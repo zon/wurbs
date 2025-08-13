@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import FatalError from './components/FatalError.vue'
+import FatalError from '../../../gonf-ts/lib/components/FatalError.vue'
 </script>
 
 <template>

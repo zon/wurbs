@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, useTemplateRef } from 'vue'
-import type { Message } from '@/models/Message'
-import { formatDate } from '@/lib/date'
+import type { Message } from '../models/Message'
+import { formatDate } from 'gonf'
 
 const props = defineProps<{
   message: Message

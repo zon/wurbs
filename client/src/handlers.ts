@@ -1,8 +1,7 @@
-import type { Nats } from './lib/nats'
 import { messagesSubject, onMessage, onMessageReconnect } from './models/Message'
-import { usersSubject, onUser, onUserReconnect } from './models/User'
+import { usersSubject, onUser, onUserReconnect, natsHandlers } from 'gonf'
 
-export function addHandlers(nats: Nats) {
-  nats.subscribe(messagesSubject, onMessage, onMessageReconnect)
-  nats.subscribe(usersSubject, onUser, onUserReconnect)
-}
+natsHandlers.push(
+  {subject: messagesSubject, onMsg: onMessage, onReconnect: onMessageReconnect},
+  {subject: usersSubject, onMsg: onUser, onReconnect: onUserReconnect}
+)

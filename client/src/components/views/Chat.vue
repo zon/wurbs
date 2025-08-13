@@ -1,11 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, useTemplateRef, watch } from 'vue'
-import MessageView from '@/components/Message.vue'
-import NewMessageForm from '@/components/NewMessageForm.vue'
-import { sendMessage, updateMessages, messages } from '@/models/Message'
-import { authUser } from '@/lib/auth'
-import { fatalError } from '@/lib/error'
-import { nats } from '@/lib/nats'
+import MessageView from '../Message.vue'
+import NewMessageForm from '../NewMessageForm.vue'
+import { sendMessage, updateMessages, messages } from '../../models/Message'
+import { authUser, fatalError, nats } from 'gonf' 
 
 const headError = useTemplateRef('head-error')
 

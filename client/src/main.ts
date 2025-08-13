@@ -2,8 +2,9 @@ import './assets/main.css'
 
 import { createApp } from 'vue'
 import App from './App.vue'
+import './handlers'
 import { initRouter } from './router'
-import { fatalError } from './lib/error'
+import { fatalError } from 'gonf'
 
 async function main() {
   try {

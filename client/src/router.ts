@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory, type Router } from 'vue-router'
-import { isAuthed } from './lib/auth'
+import { isAuthed } from 'gonf'
 
 const authorizing = 'authorizing'
 
@@ -18,12 +18,12 @@ export function initRouter() {
         {
             name: authorizing,
             path: '/authorizing',
-            component: () => import('./components/views/Authorizing.vue'),
+            component: () => import('../../../gonf-ts/lib/components/views/Authorizing.vue'),
             meta: { noAuth: true }
         },
         {
             path: '/oidc/signin',
-            component: () => import('./components/views/OidcSignin.vue'),
+            component: () => import('../../../gonf-ts/lib/components/views/OidcSignin.vue'),
             meta: { noAuth: true }
         }
     ]

@@ -1,6 +1,6 @@
 {
   "name": "wurbs",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@nats-io/nats-core": "^3.0.2",
+    "gonf": "file:../../gonf-ts",
     "oidc-client-ts": "^3.3.0",
     "vue": "^3.5.13",
     "vue-router": "4"

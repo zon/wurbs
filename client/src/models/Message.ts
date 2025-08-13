@@ -1,5 +1,4 @@
-import { get, post } from '@/lib/http'
-import { getUser } from './User'
+import { get, post, getUser } from 'gonf'
 import { reactive } from 'vue'
 import type { Msg } from '@nats-io/nats-core'
 
