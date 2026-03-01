@@ -29,4 +29,4 @@ requirements:
     description: CLI command to run database migrations against the configured postgres database
     items:
       - Running `wurbctl migrate db` applies all pending database migrations
-    passing: false
+    passing: true
