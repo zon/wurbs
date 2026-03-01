@@ -1,0 +1,82 @@
+name: api
+description: Wurbs API-only chat service with REST, WebSocket, auth, and NATS integration
+
+requirements:
+  - category: rest service
+    description: REST JSON API service that emits NATS messages on record changes
+    items:
+      - The rest service exposes a REST JSON API
+      - Record changes publish matching NATS subject messages
+    passing: false
+
+  - category: socket service
+    description: WebSocket service that relays NATS messages to connected clients
+    items:
+      - Clients can open a WebSocket connection following a specific channel
+      - NATS subject messages are relayed to the corresponding WebSocket channel
+    passing: false
+
+  - category: auth
+    description: Authentication via OIDC and client credential flow
+    items:
+      - Users can authenticate using a generic OIDC provider
+      - Clients can authenticate using the client credentials flow
+      - Admin users can authenticate with both OIDC and client credentials
+      - Real users can only authenticate with OIDC
+      - Test users can only authenticate with client credentials
+      - All test users share the same client credential flow keys
+    passing: false
+
+  - category: channels
+    description: Support for multiple chat channel types
+    items:
+      - Public and private channels are supported
+      - Real channels can only contain real users
+      - Test channels can contain both real and test users
+    passing: false
+
+  - category: admin users
+    description: Admin capabilities for managing the system
+    items:
+      - Admin users can manage channels
+      - Admin users can invite users
+    passing: false
+
+  - category: NATS auth callout
+    description: NATS auth callout using k8s service tokens (client side only)
+    items:
+      - The service handles NATS auth callout using k8s service tokens
+      - Only the client-side integration is implemented
+    passing: false
+
+  - category: configuration
+    description: Config and secrets loaded from files
+    items:
+      - The service reads configuration from a config file
+      - Secrets are loaded from a separate secrets file
+    passing: false
+
+  - category: end to end tests
+    description: Tests that exercise the full system using test channels and users
+    items:
+      - Tests require admin client credential flow keys to run
+      - Tests create and clean up test channels and users
+      - Tests avoid real channels, real users, and OIDC auth
+    passing: false
+
+  - category: containerfile
+    description: Container image built with podman containing both services
+    items:
+      - A Containerfile builds an image containing the rest and socket services
+      - The image is built using podman
+    passing: false
+
+  - category: makefile
+    description: Make targets for running, testing, and deploying the services
+    items:
+      - `make rest` starts the rest service with air
+      - `make socket` starts the socket service with air
+      - `make install` runs `go install wurbctl`
+      - `make test` runs all tests
+      - `make push` builds and pushes the container using a docker access token from file
+    passing: false
