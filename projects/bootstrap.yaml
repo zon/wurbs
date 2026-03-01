@@ -23,7 +23,7 @@ requirements:
       - Admin client credential flow keys are generated and saved to a k8s secret
       - The `--context` option selects which k8s context to use
       - The `--namespace` option selects which k8s namespace to use
-    passing: false
+    passing: true
 
   - category: wurbctl migrate db
     description: CLI command to run database migrations against the configured postgres database
