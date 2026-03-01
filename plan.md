@@ -39,6 +39,11 @@ A plan to convert this repo to an API only chat service.
 - Containerfile
   - Built with podman
   - Contains rest and socket services
+  - Contains wurbctl binary
+- Helm chart
+  - Separate Deployment for the rest service
+  - Separate Deployment for the socket service
+  - Rest Deployment includes an init container that runs `wurbctl migrate db`
 - make file
   - rest
     - starts rest service with air
@@ -80,13 +85,34 @@ Create a wurbctl CLI app.
   - takes an email argument
   - creates/updates an admin user
   - generates admin client credential flow keys and saves to k8s secret
+- wurbctl migrate db
+  - runs database migrations against the configured postgres database
 - Common options
   - --context defines what k8s to use
   - --namespace defines what k8s namespace to use
 
+## Remove gonf dependency
+
+Wurbs should no longer use the gonf library. All functionality currently provided by gonf must be implemented directly within this repo.
+
+- Database
+  - Replace `gonf.InitDB()` and `gonf.DB` with a locally-owned GORM setup
+  - Replace `gonf.AutoMigrate()` with a local auto-migration call
+- Auth
+  - Replace `gonf.InitAuthMiddleware()` and `gonf.AuthMiddleware` with local OIDC and client credential middleware
+  - Replace `gonf.AuthUser()` with a local helper that extracts the authenticated user from context
+- NATS
+  - Replace `gonf.Connect()` and `gonf.Publish()` with local NATS connection and publish helpers
+- Config
+  - Replace `gonf.LoadConfig()` with a local config loader reading from the config and secrets files
+- Utilities
+  - Replace `gonf.ParseTime()` with a local time parsing helper
+  - Replace the `gonf.User` type with a locally-defined User model
+- Remove the gonf replace directive from go.mod
+- Remove client code (Vue/TS frontend that depends on gonf-ts)
+
 ## Clean up
 
-- Remove client code
 - Remove create-db.sh
 
 ## Ralph Projects

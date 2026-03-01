@@ -24,3 +24,9 @@ requirements:
       - The `--context` option selects which k8s context to use
       - The `--namespace` option selects which k8s namespace to use
     passing: false
+
+  - category: wurbctl migrate db
+    description: CLI command to run database migrations against the configured postgres database
+    items:
+      - Running `wurbctl migrate db` applies all pending database migrations
+    passing: false

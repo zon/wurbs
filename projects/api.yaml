@@ -65,10 +65,19 @@ requirements:
     passing: false
 
   - category: containerfile
-    description: Container image built with podman containing both services
+    description: Container image built with podman containing both services and wurbctl
     items:
       - A Containerfile builds an image containing the rest and socket services
+      - The image includes the wurbctl binary
       - The image is built using podman
+    passing: false
+
+  - category: helm chart
+    description: Helm chart with separate deployments for the rest and socket services
+    items:
+      - The rest service has its own Deployment
+      - The socket service has its own Deployment
+      - The rest Deployment includes an init container that runs wurbctl migrate db before the main container starts
     passing: false
 
   - category: makefile
@@ -79,4 +88,18 @@ requirements:
       - `make install` runs `go install wurbctl`
       - `make test` runs all tests
       - `make push` builds and pushes the container using a docker access token from file
+    passing: false
+
+  - category: remove gonf dependency
+    description: Replace all gonf library usage with code owned directly by this repo
+    items:
+      - Database initialisation and the GORM DB handle are implemented locally without gonf
+      - Auto-migration is called from local code without gonf
+      - OIDC and client credential auth middleware are implemented locally without gonf
+      - The helper that extracts the authenticated user from context is implemented locally without gonf
+      - NATS connection and publish helpers are implemented locally without gonf
+      - Config and secrets loading is implemented locally without gonf
+      - Time parsing helper is implemented locally without gonf
+      - The User model is defined locally without gonf
+      - The gonf replace directive is removed from go.mod and gonf is removed from go.sum
     passing: false
