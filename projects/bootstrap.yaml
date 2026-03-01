@@ -14,7 +14,7 @@ requirements:
       - The `--local` option creates configmap and secret files for local development instead
       - The `--context` option selects which k8s context to use
       - The `--namespace` option selects which k8s namespace to use
-    passing: false
+    passing: true
 
   - category: wurbctl set admin
     description: CLI command to create or update an admin user and generate their credentials
