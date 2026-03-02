@@ -101,13 +101,13 @@ func (c *ConfigCmd) Run() error {
 
 	// Step 4: Apply configmap and secret
 	if c.Local {
-		if err := WriteConfigmapFile("wurbs-config.yaml", "wurbs-config", c.Namespace, configData); err != nil {
+		if err := WriteConfigmapFile("config.yaml", "wurbs-config", c.Namespace, configData); err != nil {
 			return fmt.Errorf("failed to write configmap file: %w", err)
 		}
-		if err := WriteSecretFile("wurbs-secret.yaml", "wurbs-secret", c.Namespace, secretData); err != nil {
+		if err := WriteSecretFile("secret.yaml", "wurbs-secret", c.Namespace, secretData); err != nil {
 			return fmt.Errorf("failed to write secret file: %w", err)
 		}
-		fmt.Println("wrote wurbs-config.yaml and wurbs-secret.yaml")
+		fmt.Println("wrote config.yaml and secret.yaml")
 	} else {
 		if err := ApplyConfigmap("wurbs-config", c.Namespace, c.Context, configData); err != nil {
 			return fmt.Errorf("failed to apply configmap: %w", err)

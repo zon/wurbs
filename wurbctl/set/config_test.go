@@ -134,7 +134,7 @@ func TestConfigCmd_LocalWritesConfigmapFile(t *testing.T) {
 	err := cmd.Run()
 	require.NoError(t, err)
 
-	data, err := os.ReadFile(filepath.Join(dir, "wurbs-config.yaml"))
+	data, err := os.ReadFile(filepath.Join(dir, "config.yaml"))
 	require.NoError(t, err)
 
 	content := string(data)
@@ -159,7 +159,7 @@ func TestConfigCmd_LocalWritesSecretFile(t *testing.T) {
 	err := cmd.Run()
 	require.NoError(t, err)
 
-	data, err := os.ReadFile(filepath.Join(dir, "wurbs-secret.yaml"))
+	data, err := os.ReadFile(filepath.Join(dir, "secret.yaml"))
 	require.NoError(t, err)
 
 	content := string(data)
@@ -184,7 +184,7 @@ func TestConfigCmd_LocalWithNamespace(t *testing.T) {
 	err := cmd.Run()
 	require.NoError(t, err)
 
-	data, err := os.ReadFile(filepath.Join(dir, "wurbs-config.yaml"))
+	data, err := os.ReadFile(filepath.Join(dir, "config.yaml"))
 	require.NoError(t, err)
 	assert.Contains(t, string(data), "namespace: wurbs-prod")
 }
@@ -203,7 +203,7 @@ func TestConfigCmd_TestFlagGeneratesKeys(t *testing.T) {
 	err := cmd.Run()
 	require.NoError(t, err)
 
-	data, err := os.ReadFile(filepath.Join(dir, "wurbs-secret.yaml"))
+	data, err := os.ReadFile(filepath.Join(dir, "secret.yaml"))
 	require.NoError(t, err)
 
 	content := string(data)
@@ -223,7 +223,7 @@ func TestConfigCmd_NoTestFlagNoKeys(t *testing.T) {
 	err := cmd.Run()
 	require.NoError(t, err)
 
-	data, err := os.ReadFile(filepath.Join(dir, "wurbs-secret.yaml"))
+	data, err := os.ReadFile(filepath.Join(dir, "secret.yaml"))
 	require.NoError(t, err)
 
 	content := string(data)
@@ -351,7 +351,7 @@ func TestConfigCmd_LocalConfigmapContainsAllFields(t *testing.T) {
 	err := cmd.Run()
 	require.NoError(t, err)
 
-	data, err := os.ReadFile(filepath.Join(dir, "wurbs-config.yaml"))
+	data, err := os.ReadFile(filepath.Join(dir, "config.yaml"))
 	require.NoError(t, err)
 	content := string(data)
 
@@ -371,7 +371,7 @@ func TestConfigCmd_LocalSecretContainsPassword(t *testing.T) {
 	err := cmd.Run()
 	require.NoError(t, err)
 
-	data, err := os.ReadFile(filepath.Join(dir, "wurbs-secret.yaml"))
+	data, err := os.ReadFile(filepath.Join(dir, "secret.yaml"))
 	require.NoError(t, err)
 	content := string(data)
 
