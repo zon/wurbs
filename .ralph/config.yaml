@@ -1,1 +1,25 @@
 model: anthropic/claude-sonnet-4-6
+before:
+  - name: build rest
+    command: go
+    args: [build, ./server/rest]
+  - name: build socket
+    command: go
+    args: [build, ./server/socket]
+services:
+  - name: rest
+    command: make
+    args: [rest]
+  - name: socket
+    command: make
+    args: [socket]
+workflow:
+  namespace: ralph-wurbs
+  configMaps:
+    - name: wurbs-config
+      destFile: ./config/main.yaml
+  secrets:
+    - name: wurbs-secret
+      destFile: ./config/secrets.yaml
+  env:
+    WURB_CONFIG: /workspace/config

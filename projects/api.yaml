@@ -7,6 +7,7 @@ requirements:
     items:
       - The rest service exposes a REST JSON API
       - Record changes publish matching NATS subject messages
+      - The service accepts a --test flag that enables test users and test channels
     passing: false
 
   - category: socket service
@@ -14,6 +15,7 @@ requirements:
     items:
       - Clients can open a WebSocket connection following a specific channel
       - NATS subject messages are relayed to the corresponding WebSocket channel
+      - The service accepts a --test flag that enables test users and test channels
     passing: false
 
   - category: auth
@@ -50,10 +52,13 @@ requirements:
     passing: false
 
   - category: configuration
-    description: Config and secrets loaded from files
+    description: Config and secrets loaded from files, not environment variables
     items:
-      - The service reads configuration from a config file
-      - Secrets are loaded from a separate secrets file
+      - The service reads all configuration from a config file (no env vars for config)
+      - Secrets are loaded from a separate secrets file (no env vars for secrets)
+      - The config file is located at <dir>/config.yaml and the secrets file at <dir>/secret.yaml
+      - The config directory defaults to /etc/wurbs and can be overridden with the WURB_CONFIG env var
+      - In --test mode, if WURB_CONFIG is not set, the service walks up from the working directory to find the git repo root and uses ./config there if it exists
     passing: false
 
   - category: end to end tests
@@ -83,11 +88,11 @@ requirements:
   - category: makefile
     description: Make targets for running, testing, and deploying the services
     items:
-      - `make rest` starts the rest service with air
-      - `make socket` starts the socket service with air
-      - `make install` runs `go install wurbctl`
-      - `make test` runs all tests
-      - `make push` builds and pushes the container using a docker access token from file
+      - make rest starts the rest service with air in --test mode
+      - make socket starts the socket service with air in --test mode
+      - make install runs go install wurbctl
+      - make test runs all tests
+      - make push builds and pushes the container using a docker access token from file
     passing: false
 
   - category: remove gonf dependency
@@ -98,7 +103,7 @@ requirements:
       - OIDC and client credential auth middleware are implemented locally without gonf
       - The helper that extracts the authenticated user from context is implemented locally without gonf
       - NATS connection and publish helpers are implemented locally without gonf
-      - Config and secrets loading is implemented locally without gonf
+      - Config and secrets loading is implemented locally without gonf, reading from config and secret files only (no env vars except WURB_CONFIG)
       - Time parsing helper is implemented locally without gonf
       - The User model is defined locally without gonf
       - The gonf replace directive is removed from go.mod and gonf is removed from go.sum

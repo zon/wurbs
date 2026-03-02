@@ -10,7 +10,15 @@ A plan to convert this repo to an API only chat service.
   - Generic OIDC Auth
   - Client credentials flow
 - Config file
+  - All non-secret configuration is read from a config file
+  - The config file location defaults to `/etc/wurbs/config.yaml`
+  - The `WURB_CONFIG` env var overrides the config file directory
+  - In `--test` mode, falls back to `./config` at the git repo root if present
 - Secrets file
+  - All secret values are read from a secrets file
+  - The secrets file location defaults to `/etc/wurbs/secret.yaml`
+  - The secrets file directory is the same as the config file directory
+- No environment variables used for configuration (except `WURB_CONFIG`)
 - Markdown documentation
 - Support for multiple chat channels
   - Public channels
@@ -46,9 +54,9 @@ A plan to convert this repo to an API only chat service.
   - Rest Deployment includes an init container that runs `wurbctl migrate db`
 - make file
   - rest
-    - starts rest service with air
+    - starts rest service with air in `--test` mode
   - socket
-    - starts socket service with air
+    - starts socket service with air in `--test` mode
   - install
     - go install wurbctl
   - test
@@ -58,6 +66,10 @@ A plan to convert this repo to an API only chat service.
       - uses docker access token from file
 
 ## Services
+
+Both services support a `--test` flag:
+- Enables test users and test channels
+- Adds a config directory fallback for local development: if the working directory is inside a git repository and `./config` exists at the repo root, config and secret files are loaded from there
 
 - rest
   - REST JSON API service
@@ -72,21 +84,22 @@ Create a wurbctl CLI app.
 
 - wurbctl set config
   - create/updates postgres user and database
-  - records OIDC settings
+  - all settings provided via CLI flags only (no env vars)
   - requires options providing anything missing the user must provide
     - db credentials
     - oidc settings
   - --test option to create/update test user client credential flow keys
     - deployments without test key can't create test users
-  - creates/updates k8s configmap
-  - creates/updates k8s secret
-  - --local option to create configmap and secret files for local development
+  - creates/updates k8s configmap and secret
+  - --local option to create config and secret files for local development
+    - writes `config.yaml` and `secret.yaml` to the output directory
 - wurbctl set admin
   - takes an email argument
   - creates/updates an admin user
   - generates admin client credential flow keys and saves to k8s secret
 - wurbctl migrate db
-  - runs database migrations against the configured postgres database
+  - runs database migrations using connection details from the config and secret files
+  - config directory resolved via `WURB_CONFIG` env var, falling back to `/etc/wurbs`
 - Common options
   - --context defines what k8s to use
   - --namespace defines what k8s namespace to use
@@ -105,6 +118,7 @@ Wurbs should no longer use the gonf library. All functionality currently provide
   - Replace `gonf.Connect()` and `gonf.Publish()` with local NATS connection and publish helpers
 - Config
   - Replace `gonf.LoadConfig()` with a local config loader reading from the config and secrets files
+  - The config directory is determined by `WURB_CONFIG` env var, falling back to `/etc/wurbs`
 - Utilities
   - Replace `gonf.ParseTime()` with a local time parsing helper
   - Replace the `gonf.User` type with a locally-defined User model
