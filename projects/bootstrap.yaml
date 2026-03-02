@@ -44,4 +44,4 @@ requirements:
       - Running `wurbctl migrate db` applies all pending database migrations
       - Connection details are read from the config and secret files, not environment variables
       - The config directory is resolved from the `WURB_CONFIG` env var, falling back to `/etc/wurbs`
-    passing: false
+    passing: true

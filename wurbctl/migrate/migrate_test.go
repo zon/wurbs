@@ -1,7 +1,9 @@
 package migrate
 
 import (
+	"encoding/base64"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,13 +12,109 @@ import (
 	"gorm.io/gorm"
 )
 
-// TestDSN_Success verifies DSN is built correctly when all required env vars are set.
+// writeConfigFile writes a k8s ConfigMap YAML to a temp file.
+func writeConfigFile(t *testing.T, dir string, data map[string]string) {
+	t.Helper()
+	var content string
+	content += "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: wurbs-config\ndata:\n"
+	for k, v := range data {
+		content += "  " + k + ": \"" + v + "\"\n"
+	}
+	err := os.WriteFile(filepath.Join(dir, "main.yaml"), []byte(content), 0600)
+	require.NoError(t, err)
+}
+
+// writeSecretsFile writes a k8s Secret YAML to a temp file with base64-encoded values.
+func writeSecretsFile(t *testing.T, dir string, data map[string]string) {
+	t.Helper()
+	var content string
+	content += "apiVersion: v1\nkind: Secret\nmetadata:\n  name: wurbs-secret\ntype: Opaque\ndata:\n"
+	for k, v := range data {
+		encoded := base64.StdEncoding.EncodeToString([]byte(v))
+		content += "  " + k + ": " + encoded + "\n"
+	}
+	err := os.WriteFile(filepath.Join(dir, "secrets.yaml"), []byte(content), 0600)
+	require.NoError(t, err)
+}
+
+// setConfigDir sets WURB_CONFIG to a temp directory and restores it after the test.
+func setConfigDir(t *testing.T, dir string) {
+	t.Helper()
+	t.Setenv("WURB_CONFIG", dir)
+}
+
+// --- ConfigDir tests ---
+
+func TestConfigDir_EnvVar(t *testing.T) {
+	t.Setenv("WURB_CONFIG", "/custom/config")
+	assert.Equal(t, "/custom/config", ConfigDir())
+}
+
+func TestConfigDir_Default(t *testing.T) {
+	t.Setenv("WURB_CONFIG", "")
+	assert.Equal(t, "/etc/wurbs", ConfigDir())
+}
+
+// --- LoadConfig tests ---
+
+func TestLoadConfig_Success(t *testing.T) {
+	dir := t.TempDir()
+	writeConfigFile(t, dir, map[string]string{
+		"PGHOST":     "db.example.com",
+		"PGPORT":     "5433",
+		"PGDATABASE": "wurbs_db",
+		"PGUSER":     "wurbs",
+	})
+
+	cfg, err := LoadConfig(dir)
+	require.NoError(t, err)
+	assert.Equal(t, "db.example.com", cfg["PGHOST"])
+	assert.Equal(t, "5433", cfg["PGPORT"])
+	assert.Equal(t, "wurbs_db", cfg["PGDATABASE"])
+	assert.Equal(t, "wurbs", cfg["PGUSER"])
+}
+
+func TestLoadConfig_MissingFile(t *testing.T) {
+	dir := t.TempDir()
+	_, err := LoadConfig(dir)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "main.yaml")
+}
+
+// --- LoadSecrets tests ---
+
+func TestLoadSecrets_Success(t *testing.T) {
+	dir := t.TempDir()
+	writeSecretsFile(t, dir, map[string]string{
+		"PGPASSWORD": "supersecret",
+	})
+
+	secrets, err := LoadSecrets(dir)
+	require.NoError(t, err)
+	assert.Equal(t, "supersecret", secrets["PGPASSWORD"])
+}
+
+func TestLoadSecrets_MissingFile(t *testing.T) {
+	dir := t.TempDir()
+	_, err := LoadSecrets(dir)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "secrets.yaml")
+}
+
+// --- DSN tests ---
+
 func TestDSN_Success(t *testing.T) {
-	t.Setenv("PGHOST", "localhost")
-	t.Setenv("PGPORT", "5432")
-	t.Setenv("PGUSER", "admin")
-	t.Setenv("PGPASSWORD", "secret")
-	t.Setenv("PGDATABASE", "wurbs")
+	dir := t.TempDir()
+	writeConfigFile(t, dir, map[string]string{
+		"PGHOST":     "localhost",
+		"PGPORT":     "5432",
+		"PGDATABASE": "wurbs",
+		"PGUSER":     "admin",
+	})
+	writeSecretsFile(t, dir, map[string]string{
+		"PGPASSWORD": "secret",
+	})
+	setConfigDir(t, dir)
 
 	dsn, err := DSN()
 	require.NoError(t, err)
@@ -27,57 +125,76 @@ func TestDSN_Success(t *testing.T) {
 	assert.Contains(t, dsn, "dbname=wurbs")
 }
 
-// TestDSN_DefaultPort verifies the port defaults to 5432 when PGPORT is not set.
 func TestDSN_DefaultPort(t *testing.T) {
-	t.Setenv("PGHOST", "localhost")
-	t.Setenv("PGPORT", "")
-	t.Setenv("PGUSER", "admin")
-	t.Setenv("PGPASSWORD", "secret")
-	t.Setenv("PGDATABASE", "wurbs")
+	dir := t.TempDir()
+	writeConfigFile(t, dir, map[string]string{
+		"PGHOST":     "localhost",
+		"PGDATABASE": "wurbs",
+		"PGUSER":     "admin",
+	})
+	writeSecretsFile(t, dir, map[string]string{
+		"PGPASSWORD": "secret",
+	})
+	setConfigDir(t, dir)
 
 	dsn, err := DSN()
 	require.NoError(t, err)
 	assert.Contains(t, dsn, "port=5432")
 }
 
-// TestDSN_MissingHost verifies an error is returned when PGHOST is missing.
 func TestDSN_MissingHost(t *testing.T) {
-	t.Setenv("PGHOST", "")
-	t.Setenv("PGUSER", "admin")
-	t.Setenv("PGDATABASE", "wurbs")
+	dir := t.TempDir()
+	writeConfigFile(t, dir, map[string]string{
+		"PGDATABASE": "wurbs",
+		"PGUSER":     "admin",
+	})
+	writeSecretsFile(t, dir, map[string]string{
+		"PGPASSWORD": "secret",
+	})
+	setConfigDir(t, dir)
 
 	_, err := DSN()
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "PGHOST")
 }
 
-// TestDSN_MissingUser verifies an error is returned when PGUSER is missing.
 func TestDSN_MissingUser(t *testing.T) {
-	t.Setenv("PGHOST", "localhost")
-	t.Setenv("PGUSER", "")
-	t.Setenv("PGDATABASE", "wurbs")
+	dir := t.TempDir()
+	writeConfigFile(t, dir, map[string]string{
+		"PGHOST":     "localhost",
+		"PGDATABASE": "wurbs",
+	})
+	writeSecretsFile(t, dir, map[string]string{
+		"PGPASSWORD": "secret",
+	})
+	setConfigDir(t, dir)
 
 	_, err := DSN()
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "PGUSER")
 }
 
-// TestDSN_MissingDatabase verifies an error is returned when PGDATABASE is missing.
 func TestDSN_MissingDatabase(t *testing.T) {
-	t.Setenv("PGHOST", "localhost")
-	t.Setenv("PGUSER", "admin")
-	t.Setenv("PGDATABASE", "")
+	dir := t.TempDir()
+	writeConfigFile(t, dir, map[string]string{
+		"PGHOST": "localhost",
+		"PGUSER": "admin",
+	})
+	writeSecretsFile(t, dir, map[string]string{
+		"PGPASSWORD": "secret",
+	})
+	setConfigDir(t, dir)
 
 	_, err := DSN()
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "PGDATABASE")
 }
 
-// TestDSN_MissingMultiple verifies that all missing variables are reported.
 func TestDSN_MissingMultiple(t *testing.T) {
-	t.Setenv("PGHOST", "")
-	t.Setenv("PGUSER", "")
-	t.Setenv("PGDATABASE", "")
+	dir := t.TempDir()
+	writeConfigFile(t, dir, map[string]string{})
+	writeSecretsFile(t, dir, map[string]string{})
+	setConfigDir(t, dir)
 
 	_, err := DSN()
 	require.Error(t, err)
@@ -85,6 +202,36 @@ func TestDSN_MissingMultiple(t *testing.T) {
 	assert.Contains(t, err.Error(), "PGUSER")
 	assert.Contains(t, err.Error(), "PGDATABASE")
 }
+
+func TestDSN_MissingConfigFile(t *testing.T) {
+	dir := t.TempDir()
+	// Only write secrets, no config
+	writeSecretsFile(t, dir, map[string]string{
+		"PGPASSWORD": "secret",
+	})
+	setConfigDir(t, dir)
+
+	_, err := DSN()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "config")
+}
+
+func TestDSN_MissingSecretsFile(t *testing.T) {
+	dir := t.TempDir()
+	// Only write config, no secrets
+	writeConfigFile(t, dir, map[string]string{
+		"PGHOST":     "localhost",
+		"PGDATABASE": "wurbs",
+		"PGUSER":     "admin",
+	})
+	setConfigDir(t, dir)
+
+	_, err := DSN()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "secrets")
+}
+
+// --- RunMigrations tests ---
 
 // TestRunMigrations verifies that RunMigrations applies all pending migrations successfully.
 // Uses an in-memory SQLite database to avoid requiring a running PostgreSQL instance.
@@ -128,12 +275,13 @@ func TestRunMigrations_CreatesColumns(t *testing.T) {
 	assert.True(t, migrator.HasColumn(&Message{}, "content"), "messages table should have content column")
 }
 
-// TestDBCmd_Run_MissingEnvVars verifies DBCmd.Run returns an error when PG env vars are missing.
-func TestDBCmd_Run_MissingEnvVars(t *testing.T) {
-	// Clear all PG env vars
-	for _, key := range []string{"PGHOST", "PGPORT", "PGUSER", "PGPASSWORD", "PGDATABASE"} {
-		os.Unsetenv(key)
-	}
+// --- DBCmd.Run tests ---
+
+// TestDBCmd_Run_MissingConfigFiles verifies DBCmd.Run returns an error when config files are absent.
+func TestDBCmd_Run_MissingConfigFiles(t *testing.T) {
+	dir := t.TempDir()
+	setConfigDir(t, dir)
+	// No config files written
 
 	cmd := &DBCmd{}
 	err := cmd.Run()
