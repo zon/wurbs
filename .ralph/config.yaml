@@ -1,18 +1,18 @@
 model: anthropic/claude-sonnet-4-6
-before:
-  - name: build rest
-    command: go
-    args: [build, ./server/rest]
-  - name: build socket
-    command: go
-    args: [build, ./server/socket]
-services:
-  - name: rest
-    command: make
-    args: [rest]
-  - name: socket
-    command: make
-    args: [socket]
+# before:
+#   - name: build rest
+#     command: go
+#     args: [build, ./server/rest]
+#   - name: build socket
+#     command: go
+#     args: [build, ./server/socket]
+# services:
+#   - name: rest
+#     command: make
+#     args: [rest]
+#   - name: socket
+#     command: make
+#     args: [socket]
 workflow:
   namespace: ralph-wurbs
   configMaps:
