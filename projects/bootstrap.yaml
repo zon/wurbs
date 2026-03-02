@@ -36,7 +36,7 @@ requirements:
       - The wurbs-config configmap is mounted to ./config/main.yaml
       - The wurbs-secret secret is mounted to ./config/secrets.yaml
       - The WURB_CONFIG env var is set to /workspace/config
-    passing: false
+    passing: true
 
   - category: wurbctl migrate db
     description: CLI command to run database migrations using connection details from config and secret files
