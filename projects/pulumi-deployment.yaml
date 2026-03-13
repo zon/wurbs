@@ -8,23 +8,23 @@ requirements:
       - A Pulumi project is created in the infra/ directory
       - The project uses the kubernetes provider
       - A Pulumi.yaml defines the project name as "wurbs"
-    passing: false
+    passing: true
 
   - category: ralph namespace
     description: Ralph namespace for ralph system components
     items:
       - A kubernetes_namespace resource creates the "ralph-wurbs" namespace
-    passing: false
+    passing: true
 
   - category: wurbs namespace
     description: Wurbs namespace for the application
     items:
       - A kubernetes_namespace resource creates the "wurbs" namespace
-    passing: false
+    passing: true
 
   - category: cloudnativepg
     description: CloudNativePG cluster resource for PostgreSQL
     items:
       - A Cluster resource creates a Postgres database in the wurbs namespace
       - The database credentials are stored in a secret
-    passing: false
+    passing: true
