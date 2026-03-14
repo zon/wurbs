@@ -71,8 +71,8 @@ func TestMainGoContainsSecret(t *testing.T) {
 		t.Fatalf("Failed to read main.go: %v", err)
 	}
 
-	if !strings.Contains(string(content), "postgres-secret") {
-		t.Error("main.go should contain postgres-secret")
+	if strings.Contains(string(content), "corev1.NewSecret") {
+		t.Error("main.go should NOT contain manual secret creation - CloudNativePG handles credentials")
 	}
 }
 
@@ -119,12 +119,8 @@ func TestMainGoCreatesUsernamePasswordSecret(t *testing.T) {
 		t.Fatalf("Failed to read main.go: %v", err)
 	}
 
-	if !strings.Contains(string(content), "username") {
-		t.Error("main.go should create username in secret")
-	}
-
-	if !strings.Contains(string(content), "password") {
-		t.Error("main.go should create password in secret")
+	if strings.Contains(string(content), "corev1.NewSecret") {
+		t.Error("main.go should NOT create manual secret - CloudNativePG handles credentials automatically")
 	}
 }
 
@@ -265,5 +261,27 @@ func TestMainGoFallsBackToEnvKubeconfig(t *testing.T) {
 
 	if !strings.Contains(string(content), "KUBECONFIG") {
 		t.Error("main.go should fall back to KUBECONFIG env var")
+	}
+}
+
+func TestMainGoClusterHasOneInstance(t *testing.T) {
+	content, err := os.ReadFile("main.go")
+	if err != nil {
+		t.Fatalf("Failed to read main.go: %v", err)
+	}
+
+	if !strings.Contains(string(content), `"instances": 1`) {
+		t.Error("main.go should configure cluster with 1 instance")
+	}
+}
+
+func TestMainGoNoManualSecret(t *testing.T) {
+	content, err := os.ReadFile("main.go")
+	if err != nil {
+		t.Fatalf("Failed to read main.go: %v", err)
+	}
+
+	if strings.Contains(string(content), "corev1.NewSecret") {
+		t.Error("main.go should NOT create a manual secret - CloudNativePG handles credentials automatically")
 	}
 }

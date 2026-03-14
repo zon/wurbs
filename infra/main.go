@@ -1,8 +1,6 @@
 package main
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"os"
 
 	"github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes"
@@ -48,23 +46,6 @@ func main() {
 			return err
 		}
 
-		password := generatePassword(16)
-		username := "postgres"
-
-		_, err = corev1.NewSecret(ctx, "postgres-secret", &corev1.SecretArgs{
-			Metadata: &metav1.ObjectMetaArgs{
-				Name:      pulumi.String("postgres-creds"),
-				Namespace: wurbsNs.Metadata.Name(),
-			},
-			StringData: pulumi.StringMap{
-				"username": pulumi.String(username),
-				"password": pulumi.String(password),
-			},
-		}, pulumi.Provider(k8s), pulumi.Parent(wurbsNs))
-		if err != nil {
-			return err
-		}
-
 		_, err = apiextensions.NewCustomResource(ctx, "postgres-cluster", &apiextensions.CustomResourceArgs{
 			ApiVersion: pulumi.String("postgresql.cnpg.io/v1"),
 			Kind:       pulumi.String("Cluster"),
@@ -74,7 +55,7 @@ func main() {
 			},
 			OtherFields: map[string]interface{}{
 				"spec": map[string]interface{}{
-					"instances": 3,
+					"instances": 1,
 					"bootstrap": map[string]interface{}{
 						"initdb": map[string]interface{}{
 							"database": "wurbs",
@@ -93,10 +74,4 @@ func main() {
 
 		return nil
 	})
-}
-
-func generatePassword(length int) string {
-	bytes := make([]byte, length)
-	rand.Read(bytes)
-	return hex.EncodeToString(bytes)[:length]
 }

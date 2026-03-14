@@ -31,4 +31,4 @@ requirements:
       - A Cluster resource creates a Postgres database in the wurbs namespace
       - CloudNativePG handles database credentials automatically
       - The cluster has 1 instance
-    passing: false
+    passing: true
