@@ -8,7 +8,10 @@ requirements:
       - A Pulumi project is created in the infra/ directory
       - The project uses the kubernetes provider
       - A Pulumi.yaml defines the project name as "wurbs"
-    passing: true
+      - The stack is named "dev"
+      - Pulumi state is stored in the cloud
+      - The deployment targets a microk8s cluster
+    passing: false
 
   - category: ralph namespace
     description: Ralph namespace for ralph system components
@@ -26,5 +29,6 @@ requirements:
     description: CloudNativePG cluster resource for PostgreSQL
     items:
       - A Cluster resource creates a Postgres database in the wurbs namespace
-      - The database credentials are stored in a secret
-    passing: true
+      - CloudNativePG handles database credentials automatically
+      - The cluster has 1 instance
+    passing: false
