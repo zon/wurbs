@@ -1,28 +1,18 @@
 package main
 
 import (
-	"os"
-
 	"github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes"
 	"github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes/apiextensions"
 	corev1 "github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes/core/v1"
 	metav1 "github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes/meta/v1"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
-	"github.com/pulumi/pulumi/sdk/v3/go/pulumi/config"
 )
 
 func main() {
 	pulumi.Run(func(ctx *pulumi.Context) error {
-		cfg := config.New(ctx, "wurbs")
-
-		kubeconfig := cfg.Get("kubeconfig")
-		if kubeconfig == "" {
-			kubeconfig = os.Getenv("KUBECONFIG")
-		}
-
 		k8s, err := kubernetes.NewProvider(ctx, "k8s", &kubernetes.ProviderArgs{
 			EnableServerSideApply: pulumi.Bool(true),
-			Kubeconfig:            pulumi.String(kubeconfig),
+			Context:               pulumi.String("microk8s"),
 		})
 		if err != nil {
 			return err
