@@ -1,0 +1,20 @@
+config:
+  wurbs:cluster-name: wurbs-dev
+  wurbs:kubeconfig: |
+    apiVersion: v1
+    clusters:
+    - cluster:
+        certificate-authority-data: ${MICROK8S_CA_DATA}
+        server: https://127.0.0.1:16443
+      name: microk8s
+    contexts:
+    - context:
+        cluster: microk8s
+        user: admin
+      name: microk8s
+    current-context: microk8s
+    kind: Config
+    users:
+    - name: admin
+      user:
+        token: ${MICROK8S_TOKEN}

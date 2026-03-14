@@ -201,3 +201,69 @@ func TestAbsolutePath(t *testing.T) {
 		t.Error("Test should run from infra directory")
 	}
 }
+
+func TestPulumiDevStackExists(t *testing.T) {
+	_, err := os.Stat("Pulumi.dev.yaml")
+	if err != nil {
+		t.Fatalf("Pulumi.dev.yaml not found: %v", err)
+	}
+}
+
+func TestPulumiDevStackConfig(t *testing.T) {
+	content, err := os.ReadFile("Pulumi.dev.yaml")
+	if err != nil {
+		t.Fatalf("Failed to read Pulumi.dev.yaml: %v", err)
+	}
+
+	if !strings.Contains(string(content), "config:") {
+		t.Error("Pulumi.dev.yaml should contain config section")
+	}
+}
+
+func TestPulumiYamlBackend(t *testing.T) {
+	content, err := os.ReadFile("Pulumi.yaml")
+	if err != nil {
+		t.Fatalf("Failed to read Pulumi.yaml: %v", err)
+	}
+
+	if !strings.Contains(string(content), "backend:") {
+		t.Error("Pulumi.yaml should contain backend configuration")
+	}
+
+	if !strings.Contains(string(content), "url:") {
+		t.Error("Pulumi.yaml should contain backend url")
+	}
+}
+
+func TestMainGoUsesKubeconfig(t *testing.T) {
+	content, err := os.ReadFile("main.go")
+	if err != nil {
+		t.Fatalf("Failed to read main.go: %v", err)
+	}
+
+	if !strings.Contains(string(content), "kubeconfig") {
+		t.Error("main.go should use kubeconfig configuration")
+	}
+}
+
+func TestMainGoReadsKubeconfigFromConfig(t *testing.T) {
+	content, err := os.ReadFile("main.go")
+	if err != nil {
+		t.Fatalf("Failed to read main.go: %v", err)
+	}
+
+	if !strings.Contains(string(content), "config.New") {
+		t.Error("main.go should read kubeconfig from config")
+	}
+}
+
+func TestMainGoFallsBackToEnvKubeconfig(t *testing.T) {
+	content, err := os.ReadFile("main.go")
+	if err != nil {
+		t.Fatalf("Failed to read main.go: %v", err)
+	}
+
+	if !strings.Contains(string(content), "KUBECONFIG") {
+		t.Error("main.go should fall back to KUBECONFIG env var")
+	}
+}

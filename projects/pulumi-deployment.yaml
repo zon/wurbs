@@ -11,7 +11,7 @@ requirements:
       - The stack is named "dev"
       - Pulumi state is stored in the cloud
       - The deployment targets a microk8s cluster
-    passing: false
+    passing: true
 
   - category: ralph namespace
     description: Ralph namespace for ralph system components

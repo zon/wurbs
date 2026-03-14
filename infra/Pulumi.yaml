@@ -1,2 +1,4 @@
 name: wurbs
 runtime: go
+backend:
+  url: https://app.pulumi.com
