@@ -2,6 +2,7 @@ package set
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -30,6 +31,25 @@ func WriteConfigmapFile(filename, name, namespace string, data map[string]string
 func WriteSecretFile(filename, name, namespace string, data map[string]string) error {
 	yaml := buildSecretYAML(name, namespace, data)
 	return os.WriteFile(filename, []byte(yaml), 0600)
+}
+
+// buildSecretYAML constructs a Kubernetes Secret YAML string with base64-encoded values.
+func buildSecretYAML(name, namespace string, data map[string]string) string {
+	var sb strings.Builder
+	sb.WriteString("apiVersion: v1\n")
+	sb.WriteString("kind: Secret\n")
+	sb.WriteString("metadata:\n")
+	sb.WriteString(fmt.Sprintf("  name: %s\n", name))
+	if namespace != "" {
+		sb.WriteString(fmt.Sprintf("  namespace: %s\n", namespace))
+	}
+	sb.WriteString("type: Opaque\n")
+	sb.WriteString("data:\n")
+	for k, v := range data {
+		encoded := base64.StdEncoding.EncodeToString([]byte(v))
+		sb.WriteString(fmt.Sprintf("  %s: %s\n", k, encoded))
+	}
+	return sb.String()
 }
 
 // kubectlApply runs kubectl apply -f - with the given YAML input.
@@ -71,21 +91,92 @@ func buildConfigmapYAML(name, namespace string, data map[string]string) string {
 	return sb.String()
 }
 
-// buildSecretYAML constructs a Kubernetes Secret YAML string with base64-encoded values.
-func buildSecretYAML(name, namespace string, data map[string]string) string {
-	var sb strings.Builder
-	sb.WriteString("apiVersion: v1\n")
-	sb.WriteString("kind: Secret\n")
-	sb.WriteString("metadata:\n")
-	sb.WriteString(fmt.Sprintf("  name: %s\n", name))
+// GetSecret retrieves a Kubernetes Secret and returns its data as a map.
+func GetSecret(name, namespace, context string) (map[string]string, error) {
+	args := []string{"get", "secret", name, "-o", "json"}
 	if namespace != "" {
-		sb.WriteString(fmt.Sprintf("  namespace: %s\n", namespace))
+		args = append(args, "--namespace", namespace)
 	}
-	sb.WriteString("type: Opaque\n")
-	sb.WriteString("data:\n")
-	for k, v := range data {
-		encoded := base64.StdEncoding.EncodeToString([]byte(v))
-		sb.WriteString(fmt.Sprintf("  %s: %s\n", k, encoded))
+	if context != "" {
+		args = append(args, "--context", context)
 	}
-	return sb.String()
+
+	cmd := exec.Command("kubectl", args...)
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get secret %s: %w", name, err)
+	}
+
+	data, err := parseJSONSecret(output)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse secret: %w", err)
+	}
+	return data, nil
+}
+
+func parseJSONSecret(output []byte) (map[string]string, error) {
+	var secret struct {
+		Data map[string]string `json:"data"`
+	}
+	if err := json.Unmarshal(output, &secret); err != nil {
+		return nil, err
+	}
+
+	result := make(map[string]string)
+	for k, v := range secret.Data {
+		decoded, err := base64.StdEncoding.DecodeString(v)
+		if err != nil {
+			result[k] = v
+		} else {
+			result[k] = string(decoded)
+		}
+	}
+	return result, nil
+}
+
+type PostgresConfig struct {
+	Host     string `json:"host"`
+	Port     int    `json:"port"`
+	User     string `json:"user"`
+	Password string `json:"password"`
+	Database string `json:"database"`
+}
+
+func WritePostgresJSON(filename string, host string, port int, secretData map[string]string) error {
+	cfg := PostgresConfig{
+		Host:     host,
+		Port:     port,
+		User:     secretData["username"],
+		Password: secretData["password"],
+		Database: secretData["dbname"],
+	}
+	data, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal postgres config: %w", err)
+	}
+	return os.WriteFile(filename, data, 0600)
+}
+
+func GetServiceIP(name, namespace, context string) (string, error) {
+	args := []string{"get", "svc", name, "-o", "json"}
+	if namespace != "" {
+		args = append(args, "--namespace", namespace)
+	}
+	if context != "" {
+		args = append(args, "--context", context)
+	}
+
+	cmd := exec.Command("kubectl", args...)
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("failed to get service %s: %w", name, err)
+	}
+
+	var svc struct {
+		ClusterIP string `json:"clusterIP"`
+	}
+	if err := json.Unmarshal(output, &svc); err != nil {
+		return "", fmt.Errorf("failed to parse service: %w", err)
+	}
+	return svc.ClusterIP, nil
 }
