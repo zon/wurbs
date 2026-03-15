@@ -449,9 +449,16 @@ func TestRunFromCloudNativePG_Success(t *testing.T) {
 	mock := &mockK8sGetter{
 		serviceIP: "10.244.0.10",
 		secretData: map[string]string{
-			"username": "wurbs",
-			"password": "mysecret",
-			"dbname":   "wurbs",
+			"username":  "wurbs",
+			"password":  "mysecret",
+			"dbname":    "wurbs",
+			"host":      "wurbs-postgres",
+			"port":      "5432",
+			"uri":       "postgresql://wurbs:mysecret@wurbs-postgres:5432/wurbs",
+			"pgpass":    "wurbs-postgres:5432:wurbs:wurbs",
+			"jdbc-uri":  "jdbc:postgresql://wurbs-postgres:5432/wurbs",
+			"fqdn-uri":  "postgresql://wurbs:mysecret@wurbs-postgres.wurbs.svc.cluster.local:5432/wurbs",
+			"fqdn-jdbc": "jdbc:postgresql://wurbs-postgres.wurbs.svc.cluster.local:5432/wurbs",
 		},
 	}
 
@@ -469,9 +476,13 @@ func TestRunFromCloudNativePG_Success(t *testing.T) {
 	content := string(data)
 	assert.Contains(t, content, `"host": "10.244.0.10"`)
 	assert.Contains(t, content, `"port": 32432`)
-	assert.Contains(t, content, `"user": "wurbs"`)
-	assert.Contains(t, content, `"password": "mysecret"`)
-	assert.Contains(t, content, `"database": "wurbs"`)
+	assert.Contains(t, content, `"username": "wurbs"`)
+	assert.Contains(t, content, `"dbname": "wurbs"`)
+	assert.Contains(t, content, `"uri": "postgresql://wurbs:mysecret@10.244.0.10:32432/wurbs"`)
+	assert.Contains(t, content, `"pgpass": "10.244.0.10:32432:wurbs:wurbs"`)
+	assert.Contains(t, content, `"jdbc-uri": "jdbc:postgresql://10.244.0.10:32432/wurbs"`)
+	assert.Contains(t, content, `"fqdn-uri": "postgresql://wurbs:mysecret@10.244.0.10.wurbs.svc.cluster.local:32432/wurbs"`)
+	assert.Contains(t, content, `"fqdn-jdbc-uri": "jdbc:postgresql://10.244.0.10.wurbs.svc.cluster.local:32432/wurbs"`)
 }
 
 func TestRunFromCloudNativePG_ServiceError(t *testing.T) {
@@ -539,4 +550,47 @@ func TestRunFromCloudNativePG_DefaultNamespace(t *testing.T) {
 
 	_, err = os.ReadFile(filepath.Join(dir, "config", "postgres.json"))
 	require.NoError(t, err)
+}
+
+func TestPatchSecret(t *testing.T) {
+	secretData := map[string]string{
+		"username":  "wurbs",
+		"password":  "secret123",
+		"dbname":    "wurbs_db",
+		"host":      "wurbs-postgres",
+		"port":      "5432",
+		"uri":       "postgresql://wurbs:secret123@wurbs-postgres:5432/wurbs_db",
+		"pgpass":    "wurbs-postgres:5432:wurbs_db:wurbs",
+		"jdbc-uri":  "jdbc:postgresql://wurbs-postgres:5432/wurbs_db",
+		"fqdn-uri":  "postgresql://wurbs:secret123@wurbs-postgres.wurbs.svc.cluster.local:5432/wurbs_db",
+		"fqdn-jdbc": "jdbc:postgresql://wurbs-postgres.wurbs.svc.cluster.local:5432/wurbs_db",
+	}
+
+	secret := PatchSecret(secretData, "10.244.0.10", 32432)
+
+	assert.Equal(t, "wurbs", secret.Username)
+	assert.Equal(t, "secret123", secret.Password)
+	assert.Equal(t, "wurbs_db", secret.DBName)
+	assert.Equal(t, "10.244.0.10", secret.Host)
+	assert.Equal(t, 32432, secret.Port)
+
+	assert.Equal(t, "postgresql://wurbs:secret123@10.244.0.10:32432/wurbs_db", secret.URI)
+	assert.Equal(t, "10.244.0.10:32432:wurbs_db:wurbs", secret.PGPass)
+	assert.Equal(t, "jdbc:postgresql://10.244.0.10:32432/wurbs_db", secret.JDBCURI)
+	assert.Equal(t, "postgresql://wurbs:secret123@10.244.0.10.wurbs.svc.cluster.local:32432/wurbs_db", secret.FQDNURI)
+	assert.Equal(t, "jdbc:postgresql://10.244.0.10.wurbs.svc.cluster.local:32432/wurbs_db", secret.FQDNJDBC)
+}
+
+func TestPatchSecret_DefaultPort(t *testing.T) {
+	secretData := map[string]string{
+		"username": "wurbs",
+		"password": "secret",
+		"dbname":   "mydb",
+		"host":     "postgres",
+		"uri":      "postgresql://wurbs:secret@postgres:5432/mydb",
+	}
+
+	secret := PatchSecret(secretData, "10.0.0.1", 32432)
+
+	assert.Equal(t, "postgresql://wurbs:secret@10.0.0.1:32432/mydb", secret.URI)
 }

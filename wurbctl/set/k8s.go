@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
+
+	"github.com/zon/chat/core"
 )
 
 // ApplyConfigmap creates or updates a Kubernetes ConfigMap using kubectl.
@@ -179,4 +182,39 @@ func GetServiceIP(name, namespace, context string) (string, error) {
 		return "", fmt.Errorf("failed to parse service: %w", err)
 	}
 	return svc.ClusterIP, nil
+}
+
+func PatchSecret(secretData map[string]string, newHost string, newPort int) *core.Secret {
+	secret := &core.Secret{
+		Username: secretData["username"],
+		Password: secretData["password"],
+		DBName:   secretData["dbname"],
+		Host:     newHost,
+		Port:     newPort,
+		URI:      secretData["uri"],
+		PGPass:   secretData["pgpass"],
+		JDBCURI:  secretData["jdbc-uri"],
+		FQDNURI:  secretData["fqdn-uri"],
+		FQDNJDBC: secretData["fqdn-jdbc"],
+	}
+
+	oldHost := secretData["host"]
+	oldPort := 5432
+	if p, err := strconv.Atoi(secretData["port"]); err == nil {
+		oldPort = p
+	}
+
+	oldHostPort := fmt.Sprintf("%s:%d", oldHost, oldPort)
+	newHostPort := fmt.Sprintf("%s:%d", newHost, newPort)
+
+	secret.URI = strings.ReplaceAll(secret.URI, oldHostPort, newHostPort)
+	secret.PGPass = strings.ReplaceAll(secret.PGPass, oldHostPort, newHostPort)
+	secret.JDBCURI = strings.ReplaceAll(secret.JDBCURI, oldHostPort, newHostPort)
+
+	secret.FQDNURI = strings.ReplaceAll(secret.FQDNURI, oldHost, newHost)
+	secret.FQDNURI = strings.ReplaceAll(secret.FQDNURI, fmt.Sprintf(":%d", oldPort), fmt.Sprintf(":%d", newPort))
+	secret.FQDNJDBC = strings.ReplaceAll(secret.FQDNJDBC, oldHost, newHost)
+	secret.FQDNJDBC = strings.ReplaceAll(secret.FQDNJDBC, fmt.Sprintf(":%d", oldPort), fmt.Sprintf(":%d", newPort))
+
+	return secret
 }

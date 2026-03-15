@@ -2,7 +2,8 @@
 *_templ.txt
 *.db
 *.sqlite3
-.terraform
+/config
+/terraform
 
 /server/token.json
 
