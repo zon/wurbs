@@ -9,12 +9,11 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/zon/chat/core"
-	"github.com/zon/gonf"
 )
 
 var cli struct {
-	Key       string `arg:"" type:"existingfile" help:"Path to Zitadel API private key json file"`
-	Subdomain string `help:"Zitadel application subdomain" default:"wurbs-2d2isd"`
+	ConfigDir string `help:"Config directory" default:""`
+	Test      bool   `help:"Enable test mode with test users and channels" default:"false"`
 	Port      string `help:"Port to host on" default:"8080"`
 }
 
@@ -22,29 +21,44 @@ func main() {
 	ktx := kong.Parse(&cli)
 	ktx.FatalIfErrorf(ktx.Error)
 
-	err := gonf.LoadConfig()
+	testMode := cli.Test
+	workingDir, _ := os.Getwd()
+
+	configDir := cli.ConfigDir
+	if configDir == "" {
+		var err error
+		configDir, err = core.GetConfigDir(testMode, workingDir)
+		if err != nil {
+			slog.Error("config dir", "error", err)
+			os.Exit(1)
+		}
+	}
+
+	cfg, secrets, err := core.LoadConfig(configDir)
 	if err != nil {
 		slog.Error("config", "error", err)
 		os.Exit(1)
 	}
 
-	err = core.InitDB()
+	err = core.InitDB(cfg, secrets)
 	if err != nil {
 		slog.Error("db", "error", err)
 		os.Exit(1)
 	}
 
-	err = gonf.InitAuthMiddleware(cli.Subdomain, cli.Key)
+	err = core.AutoMigrate()
 	if err != nil {
-		slog.Error("zitadel auth middleware could not initialize", "error", err)
+		slog.Error("auto migrate", "error", err)
 		os.Exit(1)
 	}
 
-	err = gonf.Connect()
+	err = core.ConnectNATS(cfg, secrets)
 	if err != nil {
 		slog.Error("nats connection failed", "error", err)
 		os.Exit(1)
 	}
+
+	core.SetTestMode(testMode)
 
 	app := fiber.New()
 	app.Use(cors.New())
@@ -54,11 +68,12 @@ func main() {
 		return c.JSON("ok")
 	})
 
-	app.Use(gonf.AuthMiddleware)
+	app.Use(core.AuthMiddleware)
 
-	gonf.AddRoutes(app)
 	app.Get("/messages", getMessages)
 	app.Post("/messages", postMessage)
+	app.Put("/messages/:id", putMessage)
+	app.Delete("/messages/:id", deleteMessage)
 
 	err = app.Listen(":" + cli.Port)
 	if err != nil {

@@ -1,11 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/zon/chat/core"
-	"github.com/zon/gonf"
 )
 
 func getMessages(c *fiber.Ctx) error {
@@ -13,7 +13,7 @@ func getMessages(c *fiber.Ctx) error {
 
 	bq := c.Query("before")
 	if bq != "" {
-		before, err := gonf.ParseTime(bq)
+		before, err := core.ParseTime(bq)
 		if err != nil {
 			return fiber.ErrBadRequest
 		}
@@ -26,7 +26,7 @@ func getMessages(c *fiber.Ctx) error {
 
 	aq := c.Query("after")
 	if aq != "" {
-		after, err := gonf.ParseTime(aq)
+		after, err := core.ParseTime(aq)
 		if err != nil {
 			return fiber.ErrBadRequest
 		}
@@ -45,7 +45,7 @@ func getMessages(c *fiber.Ctx) error {
 }
 
 func postMessage(c *fiber.Ctx) error {
-	user, err := gonf.AuthUser(c)
+	user, err := core.AuthUser(c)
 	if err != nil {
 		return err
 	}
@@ -70,10 +70,100 @@ func postMessage(c *fiber.Ctx) error {
 		return err
 	}
 
-	err = gonf.Publish("messages", record)
+	err = core.PublishMessage("created", record)
 	if err != nil {
 		return err
 	}
 
 	return c.JSON(record)
+}
+
+func putMessage(c *fiber.Ctx) error {
+	user, err := core.AuthUser(c)
+	if err != nil {
+		return err
+	}
+
+	id := c.Params("id")
+	var msgID uint
+	_, err = fmt.Sscanf(id, "%d", &msgID)
+	if err != nil {
+		return fiber.ErrBadRequest
+	}
+
+	var body string
+	err = c.BodyParser(&body)
+	if err != nil {
+		return err
+	}
+	content := strings.TrimSpace(body)
+
+	if content == "" {
+		return fiber.ErrBadRequest
+	}
+
+	content, err = core.MarkdownToHtml(content)
+	if err != nil {
+		return err
+	}
+
+	msg := &core.Message{}
+	msg.ID = msgID
+	err = core.DB.First(msg).Error
+	if err != nil {
+		return fiber.ErrNotFound
+	}
+
+	if msg.UserID != user.ID {
+		return fiber.ErrForbidden
+	}
+
+	err = msg.Update(content)
+	if err != nil {
+		return err
+	}
+
+	err = core.PublishMessage("updated", msg)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(msg)
+}
+
+func deleteMessage(c *fiber.Ctx) error {
+	user, err := core.AuthUser(c)
+	if err != nil {
+		return err
+	}
+
+	id := c.Params("id")
+	var msgID uint
+	_, err = fmt.Sscanf(id, "%d", &msgID)
+	if err != nil {
+		return fiber.ErrBadRequest
+	}
+
+	msg := &core.Message{}
+	msg.ID = msgID
+	err = core.DB.First(msg).Error
+	if err != nil {
+		return fiber.ErrNotFound
+	}
+
+	if msg.UserID != user.ID {
+		return fiber.ErrForbidden
+	}
+
+	err = msg.Delete()
+	if err != nil {
+		return err
+	}
+
+	err = core.PublishMessage("deleted", msg)
+	if err != nil {
+		return err
+	}
+
+	return c.SendStatus(fiber.StatusNoContent)
 }

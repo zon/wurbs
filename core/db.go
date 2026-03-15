@@ -12,12 +12,11 @@ const sqliteFile = defaultDatabase + ".db"
 
 var DB *gorm.DB
 
-func InitDB() error {
-	cfg, err := LoadPostgresConfig("config")
-	if err == nil {
+func InitDB(cfg *Config, secrets *Secrets) error {
+	if cfg.Database.Type == "postgres" {
 		dsn := fmt.Sprintf(
 			"host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
-			cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.Database,
+			cfg.Server.Host, cfg.Database.Port, secrets.Database.User, secrets.Database.Password, cfg.Database.Name,
 		)
 		db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 		if err != nil {
@@ -27,11 +26,12 @@ func InitDB() error {
 		return nil
 	}
 
-	return fmt.Errorf("postgres.json not found and no fallback configured: %w", err)
+	return fmt.Errorf("unsupported database type: %s", cfg.Database.Type)
 }
 
 func AutoMigrate() error {
 	return DB.AutoMigrate(
 		&Message{},
+		&User{},
 	)
 }

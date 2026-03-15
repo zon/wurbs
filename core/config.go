@@ -23,6 +23,9 @@ type ServerConfig struct {
 
 type DatabaseConfig struct {
 	Type string `yaml:"type"`
+	Port int    `yaml:"port"`
+	Name string `yaml:"name"`
+	Host string `yaml:"host"`
 }
 
 type NATSConfig struct {

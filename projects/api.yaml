@@ -8,7 +8,7 @@ requirements:
       - The rest service exposes a REST JSON API
       - Record changes publish matching NATS subject messages
       - The service accepts a --test flag that enables test users and test channels
-    passing: false
+    passing: true
 
   - category: socket service
     description: WebSocket service that relays NATS messages to connected clients
