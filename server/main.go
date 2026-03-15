@@ -27,7 +27,7 @@ func main() {
 	configDir := cli.ConfigDir
 	if configDir == "" {
 		var err error
-		configDir, err = core.GetConfigDir(testMode, workingDir)
+		configDir, err = core.GetConfigDir(workingDir)
 		if err != nil {
 			slog.Error("config dir", "error", err)
 			os.Exit(1)

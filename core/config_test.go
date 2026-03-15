@@ -12,56 +12,47 @@ import (
 func TestGetConfigDir(t *testing.T) {
 	tests := []struct {
 		name             string
-		wurbConfigEnv    string
-		testMode         bool
+		wurbsConfigEnv   string
 		workingDir       string
 		expectedContains string
 		wantErr          bool
 	}{
 		{
-			name:             "uses WURB_CONFIG when set",
-			wurbConfigEnv:    "/custom/config",
-			testMode:         false,
+			name:             "uses WURBS_CONFIG when set",
+			wurbsConfigEnv:   "/custom/config",
+			workingDir:       "/workspace/repo",
 			expectedContains: "/custom/config",
 		},
 		{
-			name:             "defaults to /etc/wurbs when no env and not test mode",
-			wurbConfigEnv:    "",
-			testMode:         false,
-			expectedContains: "/etc/wurbs",
-		},
-		{
-			name:             "finds git root config in test mode",
-			wurbConfigEnv:    "",
-			testMode:         true,
+			name:             "defaults to ./config relative to git root",
+			wurbsConfigEnv:   "",
 			workingDir:       "/workspace/repo/subdir",
 			expectedContains: "/workspace/repo/config",
 		},
 		{
-			name:             "falls back to /etc/wurbs in test mode when no git repo",
-			wurbConfigEnv:    "",
-			testMode:         true,
-			workingDir:       "/tmp/nonexistent",
-			expectedContains: "/etc/wurbs",
+			name:           "returns error when no git repo and no env var",
+			wurbsConfigEnv: "",
+			workingDir:     "/tmp/nonexistent",
+			wantErr:        true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.wurbConfigEnv != "" {
-				os.Setenv("WURB_CONFIG", tt.wurbConfigEnv)
-				defer os.Unsetenv("WURB_CONFIG")
+			if tt.wurbsConfigEnv != "" {
+				os.Setenv("WURBS_CONFIG", tt.wurbsConfigEnv)
+				defer os.Unsetenv("WURBS_CONFIG")
 			} else {
-				os.Unsetenv("WURB_CONFIG")
+				os.Unsetenv("WURBS_CONFIG")
 			}
 
-			dir, err := GetConfigDir(tt.testMode, tt.workingDir)
+			dir, err := GetConfigDir(tt.workingDir)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
 			}
 			require.NoError(t, err)
-			assert.Contains(t, dir, tt.expectedContains)
+			assert.Equal(t, tt.expectedContains, dir)
 		})
 	}
 }

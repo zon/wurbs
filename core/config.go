@@ -51,22 +51,17 @@ type OIDCSecrets struct {
 	ClientSecret string `yaml:"client_secret"`
 }
 
-func GetConfigDir(testMode bool, workingDir string) (string, error) {
-	if wurbConfig := os.Getenv("WURB_CONFIG"); wurbConfig != "" {
-		return wurbConfig, nil
+func GetConfigDir(workingDir string) (string, error) {
+	if wurbsConfig := os.Getenv("WURBS_CONFIG"); wurbsConfig != "" {
+		return wurbsConfig, nil
 	}
 
-	if testMode {
-		gitRoot, err := FindGitRoot(workingDir)
-		if err == nil {
-			configPath := filepath.Join(gitRoot, "config")
-			if _, err := os.Stat(configPath); err == nil {
-				return configPath, nil
-			}
-		}
+	gitRoot, err := FindGitRoot(workingDir)
+	if err != nil {
+		return "", err
 	}
 
-	return defaultConfigDir, nil
+	return filepath.Join(gitRoot, "config"), nil
 }
 
 func FindGitRoot(startDir string) (string, error) {
