@@ -1,10 +1,14 @@
 package migrate
 
-import "gorm.io/gorm"
+import (
+	"github.com/zon/chat/core"
+	"gorm.io/gorm"
+)
 
 // RunMigrations applies all pending GORM AutoMigrate migrations.
 func RunMigrations(db *gorm.DB) error {
 	return db.AutoMigrate(
-		&Message{},
+		&core.Message{},
+		&core.User{},
 	)
 }
