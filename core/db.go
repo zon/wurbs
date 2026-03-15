@@ -12,6 +12,10 @@ const sqliteFile = defaultDatabase + ".db"
 
 var DB *gorm.DB
 
+func SetDB(db *gorm.DB) {
+	DB = db
+}
+
 func InitDB(cfg *Config, secrets *Secrets) error {
 	if cfg.Database.Type == "postgres" {
 		dsn := fmt.Sprintf(

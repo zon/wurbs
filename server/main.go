@@ -3,6 +3,7 @@ package main
 import (
 	"log/slog"
 	"os"
+	"path/filepath"
 
 	"github.com/alecthomas/kong"
 	"github.com/gofiber/fiber/v2"
@@ -40,11 +41,19 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = core.InitDB(cfg, secrets)
+	postgresSecretPath := filepath.Join(configDir, "postgres.json")
+	secret, err := core.ReadSecret(postgresSecretPath)
+	if err != nil {
+		slog.Error("read postgres secret", "error", err)
+		os.Exit(1)
+	}
+
+	db, err := core.OpenDB(secret)
 	if err != nil {
 		slog.Error("db", "error", err)
 		os.Exit(1)
 	}
+	core.SetDB(db)
 
 	err = core.AutoMigrate()
 	if err != nil {
