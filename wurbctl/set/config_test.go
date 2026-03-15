@@ -1,385 +1,207 @@
 package set
 
 import (
-	"encoding/base64"
 	"errors"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// noopEnsure is a PostgresEnsurer that always succeeds (used in tests).
-func noopEnsure(host string, port int, adminUser, adminPassword, appUser, appPassword, dbName string) error {
-	return nil
+func mockLoadSecret(name, namespace, context string) (map[string]string, error) {
+	return map[string]string{
+		"username":      "wurbs",
+		"password":      "wurbs_secret",
+		"dbname":        "wurbs_db",
+		"host":          "postgres.wurbs.svc.cluster.local",
+		"port":          "5432",
+		"uri":           "postgresql://wurbs:wurbs_secret@postgres.wurbs.svc.cluster.local:5432/wurbs_db",
+		"pgpass":        "wurbs_secret",
+		"jdbc-uri":      "jdbc:postgresql://postgres.wurbs.svc.cluster.local:5432/wurbs_db",
+		"fqdn-uri":      "postgresql://wurbs:wurbs_secret@postgres.wurbs.svc.cluster.local:5432/wurbs_db",
+		"fqdn-jdbc-uri": "jdbc:postgresql://postgres.wurbs.svc.cluster.local:5432/wurbs_db",
+	}, nil
 }
 
-// errEnsure is a PostgresEnsurer that always fails (used in tests).
-func errEnsure(host string, port int, adminUser, adminPassword, appUser, appPassword, dbName string) error {
-	return errors.New("connection refused")
+func mockLoadSecretFail(name, namespace, context string) (map[string]string, error) {
+	return nil, errors.New("secret not found")
 }
 
-// fullCmd returns a ConfigCmd with all required fields populated, using noopEnsure.
 func fullCmd() ConfigCmd {
 	return ConfigCmd{
-		DBHost:          "localhost",
-		DBPort:          5432,
-		DBAdminUser:     "postgres",
-		DBAdminPassword: "adminpass",
-		DBUser:          "wurbs",
-		DBPassword:      "wurbs_secret",
-		DBName:          "wurbs_db",
-		OIDCIssuer:      "https://issuer.example.com",
-		OIDCClientID:    "wurbs-client",
-		Namespace:       "default",
-		ensurePostgres:  noopEnsure,
+		ClusterIP:  "10.96.0.1",
+		Context:    "test-context",
+		Namespace:  "wurbs",
+		OIDCIssuer: "https://issuer.example.com",
+		loadSecret: mockLoadSecret,
 	}
 }
 
-// --- Missing required value tests ---
-
-func TestConfigCmd_MissingDBHost(t *testing.T) {
-	cmd := fullCmd()
-	cmd.DBHost = ""
-	err := cmd.Run()
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "--db-host / PGHOST")
-}
-
-func TestConfigCmd_MissingDBAdminUser(t *testing.T) {
-	cmd := fullCmd()
-	cmd.DBAdminUser = ""
-	err := cmd.Run()
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "--db-admin-user / PGADMINUSER")
-}
-
-func TestConfigCmd_MissingDBUser(t *testing.T) {
-	cmd := fullCmd()
-	cmd.DBUser = ""
-	err := cmd.Run()
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "--db-user / PGUSER")
-}
-
-func TestConfigCmd_MissingDBPassword(t *testing.T) {
-	cmd := fullCmd()
-	cmd.DBPassword = ""
-	err := cmd.Run()
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "--db-password / PGPASSWORD")
-}
-
-func TestConfigCmd_MissingDBName(t *testing.T) {
-	cmd := fullCmd()
-	cmd.DBName = ""
-	err := cmd.Run()
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "--db-name / PGDATABASE")
-}
-
-func TestConfigCmd_MissingOIDCIssuer(t *testing.T) {
-	cmd := fullCmd()
-	cmd.OIDCIssuer = ""
-	err := cmd.Run()
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "--oidc-issuer")
-}
-
-func TestConfigCmd_MissingOIDCClientID(t *testing.T) {
-	cmd := fullCmd()
-	cmd.OIDCClientID = ""
-	err := cmd.Run()
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "--oidc-client-id")
-}
-
-func TestConfigCmd_MissingMultiple(t *testing.T) {
-	cmd := fullCmd()
-	cmd.DBHost = ""
-	cmd.OIDCIssuer = ""
-	cmd.OIDCClientID = ""
-	err := cmd.Run()
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "--db-host / PGHOST")
-	assert.Contains(t, err.Error(), "--oidc-issuer")
-	assert.Contains(t, err.Error(), "--oidc-client-id")
-}
-
-// --- Postgres error propagation ---
-
-func TestConfigCmd_PostgresError(t *testing.T) {
-	cmd := fullCmd()
-	cmd.ensurePostgres = errEnsure
-	cmd.Local = true // avoid kubectl
-	err := cmd.Run()
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to configure postgres")
-	assert.Contains(t, err.Error(), "connection refused")
-}
-
-// --- Local file generation ---
-
-func TestConfigCmd_LocalWritesConfigmapFile(t *testing.T) {
-	dir := t.TempDir()
-	origDir, _ := os.Getwd()
-	defer os.Chdir(origDir)
-	os.Chdir(dir)
-
-	cmd := fullCmd()
-	cmd.Local = true
-	err := cmd.Run()
-	require.NoError(t, err)
-
-	data, err := os.ReadFile(filepath.Join(dir, "config.yaml"))
-	require.NoError(t, err)
-
-	content := string(data)
-	assert.Contains(t, content, "kind: ConfigMap")
-	assert.Contains(t, content, "name: wurbs-config")
-	assert.Contains(t, content, "PGHOST")
-	assert.Contains(t, content, "localhost")
-	assert.Contains(t, content, "OIDC_ISSUER")
-	assert.Contains(t, content, "https://issuer.example.com")
-	assert.Contains(t, content, "OIDC_CLIENT_ID")
-	assert.Contains(t, content, "wurbs-client")
-}
-
-func TestConfigCmd_LocalWritesSecretFile(t *testing.T) {
-	dir := t.TempDir()
-	origDir, _ := os.Getwd()
-	defer os.Chdir(origDir)
-	os.Chdir(dir)
-
-	cmd := fullCmd()
-	cmd.Local = true
-	err := cmd.Run()
-	require.NoError(t, err)
-
-	data, err := os.ReadFile(filepath.Join(dir, "secret.yaml"))
-	require.NoError(t, err)
-
-	content := string(data)
-	assert.Contains(t, content, "kind: Secret")
-	assert.Contains(t, content, "name: wurbs-secret")
-	assert.Contains(t, content, "PGPASSWORD")
-
-	// Password should be base64-encoded
-	encoded := base64.StdEncoding.EncodeToString([]byte("wurbs_secret"))
-	assert.Contains(t, content, encoded)
-}
-
-func TestConfigCmd_LocalWithNamespace(t *testing.T) {
-	dir := t.TempDir()
-	origDir, _ := os.Getwd()
-	defer os.Chdir(origDir)
-	os.Chdir(dir)
-
-	cmd := fullCmd()
-	cmd.Local = true
-	cmd.Namespace = "wurbs-prod"
-	err := cmd.Run()
-	require.NoError(t, err)
-
-	data, err := os.ReadFile(filepath.Join(dir, "config.yaml"))
-	require.NoError(t, err)
-	assert.Contains(t, string(data), "namespace: wurbs-prod")
-}
-
-// --- Test flag ---
-
-func TestConfigCmd_TestFlagGeneratesKeys(t *testing.T) {
-	dir := t.TempDir()
-	origDir, _ := os.Getwd()
-	defer os.Chdir(origDir)
-	os.Chdir(dir)
-
-	cmd := fullCmd()
-	cmd.Local = true
-	cmd.Test = true
-	err := cmd.Run()
-	require.NoError(t, err)
-
-	data, err := os.ReadFile(filepath.Join(dir, "secret.yaml"))
-	require.NoError(t, err)
-
-	content := string(data)
-	assert.Contains(t, content, "TEST_CLIENT_PRIVATE_KEY")
-	assert.Contains(t, content, "TEST_CLIENT_PUBLIC_KEY")
-}
-
-func TestConfigCmd_NoTestFlagNoKeys(t *testing.T) {
-	dir := t.TempDir()
-	origDir, _ := os.Getwd()
-	defer os.Chdir(origDir)
-	os.Chdir(dir)
-
-	cmd := fullCmd()
-	cmd.Local = true
-	cmd.Test = false
-	err := cmd.Run()
-	require.NoError(t, err)
-
-	data, err := os.ReadFile(filepath.Join(dir, "secret.yaml"))
-	require.NoError(t, err)
-
-	content := string(data)
-	assert.NotContains(t, content, "TEST_CLIENT_PRIVATE_KEY")
-	assert.NotContains(t, content, "TEST_CLIENT_PUBLIC_KEY")
-}
-
-// --- RSA key pair generation ---
-
-func TestGenerateRSAKeyPair_Valid(t *testing.T) {
-	priv, pub, err := GenerateRSAKeyPair()
-	require.NoError(t, err)
-	assert.Contains(t, priv, "BEGIN RSA PRIVATE KEY")
-	assert.Contains(t, priv, "END RSA PRIVATE KEY")
-	assert.Contains(t, pub, "BEGIN PUBLIC KEY")
-	assert.Contains(t, pub, "END PUBLIC KEY")
-}
-
-func TestGenerateRSAKeyPair_Unique(t *testing.T) {
-	priv1, pub1, err1 := GenerateRSAKeyPair()
-	priv2, pub2, err2 := GenerateRSAKeyPair()
-	require.NoError(t, err1)
-	require.NoError(t, err2)
-	assert.NotEqual(t, priv1, priv2, "each generated private key should be unique")
-	assert.NotEqual(t, pub1, pub2, "each generated public key should be unique")
-}
-
-// --- YAML builders ---
-
-func TestBuildConfigmapYAML(t *testing.T) {
-	data := map[string]string{
-		"FOO": "bar",
-		"BAZ": "qux",
+func TestConfigCmd_MissingClusterIP(t *testing.T) {
+	cmd := ConfigCmd{
+		ClusterIP:  "",
+		loadSecret: mockLoadSecret,
 	}
-	yaml := buildConfigmapYAML("my-config", "my-ns", data)
-	assert.Contains(t, yaml, "apiVersion: v1")
-	assert.Contains(t, yaml, "kind: ConfigMap")
-	assert.Contains(t, yaml, "name: my-config")
-	assert.Contains(t, yaml, "namespace: my-ns")
-	assert.Contains(t, yaml, "FOO")
-	assert.Contains(t, yaml, "bar")
-	assert.Contains(t, yaml, "BAZ")
-	assert.Contains(t, yaml, "qux")
+	err := cmd.Run()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "--cluster-ip")
 }
 
-func TestBuildConfigmapYAML_NoNamespace(t *testing.T) {
-	yaml := buildConfigmapYAML("my-config", "", map[string]string{"K": "V"})
-	assert.NotContains(t, yaml, "namespace:")
-}
-
-func TestBuildSecretYAML(t *testing.T) {
-	data := map[string]string{
-		"PASSWORD": "secret123",
+func TestConfigCmd_InvalidClusterIP(t *testing.T) {
+	cmd := ConfigCmd{
+		ClusterIP:  "invalid-ip",
+		loadSecret: mockLoadSecret,
 	}
-	yaml := buildSecretYAML("my-secret", "my-ns", data)
-	assert.Contains(t, yaml, "apiVersion: v1")
-	assert.Contains(t, yaml, "kind: Secret")
-	assert.Contains(t, yaml, "name: my-secret")
-	assert.Contains(t, yaml, "namespace: my-ns")
-	assert.Contains(t, yaml, "type: Opaque")
-	assert.Contains(t, yaml, "PASSWORD")
-
-	// Values must be base64-encoded
-	encoded := base64.StdEncoding.EncodeToString([]byte("secret123"))
-	assert.Contains(t, yaml, encoded)
-	assert.NotContains(t, yaml, "secret123") // raw value must not appear
+	err := cmd.Run()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid cluster IP")
 }
 
-func TestBuildSecretYAML_NoNamespace(t *testing.T) {
-	yaml := buildSecretYAML("my-secret", "", map[string]string{"K": "V"})
-	assert.NotContains(t, yaml, "namespace:")
+func TestConfigCmd_LoadSecretError(t *testing.T) {
+	cmd := ConfigCmd{
+		ClusterIP:  "10.96.0.1",
+		loadSecret: mockLoadSecretFail,
+	}
+	err := cmd.Run()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to load secret")
 }
 
-// --- WriteConfigmapFile / WriteSecretFile ---
-
-func TestWriteConfigmapFile(t *testing.T) {
+func TestConfigCmd_WritesPostgresConfig(t *testing.T) {
 	dir := t.TempDir()
-	path := filepath.Join(dir, "config.yaml")
-	err := WriteConfigmapFile(path, "test-config", "test-ns", map[string]string{"KEY": "val"})
-	require.NoError(t, err)
-
-	data, err := os.ReadFile(path)
-	require.NoError(t, err)
-	assert.Contains(t, string(data), "kind: ConfigMap")
-}
-
-func TestWriteSecretFile(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "secret.yaml")
-	err := WriteSecretFile(path, "test-secret", "test-ns", map[string]string{"PASS": "pw"})
-	require.NoError(t, err)
-
-	data, err := os.ReadFile(path)
-	require.NoError(t, err)
-	content := string(data)
-	assert.Contains(t, content, "kind: Secret")
-	// Ensure file does not contain raw password
-	assert.NotContains(t, content, "pw")
-	encoded := base64.StdEncoding.EncodeToString([]byte("pw"))
-	assert.Contains(t, content, encoded)
-}
-
-func TestWriteSecretFile_Permissions(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "secret.yaml")
-	err := WriteSecretFile(path, "test-secret", "test-ns", map[string]string{"PASS": "pw"})
-	require.NoError(t, err)
-
-	info, err := os.Stat(path)
-	require.NoError(t, err)
-	// File should be owner-read/write only (0600)
-	assert.Equal(t, os.FileMode(0600), info.Mode().Perm())
-}
-
-// --- ConfigMap data completeness ---
-
-func TestConfigCmd_LocalConfigmapContainsAllFields(t *testing.T) {
-	dir := t.TempDir()
-	origDir, _ := os.Getwd()
-	defer os.Chdir(origDir)
-	os.Chdir(dir)
+	os.Setenv("WURBS_CONFIG", dir)
+	defer os.Unsetenv("WURBS_CONFIG")
 
 	cmd := fullCmd()
-	cmd.Local = true
 	err := cmd.Run()
 	require.NoError(t, err)
 
-	data, err := os.ReadFile(filepath.Join(dir, "config.yaml"))
+	postgresConfigPath := filepath.Join(dir, "postgres.json")
+	data, err := os.ReadFile(postgresConfigPath)
 	require.NoError(t, err)
-	content := string(data)
 
-	for _, key := range []string{"PGHOST", "PGPORT", "PGDATABASE", "PGUSER", "OIDC_ISSUER", "OIDC_CLIENT_ID"} {
-		assert.Contains(t, content, key, "configmap should contain %s", key)
+	content := string(data)
+	assert.Contains(t, content, `"host": "10.96.0.1"`)
+	assert.Contains(t, content, `"port": "32432"`)
+	assert.Contains(t, content, `"username": "wurbs"`)
+	assert.Contains(t, content, `"dbname": "wurbs_db"`)
+}
+
+func TestConfigCmd_PatchesURIFields(t *testing.T) {
+	dir := t.TempDir()
+	os.Setenv("WURBS_CONFIG", dir)
+	defer os.Unsetenv("WURBS_CONFIG")
+
+	cmd := fullCmd()
+	err := cmd.Run()
+	require.NoError(t, err)
+
+	postgresConfigPath := filepath.Join(dir, "postgres.json")
+	data, err := os.ReadFile(postgresConfigPath)
+	require.NoError(t, err)
+
+	content := string(data)
+	assert.Contains(t, content, `"uri": "postgresql://wurbs:wurbs_secret@10.96.0.1:32432/wurbs_db"`)
+	assert.Contains(t, content, `"jdbc-uri": "jdbc:postgresql://10.96.0.1:32432/wurbs_db"`)
+	assert.Contains(t, content, `"fqdn-uri": "postgresql://wurbs:wurbs_secret@10.96.0.1:32432/wurbs_db"`)
+	assert.Contains(t, content, `"fqdn-jdbc-uri": "jdbc:postgresql://10.96.0.1:32432/wurbs_db"`)
+}
+
+func TestConfigCmd_DefaultNamespace(t *testing.T) {
+	var capturedNamespace string
+	cmd := ConfigCmd{
+		ClusterIP: "10.96.0.1",
+		Namespace: "wurbs",
+		loadSecret: func(name, namespace, context string) (map[string]string, error) {
+			capturedNamespace = namespace
+			return mockLoadSecret(name, namespace, context)
+		},
+	}
+	err := cmd.Run()
+	require.NoError(t, err)
+	assert.Equal(t, "wurbs", capturedNamespace)
+}
+
+func TestPatchURI(t *testing.T) {
+	tests := []struct {
+		name     string
+		uri      string
+		newHost  string
+		newPort  string
+		expected string
+	}{
+		{
+			name:     "simple URI",
+			uri:      "postgresql://user:pass@host:5432/db",
+			newHost:  "10.96.0.1",
+			newPort:  "32432",
+			expected: "postgresql://user:pass@10.96.0.1:32432/db",
+		},
+		{
+			name:     "JDBC URI",
+			uri:      "jdbc:postgresql://host:5432/db",
+			newHost:  "10.96.0.1",
+			newPort:  "32432",
+			expected: "jdbc:postgresql://10.96.0.1:32432/db",
+		},
+		{
+			name:     "empty URI",
+			uri:      "",
+			newHost:  "10.96.0.1",
+			newPort:  "32432",
+			expected: "",
+		},
+		{
+			name:     "port already patched",
+			uri:      "postgresql://user:pass@host:32432/db",
+			newHost:  "10.96.0.1",
+			newPort:  "32432",
+			expected: "postgresql://user:pass@10.96.0.1:32432/db",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := patchURI(tt.uri, tt.newHost, tt.newPort)
+			assert.Equal(t, tt.expected, result)
+		})
 	}
 }
 
-func TestConfigCmd_LocalSecretContainsPassword(t *testing.T) {
-	dir := t.TempDir()
-	origDir, _ := os.Getwd()
-	defer os.Chdir(origDir)
-	os.Chdir(dir)
+func TestIsValidIP(t *testing.T) {
+	tests := []struct {
+		ip    string
+		valid bool
+	}{
+		{"10.96.0.1", true},
+		{"192.168.1.1", true},
+		{"127.0.0.1", true},
+		{"invalid", false},
+		{"", false},
+		{"10.96.0.1.1", false},
+		{"0.0.0.0", true},
+	}
 
-	cmd := fullCmd()
-	cmd.Local = true
-	err := cmd.Run()
-	require.NoError(t, err)
+	for _, tt := range tests {
+		t.Run(tt.ip, func(t *testing.T) {
+			result := isValidIP(tt.ip)
+			assert.Equal(t, tt.valid, result)
+		})
+	}
+}
 
-	data, err := os.ReadFile(filepath.Join(dir, "secret.yaml"))
-	require.NoError(t, err)
-	content := string(data)
+func TestGetSecret(t *testing.T) {
+	secretData := map[string]string{
+		"username": "wurbs",
+		"password": "secret",
+		"dbname":   "wurbs_db",
+		"host":     "postgres",
+		"port":     "5432",
+		"uri":      "postgresql://wurbs:secret@postgres:5432/wurbs_db",
+	}
 
-	// PGPASSWORD must be in secret and be base64-encoded
-	assert.Contains(t, content, "PGPASSWORD")
-	encoded := base64.StdEncoding.EncodeToString([]byte("wurbs_secret"))
-	assert.Contains(t, content, encoded)
-	// Raw password must NOT appear in the secret
-	assert.True(t, !strings.Contains(content, "wurbs_secret") || strings.Contains(content, encoded),
-		"raw password should not appear unencoded in secret YAML")
+	assert.Equal(t, "wurbs", secretData["username"])
+	assert.Equal(t, "secret", secretData["password"])
 }

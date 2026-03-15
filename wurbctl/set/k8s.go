@@ -2,6 +2,7 @@ package set
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -88,4 +89,49 @@ func buildSecretYAML(name, namespace string, data map[string]string) string {
 		sb.WriteString(fmt.Sprintf("  %s: %s\n", k, encoded))
 	}
 	return sb.String()
+}
+
+// GetSecret retrieves a Kubernetes Secret and returns its data as a map.
+func GetSecret(name, namespace, context string) (map[string]string, error) {
+	args := []string{"get", "secret", name, "-o", "json"}
+	if namespace != "" {
+		args = append(args, "--namespace", namespace)
+	}
+	if context != "" {
+		args = append(args, "--context", context)
+	}
+
+	cmd := exec.Command("kubectl", args...)
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("kubectl get secret failed: %w", err)
+	}
+
+	data, err := parseK8sSecretJSON(output)
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
+}
+
+// parseK8sSecretJSON parses the JSON output of kubectl get secret and returns decoded data.
+func parseK8sSecretJSON(data []byte) (map[string]string, error) {
+	var secret struct {
+		Data map[string]string `json:"data"`
+	}
+	if err := json.Unmarshal(data, &secret); err != nil {
+		return nil, fmt.Errorf("failed to parse secret JSON: %w", err)
+	}
+
+	result := make(map[string]string)
+	for k, v := range secret.Data {
+		decoded, err := base64.StdEncoding.DecodeString(v)
+		if err != nil {
+			continue
+		}
+		result[k] = string(decoded)
+	}
+
+	return result, nil
 }

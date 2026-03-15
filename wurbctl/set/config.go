@@ -2,121 +2,124 @@ package set
 
 import (
 	"fmt"
+	"net"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/zon/chat/core/config"
+	"github.com/zon/chat/core/pg"
 )
 
-// PostgresEnsurer is a function that creates or updates a postgres user and database.
-// It is a field on ConfigCmd so tests can inject a mock.
-type PostgresEnsurer func(host string, port int, adminUser, adminPassword, appUser, appPassword, dbName string) error
+const (
+	wurbsNamespace    = "wurbs"
+	postgresSecret    = "wurbs-postgres-app"
+	localPostgresPort = "32432"
+)
 
-// ConfigCmd implements `wurbctl set config`.
-type ConfigCmd struct {
-	// Postgres admin credentials (to create the app user and database)
-	DBHost          string `help:"PostgreSQL host." env:"PGHOST" required:""`
-	DBPort          int    `help:"PostgreSQL port." env:"PGPORT" default:"5432"`
-	DBAdminUser     string `help:"PostgreSQL admin user." name:"db-admin-user" env:"PGADMINUSER" required:""`
-	DBAdminPassword string `help:"PostgreSQL admin password." name:"db-admin-password" env:"PGADMINPASSWORD"`
+type SecretLoader func(name, namespace, context string) (map[string]string, error)
 
-	// App database credentials
-	DBUser     string `help:"PostgreSQL app user to create." name:"db-user" env:"PGUSER" required:""`
-	DBPassword string `help:"PostgreSQL app user password." name:"db-password" env:"PGPASSWORD" required:""`
-	DBName     string `help:"PostgreSQL database name to create." name:"db-name" env:"PGDATABASE" required:""`
-
-	// OIDC settings
-	OIDCIssuer   string `help:"OIDC issuer URL." name:"oidc-issuer" required:""`
-	OIDCClientID string `help:"OIDC client ID." name:"oidc-client-id" required:""`
-
-	// Optional flags
-	Test      bool   `help:"Create or update test user client credential flow keys."`
-	Local     bool   `help:"Create configmap and secret files for local development instead of applying to k8s."`
-	Context   string `help:"Kubernetes context to use." name:"context"`
-	Namespace string `help:"Kubernetes namespace to use." name:"namespace" default:"default"`
-
-	// ensurePostgres is injectable for testing; defaults to EnsurePostgresUserAndDB.
-	ensurePostgres PostgresEnsurer
+func DefaultLoadSecret(name, namespace, context string) (map[string]string, error) {
+	return GetSecret(name, namespace, context)
 }
 
-// Run executes the set config command.
+type ConfigCmd struct {
+	ClusterIP  string `help:"Kubernetes cluster IP for local access." name:"cluster-ip" required:""`
+	Context    string `help:"Kubernetes context to use." name:"context"`
+	Namespace  string `help:"Kubernetes namespace to use." name:"namespace" default:"wurbs"`
+	Local      bool   `help:"Create configmap and secret files for local development instead of applying to k8s."`
+	OIDCIssuer string `help:"OIDC issuer URL." name:"oidc-issuer" required:""`
+
+	loadSecret SecretLoader
+}
+
 func (c *ConfigCmd) Run() error {
-	// Validate required fields
-	var missing []string
-	if c.DBHost == "" {
-		missing = append(missing, "--db-host / PGHOST")
-	}
-	if c.DBAdminUser == "" {
-		missing = append(missing, "--db-admin-user / PGADMINUSER")
-	}
-	if c.DBUser == "" {
-		missing = append(missing, "--db-user / PGUSER")
-	}
-	if c.DBPassword == "" {
-		missing = append(missing, "--db-password / PGPASSWORD")
-	}
-	if c.DBName == "" {
-		missing = append(missing, "--db-name / PGDATABASE")
-	}
-	if c.OIDCIssuer == "" {
-		missing = append(missing, "--oidc-issuer")
-	}
-	if c.OIDCClientID == "" {
-		missing = append(missing, "--oidc-client-id")
-	}
-	if len(missing) > 0 {
-		return fmt.Errorf("missing required values: %v", missing)
+	if c.ClusterIP == "" {
+		return fmt.Errorf("missing required value: --cluster-ip")
 	}
 
-	// Resolve postgres ensurer
-	ensurePostgres := c.ensurePostgres
-	if ensurePostgres == nil {
-		ensurePostgres = EnsurePostgresUserAndDB
+	if !isValidIP(c.ClusterIP) {
+		return fmt.Errorf("invalid cluster IP: %s", c.ClusterIP)
 	}
 
-	// Step 1: Create or update postgres user and database
-	if err := ensurePostgres(c.DBHost, c.DBPort, c.DBAdminUser, c.DBAdminPassword, c.DBUser, c.DBPassword, c.DBName); err != nil {
-		return fmt.Errorf("failed to configure postgres: %w", err)
+	loadSecret := c.loadSecret
+	if loadSecret == nil {
+		loadSecret = DefaultLoadSecret
 	}
 
-	// Step 2: Build configmap and secret data
-	configData := map[string]string{
-		"PGHOST":         c.DBHost,
-		"PGPORT":         fmt.Sprintf("%d", c.DBPort),
-		"PGDATABASE":     c.DBName,
-		"PGUSER":         c.DBUser,
-		"OIDC_ISSUER":    c.OIDCIssuer,
-		"OIDC_CLIENT_ID": c.OIDCClientID,
+	secretData, err := loadSecret(postgresSecret, c.Namespace, c.Context)
+	if err != nil {
+		return fmt.Errorf("failed to load secret: %w", err)
 	}
 
-	secretData := map[string]string{
-		"PGPASSWORD": c.DBPassword,
+	secret := &pg.Secret{
+		Username:    secretData["username"],
+		Password:    secretData["password"],
+		DBName:      secretData["dbname"],
+		Host:        c.ClusterIP,
+		Port:        localPostgresPort,
+		URI:         patchURI(secretData["uri"], c.ClusterIP, localPostgresPort),
+		PGPass:      secretData["pgpass"],
+		JDBCURI:     patchURI(secretData["jdbc-uri"], c.ClusterIP, localPostgresPort),
+		FQDNURI:     patchURI(secretData["fqdn-uri"], c.ClusterIP, localPostgresPort),
+		FQDNJDBCURI: patchURI(secretData["fqdn-jdbc-uri"], c.ClusterIP, localPostgresPort),
 	}
 
-	// Step 3: Optionally generate test user client credential flow keys
-	if c.Test {
-		privateKey, publicKey, err := GenerateRSAKeyPair()
-		if err != nil {
-			return fmt.Errorf("failed to generate test keys: %w", err)
-		}
-		secretData["TEST_CLIENT_PRIVATE_KEY"] = privateKey
-		secretData["TEST_CLIENT_PUBLIC_KEY"] = publicKey
+	configDir, err := config.ConfigDir()
+	if err != nil {
+		return fmt.Errorf("failed to get config directory: %w", err)
 	}
 
-	// Step 4: Apply configmap and secret
-	if c.Local {
-		if err := WriteConfigmapFile("config.yaml", "wurbs-config", c.Namespace, configData); err != nil {
-			return fmt.Errorf("failed to write configmap file: %w", err)
-		}
-		if err := WriteSecretFile("secret.yaml", "wurbs-secret", c.Namespace, secretData); err != nil {
-			return fmt.Errorf("failed to write secret file: %w", err)
-		}
-		fmt.Println("wrote config.yaml and secret.yaml")
-	} else {
-		if err := ApplyConfigmap("wurbs-config", c.Namespace, c.Context, configData); err != nil {
-			return fmt.Errorf("failed to apply configmap: %w", err)
-		}
-		if err := ApplySecret("wurbs-secret", c.Namespace, c.Context, secretData); err != nil {
-			return fmt.Errorf("failed to apply secret: %w", err)
-		}
-		fmt.Println("applied wurbs-config configmap and wurbs-secret secret to kubernetes")
+	if err := os.MkdirAll(configDir, 0700); err != nil {
+		return fmt.Errorf("failed to create config directory: %w", err)
 	}
+
+	postgresConfigPath := filepath.Join(configDir, "postgres.json")
+	if err := secret.Write(postgresConfigPath); err != nil {
+		return fmt.Errorf("failed to write postgres config: %w", err)
+	}
+
+	fmt.Printf("wrote %s\n", postgresConfigPath)
 
 	return nil
+}
+
+func isValidIP(ip string) bool {
+	return net.ParseIP(ip) != nil
+}
+
+func patchURI(uri, newHost, newPort string) string {
+	if uri == "" {
+		return ""
+	}
+
+	parts := strings.Split(uri, "://")
+	if len(parts) < 2 {
+		return uri
+	}
+
+	scheme := parts[0]
+	rest := parts[1]
+
+	atIdx := strings.Index(rest, "@")
+	if atIdx != -1 {
+		userinfo := rest[:atIdx]
+		hostPath := rest[atIdx+1:]
+
+		slashIdx := strings.Index(hostPath, "/")
+		if slashIdx == -1 {
+			slashIdx = len(hostPath)
+		}
+		hostPath = newHost + ":" + newPort + hostPath[slashIdx:]
+
+		return scheme + "://" + userinfo + "@" + hostPath
+	}
+
+	slashIdx := strings.Index(rest, "/")
+	if slashIdx == -1 {
+		slashIdx = len(rest)
+	}
+	rest = newHost + ":" + newPort + rest[slashIdx:]
+
+	return scheme + "://" + rest
 }
