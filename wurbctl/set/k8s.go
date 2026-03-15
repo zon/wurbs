@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/zon/chat/core"
+	"github.com/zon/chat/core/pg"
 )
 
 // ApplyConfigmap creates or updates a Kubernetes ConfigMap using kubectl.
@@ -184,8 +184,8 @@ func GetServiceIP(name, namespace, context string) (string, error) {
 	return svc.ClusterIP, nil
 }
 
-func PatchSecret(secretData map[string]string, newHost string, newPort int) *core.Secret {
-	secret := &core.Secret{
+func PatchSecret(secretData map[string]string, newHost string, newPort int) *pg.Secret {
+	secret := &pg.Secret{
 		Username: secretData["username"],
 		Password: secretData["password"],
 		DBName:   secretData["dbname"],

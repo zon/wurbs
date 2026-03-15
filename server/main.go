@@ -10,6 +10,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/zon/chat/core"
+	"github.com/zon/chat/core/pg"
 )
 
 var cli struct {
@@ -42,13 +43,13 @@ func main() {
 	}
 
 	postgresSecretPath := filepath.Join(configDir, "postgres.json")
-	secret, err := core.ReadSecret(postgresSecretPath)
+	secret, err := pg.ReadSecret(postgresSecretPath)
 	if err != nil {
 		slog.Error("read postgres secret", "error", err)
 		os.Exit(1)
 	}
 
-	db, err := core.OpenDB(secret)
+	db, err := pg.OpenDB(secret)
 	if err != nil {
 		slog.Error("db", "error", err)
 		os.Exit(1)

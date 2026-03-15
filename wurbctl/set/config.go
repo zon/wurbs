@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/zon/chat/core"
+	"github.com/zon/chat/core/pg"
 )
 
 type K8sGetter interface {
@@ -176,7 +176,7 @@ func (c *ConfigCmd) runFromCloudNativePG() error {
 
 	configPath := filepath.Join(dir, "postgres.json")
 	secret := PatchSecret(secretData, host, 32432)
-	if err := core.WriteSecret(configPath, secret); err != nil {
+	if err := pg.WriteSecret(configPath, secret); err != nil {
 		return fmt.Errorf("failed to write postgres.json: %w", err)
 	}
 

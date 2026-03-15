@@ -6,19 +6,19 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/zon/chat/core"
+	"github.com/zon/chat/core/pg"
 )
 
-func writePostgresSecret(t *testing.T, dir string, secret *core.Secret) {
+func writePostgresSecret(t *testing.T, dir string, secret *pg.Secret) {
 	t.Helper()
 	path := filepath.Join(dir, "postgres.json")
-	err := core.WriteSecret(path, secret)
+	err := pg.WriteSecret(path, secret)
 	require.NoError(t, err)
 }
 
 func TestDBCmd_Run_UsesCoreConfig(t *testing.T) {
 	dir := t.TempDir()
-	secret := &core.Secret{
+	secret := &pg.Secret{
 		Username: "user",
 		Password: "pass",
 		DBName:   "testdb",
@@ -48,7 +48,7 @@ func TestDBCmd_Run_MissingPostgresJson(t *testing.T) {
 
 func TestDBCmd_Run_MissingConfigDir(t *testing.T) {
 	dir := t.TempDir()
-	secret := &core.Secret{
+	secret := &pg.Secret{
 		Username: "user",
 		Password: "pass",
 		DBName:   "testdb",

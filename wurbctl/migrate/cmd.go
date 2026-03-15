@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/zon/chat/core"
+	"github.com/zon/chat/core/pg"
 )
 
 // Cmd is the top-level `migrate` command group.
@@ -30,12 +31,12 @@ func (c *DBCmd) Run() error {
 	}
 
 	postgresSecretPath := filepath.Join(configDir, "postgres.json")
-	secret, err := core.ReadSecret(postgresSecretPath)
+	secret, err := pg.ReadSecret(postgresSecretPath)
 	if err != nil {
 		return fmt.Errorf("failed to read postgres secret: %w", err)
 	}
 
-	db, err := core.OpenDB(secret)
+	db, err := pg.OpenDB(secret)
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}

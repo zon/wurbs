@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/zon/chat/core"
+	"github.com/zon/chat/core/pg"
 )
 
 func TestServerUsesCorePg(t *testing.T) {
@@ -37,7 +38,7 @@ func TestServerUsesCorePg(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, tmpDir, configDir)
 
-	secret, err := core.ReadSecret(secretPath)
+	secret, err := pg.ReadSecret(secretPath)
 	require.NoError(t, err)
 	assert.Equal(t, "admin", secret.Username)
 	assert.Equal(t, "localhost", secret.Host)
@@ -59,10 +60,10 @@ func TestServerDbConnectionWithPgSecret(t *testing.T) {
 	err := os.WriteFile(secretPath, []byte(postgresJSON), 0644)
 	require.NoError(t, err)
 
-	secret, err := core.ReadSecret(secretPath)
+	secret, err := pg.ReadSecret(secretPath)
 	require.NoError(t, err)
 
-	_, err = core.OpenDB(secret)
+	_, err = pg.OpenDB(secret)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to connect to PostgreSQL")
 }
