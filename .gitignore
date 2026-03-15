@@ -7,4 +7,6 @@
 /server/token.json
 
 /tmp
+.config
+/config
 .pulumi

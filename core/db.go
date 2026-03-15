@@ -1,22 +1,38 @@
 package core
 
 import (
-	"github.com/zon/gonf"
+	"path/filepath"
+
+	"github.com/zon/chat/core/config"
+	"github.com/zon/chat/core/pg"
+	"gorm.io/gorm"
 )
 
-const defaultDatabase = "chat"
-const sqliteFile = defaultDatabase + ".db"
+var DB *gorm.DB
 
 func InitDB() error {
-	return gonf.InitDB(defaultDatabase, sqliteFile)
-}
-
-func AutoMigrate() error {
-	err := gonf.AutoMigrate()
+	configDir, err := config.ConfigDir()
 	if err != nil {
 		return err
 	}
-	return gonf.DB.AutoMigrate(
+
+	secret := &pg.Secret{}
+	err = secret.Read(filepath.Join(configDir, "postgres.json"))
+	if err != nil {
+		return err
+	}
+
+	db, err := secret.Open()
+	if err != nil {
+		return err
+	}
+
+	DB = db
+	return nil
+}
+
+func AutoMigrate() error {
+	return DB.AutoMigrate(
 		&Message{},
 	)
 }

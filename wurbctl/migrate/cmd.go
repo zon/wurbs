@@ -3,9 +3,10 @@ package migrate
 import (
 	"fmt"
 	"log/slog"
+	"path/filepath"
 
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
+	"github.com/zon/chat/core/config"
+	"github.com/zon/chat/core/pg"
 )
 
 // Cmd is the top-level `migrate` command group.
@@ -18,12 +19,18 @@ type DBCmd struct{}
 
 // Run applies all pending database migrations against the configured Postgres database.
 func (c *DBCmd) Run() error {
-	dsn, err := DSN()
+	configDir, err := config.ConfigDir()
 	if err != nil {
-		return fmt.Errorf("database configuration error: %w", err)
+		return fmt.Errorf("failed to resolve config directory: %w", err)
 	}
 
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	postgresPath := filepath.Join(configDir, "postgres.json")
+	var secret pg.Secret
+	if err := secret.Read(postgresPath); err != nil {
+		return fmt.Errorf("failed to read postgres config: %w", err)
+	}
+
+	db, err := secret.Open()
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
