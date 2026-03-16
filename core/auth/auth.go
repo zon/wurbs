@@ -450,3 +450,27 @@ func fetchJWKSFromIssuer(issuerURL string) (*jose.JSONWebKeySet, error) {
 func decodeJSON(r io.Reader, v any) error {
 	return json.NewDecoder(r).Decode(v)
 }
+
+// EnsureAdminUser creates or updates a user with the given email, ensuring IsAdmin is true.
+func EnsureAdminUser(db *gorm.DB, email string) (*User, error) {
+	user := &User{}
+
+	result := db.Where("email = ?", email).First(user)
+	if result.Error != nil && result.Error != gorm.ErrRecordNotFound {
+		return nil, fmt.Errorf("auth: failed to find user: %w", result.Error)
+	}
+
+	if result.Error == gorm.ErrRecordNotFound {
+		user = &User{Email: email, IsAdmin: true}
+		if err := db.Create(user).Error; err != nil {
+			return nil, fmt.Errorf("auth: failed to create user: %w", err)
+		}
+	} else if !user.IsAdmin {
+		if err := db.Model(user).Update("is_admin", true).Error; err != nil {
+			return nil, fmt.Errorf("auth: failed to update admin flag: %w", err)
+		}
+		user.IsAdmin = true
+	}
+
+	return user, nil
+}

@@ -753,6 +753,48 @@ func TestOIDCMiddleware_MissingIssuerURL(t *testing.T) {
 	assert.Contains(t, err.Error(), "issuer_url not configured")
 }
 
+// --- EnsureAdminUser ---
+
+func TestEnsureAdminUser_CreatesUser(t *testing.T) {
+	db := setupTestDB(t)
+
+	user, err := EnsureAdminUser(db, "new@example.com")
+	require.NoError(t, err)
+	assert.Equal(t, "new@example.com", user.Email)
+	assert.True(t, user.IsAdmin)
+
+	var found User
+	require.NoError(t, db.Where("email = ?", "new@example.com").First(&found).Error)
+	assert.True(t, found.IsAdmin)
+}
+
+func TestEnsureAdminUser_UpdatesExistingNonAdmin(t *testing.T) {
+	db := setupTestDB(t)
+
+	require.NoError(t, db.Create(&User{Email: "user@example.com", IsAdmin: false}).Error)
+
+	user, err := EnsureAdminUser(db, "user@example.com")
+	require.NoError(t, err)
+	assert.True(t, user.IsAdmin)
+
+	var found User
+	require.NoError(t, db.Where("email = ?", "user@example.com").First(&found).Error)
+	assert.True(t, found.IsAdmin)
+}
+
+func TestEnsureAdminUser_IdempotentForExistingAdmin(t *testing.T) {
+	db := setupTestDB(t)
+
+	user1, err := EnsureAdminUser(db, "admin@example.com")
+	require.NoError(t, err)
+
+	user2, err := EnsureAdminUser(db, "admin@example.com")
+	require.NoError(t, err)
+
+	assert.Equal(t, user1.ID, user2.ID)
+	assert.True(t, user2.IsAdmin)
+}
+
 // --- User model tests ---
 
 func TestUserModel_Fields(t *testing.T) {
