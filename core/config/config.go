@@ -10,13 +10,10 @@ import (
 const (
 	envConfigDir     = "WURB_CONFIG"
 	defaultConfigDir = "/etc/wurbs"
-	configFile       = "config.yaml"
-	secretFile       = "secret.yaml"
 )
 
 var testMode bool
-var cachedDir string
-var dirCached bool
+var cachedTree *ConfigTree
 
 // SetTestMode enables or disables test mode.
 // In test mode, if WURB_CONFIG is not set, the module walks up from the
@@ -26,8 +23,7 @@ func SetTestMode(enabled bool) {
 }
 
 func resetCache() {
-	cachedDir = ""
-	dirCached = false
+	cachedTree = nil
 }
 
 // ResetCache clears the cached configuration directory.
@@ -36,54 +32,68 @@ func ResetCache() {
 	resetCache()
 }
 
-// Dir returns the configuration directory path.
+// ConfigTree holds absolute paths to the config directory and each config file within it.
+type ConfigTree struct {
+	Parent         string
+	Config         string
+	Postgres  string
+	NATSDevToken string
+}
+
+func newConfigTree(parent string) *ConfigTree {
+	return &ConfigTree{
+		Parent:         parent,
+		Config:         filepath.Join(parent, "config.yaml"),
+		Postgres:  filepath.Join(parent, "postgres.json"),
+		NATSDevToken: filepath.Join(parent, "nats-token"),
+	}
+}
+
+// Dir returns a ConfigTree rooted at the configuration directory.
 // Resolution order:
 //  1. WURB_CONFIG environment variable
 //  2. In test mode: <git-repo-root>/config (if it exists)
 //  3. /etc/wurbs
 //
 // The result is cached after the first call.
-func Dir() (string, error) {
-	if dirCached {
-		return cachedDir, nil
+func Dir() (*ConfigTree, error) {
+	if cachedTree != nil {
+		return cachedTree, nil
 	}
 
 	if dir := os.Getenv(envConfigDir); dir != "" {
-		cachedDir = dir
-		dirCached = true
-		return dir, nil
+		cachedTree = newConfigTree(dir)
+		return cachedTree, nil
 	}
 
 	if testMode {
 		dir, err := findRepoConfigDir()
 		if err == nil {
-			cachedDir = dir
-			dirCached = true
-			return dir, nil
+			cachedTree = newConfigTree(dir)
+			return cachedTree, nil
 		}
 	}
 
-	cachedDir = defaultConfigDir
-	dirCached = true
-	return defaultConfigDir, nil
+	cachedTree = newConfigTree(defaultConfigDir)
+	return cachedTree, nil
 }
 
 // Load reads config.yaml from the config directory and unmarshals it into v.
 func Load(v any) error {
-	dir, err := Dir()
+	tree, err := Dir()
 	if err != nil {
 		return err
 	}
-	return loadYAML(filepath.Join(dir, configFile), v)
+	return loadYAML(tree.Config, v)
 }
 
 // LoadSecret reads secret.yaml from the config directory and unmarshals it into v.
 func LoadSecret(v any) error {
-	dir, err := Dir()
+	tree, err := Dir()
 	if err != nil {
 		return err
 	}
-	return loadYAML(filepath.Join(dir, secretFile), v)
+	return loadYAML(filepath.Join(tree.Parent, "secret.yaml"), v)
 }
 
 func loadYAML(path string, v any) error {
@@ -125,18 +135,18 @@ func isDir(path string) bool {
 }
 
 type Config struct {
-	RESTPort    int    `yaml:"rest_port"`
-	SocketPort  int    `yaml:"socket_port"`
-	DatabaseURI string `yaml:"database_uri"`
-	NATSURL     string `yaml:"nats_url"`
+	RESTPort   int    `yaml:"rest_port"`
+	SocketPort int    `yaml:"socket_port"`
+	OIDCIssuer string `yaml:"oidc_issuer"`
+	NATSURL    string `yaml:"nats_url"`
 }
 
 func Write(cfg *Config) error {
-	dir, err := Dir()
+	tree, err := Dir()
 	if err != nil {
 		return err
 	}
-	return saveYAML(filepath.Join(dir, configFile), cfg)
+	return saveYAML(tree.Config, cfg)
 }
 
 func saveYAML(path string, v any) error {

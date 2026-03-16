@@ -3,15 +3,14 @@ package pg
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
-	"path/filepath"
 
 	"github.com/zon/chat/core/config"
+	"github.com/zon/chat/core/k8s"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
-
-const secretFile = "postgres.json"
 
 // Secret holds PostgreSQL connection credentials.
 type Secret struct {
@@ -25,6 +24,67 @@ type Secret struct {
 	JDBCURI     string `json:"jdbc-uri"`
 	FQDNURI     string `json:"fqdn-uri"`
 	FQDNJDBCURI string `json:"fqdn-jdbc-uri"`
+}
+
+// Patch sets Host and Port and replaces the host:port component in all URI fields.
+func (s *Secret) Patch(host, port string) {
+	s.Host = host
+	s.Port = port
+	s.URI = patchURI(s.URI, host, port)
+	s.JDBCURI = patchURI(s.JDBCURI, host, port)
+	s.FQDNURI = patchURI(s.FQDNURI, host, port)
+	s.FQDNJDBCURI = patchURI(s.FQDNJDBCURI, host, port)
+}
+
+func patchURI(uri, host, port string) string {
+	const jdbcPrefix = "jdbc:"
+	prefix := ""
+	rest := uri
+	if len(uri) > len(jdbcPrefix) && uri[:len(jdbcPrefix)] == jdbcPrefix {
+		prefix = jdbcPrefix
+		rest = uri[len(jdbcPrefix):]
+	}
+	u, err := url.Parse(rest)
+	if err != nil || u.Host == "" {
+		return uri
+	}
+	u.Host = host + ":" + port
+	return prefix + u.String()
+}
+
+// ReadK8s populates the secret from a Kubernetes secret.
+func (s *Secret) ReadK8s(name, namespace, context string) error {
+	data, err := k8s.GetSecret(name, namespace, context)
+	if err != nil {
+		return err
+	}
+	s.Username = data["username"]
+	s.Password = data["password"]
+	s.DBName = data["dbname"]
+	s.Host = data["host"]
+	s.Port = data["port"]
+	s.URI = data["uri"]
+	s.PGPass = data["pgpass"]
+	s.JDBCURI = data["jdbc-uri"]
+	s.FQDNURI = data["fqdn-uri"]
+	s.FQDNJDBCURI = data["fqdn-jdbc-uri"]
+	return nil
+}
+
+// WriteK8s applies the secret to a Kubernetes namespace.
+func (s *Secret) WriteK8s(name, namespace, context string) error {
+	return k8s.ApplySecret(name, namespace, context, map[string]string{
+		"username":     s.Username,
+		"password":     s.Password,
+		"dbname":       s.DBName,
+		"host":         s.Host,
+		"port":         s.Port,
+		"uri":          s.URI,
+		"pgpass":       s.PGPass,
+		"jdbc-uri":     s.JDBCURI,
+		"fqdn-uri":     s.FQDNURI,
+		"fqdn-jdbc-uri": s.FQDNJDBCURI,
+	})
 }
 
 // Write serializes the secret to a JSON file at path.
@@ -67,13 +127,13 @@ func (s *Secret) open() (*gorm.DB, error) {
 // Open resolves the config directory, reads postgres.json, and returns a
 // connected *gorm.DB handle ready for use.
 func Open() (*gorm.DB, error) {
-	dir, err := config.Dir()
+	tree, err := config.Dir()
 	if err != nil {
 		return nil, err
 	}
 
 	var s Secret
-	if err := s.read(filepath.Join(dir, secretFile)); err != nil {
+	if err := s.read(tree.Postgres); err != nil {
 		return nil, err
 	}
 

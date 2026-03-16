@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"os/exec"
@@ -31,6 +32,10 @@ func GetClusterIP(context string) (string, error) {
 	host := u.Hostname()
 	if host == "" {
 		return "", fmt.Errorf("no host found in cluster server URL %q", server)
+	}
+
+	if net.ParseIP(host) == nil {
+		return "", fmt.Errorf("cluster server host is not a valid IP address: %q", host)
 	}
 
 	return host, nil

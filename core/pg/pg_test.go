@@ -130,6 +130,40 @@ func TestOpen_BadConnection(t *testing.T) {
 	_, _ = Open()
 }
 
+func TestSecret_Patch(t *testing.T) {
+	secret := &Secret{
+		Host:        "oldhost",
+		Port:        "5432",
+		URI:         "postgresql://user:pass@oldhost:5432/mydb",
+		JDBCURI:     "jdbc:postgresql://oldhost:5432/mydb",
+		FQDNURI:     "postgresql://user:pass@oldhost:5432/mydb",
+		FQDNJDBCURI: "jdbc:postgresql://oldhost:5432/mydb",
+	}
+
+	secret.Patch("newhost", "5433")
+
+	assert.Equal(t, "newhost", secret.Host)
+	assert.Equal(t, "5433", secret.Port)
+	assert.Equal(t, "postgresql://user:pass@newhost:5433/mydb", secret.URI)
+	assert.Equal(t, "jdbc:postgresql://newhost:5433/mydb", secret.JDBCURI)
+	assert.Equal(t, "postgresql://user:pass@newhost:5433/mydb", secret.FQDNURI)
+	assert.Equal(t, "jdbc:postgresql://newhost:5433/mydb", secret.FQDNJDBCURI)
+}
+
+func TestSecret_Patch_EmptyURI(t *testing.T) {
+	secret := &Secret{
+		Host: "oldhost",
+		Port: "5432",
+	}
+
+	secret.Patch("newhost", "5433")
+
+	assert.Equal(t, "newhost", secret.Host)
+	assert.Equal(t, "5433", secret.Port)
+	assert.Equal(t, "", secret.URI)
+	assert.Equal(t, "", secret.JDBCURI)
+}
+
 func TestSecret_WriteRoundTrip(t *testing.T) {
 	tmpDir := t.TempDir()
 	testFile := filepath.Join(tmpDir, "postgres.json")

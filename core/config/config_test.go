@@ -13,9 +13,9 @@ func TestDir_EnvVarOverride(t *testing.T) {
 	resetCache()
 	defer resetCache()
 	t.Setenv(envConfigDir, "/custom/config/path")
-	dir, err := Dir()
+	tree, err := Dir()
 	require.NoError(t, err)
-	assert.Equal(t, "/custom/config/path", dir)
+	assert.Equal(t, "/custom/config/path", tree.Parent)
 }
 
 func TestDir_DefaultsToEtcWurbs(t *testing.T) {
@@ -25,9 +25,9 @@ func TestDir_DefaultsToEtcWurbs(t *testing.T) {
 	SetTestMode(false)
 	defer SetTestMode(false)
 
-	dir, err := Dir()
+	tree, err := Dir()
 	require.NoError(t, err)
-	assert.Equal(t, defaultConfigDir, dir)
+	assert.Equal(t, defaultConfigDir, tree.Parent)
 }
 
 func TestDir_TestModeFindsRepoConfig(t *testing.T) {
@@ -52,9 +52,9 @@ func TestDir_TestModeFindsRepoConfig(t *testing.T) {
 	require.NoError(t, os.Chdir(subdir))
 	defer os.Chdir(origDir)
 
-	dir, err := Dir()
+	tree, err := Dir()
 	require.NoError(t, err)
-	assert.Equal(t, configDir, dir)
+	assert.Equal(t, configDir, tree.Parent)
 }
 
 func TestDir_TestModeFallsBackWhenNoConfigDir(t *testing.T) {
@@ -73,9 +73,9 @@ func TestDir_TestModeFallsBackWhenNoConfigDir(t *testing.T) {
 	require.NoError(t, os.Chdir(repoRoot))
 	defer os.Chdir(origDir)
 
-	dir, err := Dir()
+	tree, err := Dir()
 	require.NoError(t, err)
-	assert.Equal(t, defaultConfigDir, dir)
+	assert.Equal(t, defaultConfigDir, tree.Parent)
 }
 
 func TestDir_EnvVarTakesPrecedenceOverTestMode(t *testing.T) {
@@ -85,9 +85,9 @@ func TestDir_EnvVarTakesPrecedenceOverTestMode(t *testing.T) {
 	SetTestMode(true)
 	defer SetTestMode(false)
 
-	dir, err := Dir()
+	tree, err := Dir()
 	require.NoError(t, err)
-	assert.Equal(t, "/override", dir)
+	assert.Equal(t, "/override", tree.Parent)
 }
 
 func TestLoad_ReadsConfigYAML(t *testing.T) {
@@ -193,15 +193,15 @@ func TestDir_CachesResult(t *testing.T) {
 	defer resetCache()
 	t.Setenv(envConfigDir, "/first/path")
 
-	dir1, err := Dir()
+	tree1, err := Dir()
 	require.NoError(t, err)
-	assert.Equal(t, "/first/path", dir1)
+	assert.Equal(t, "/first/path", tree1.Parent)
 
 	t.Setenv(envConfigDir, "/second/path")
 
-	dir2, err := Dir()
+	tree2, err := Dir()
 	require.NoError(t, err)
-	assert.Equal(t, "/first/path", dir2, "should return cached value")
+	assert.Equal(t, "/first/path", tree2.Parent, "should return cached value")
 }
 
 func TestWrite_WritesConfigYAML(t *testing.T) {
@@ -211,10 +211,10 @@ func TestWrite_WritesConfigYAML(t *testing.T) {
 	t.Setenv(envConfigDir, tmp)
 
 	cfg := &Config{
-		RESTPort:    8080,
-		SocketPort:  8081,
-		DatabaseURI: "postgres://localhost/db",
-		NATSURL:     "nats://localhost:4222",
+		RESTPort:   8080,
+		SocketPort: 8081,
+		OIDCIssuer: "https://issuer.example.com",
+		NATSURL:    "nats://localhost:4222",
 	}
 	require.NoError(t, Write(cfg))
 
@@ -222,7 +222,7 @@ func TestWrite_WritesConfigYAML(t *testing.T) {
 	require.NoError(t, Load(&loaded))
 	assert.Equal(t, 8080, loaded.RESTPort)
 	assert.Equal(t, 8081, loaded.SocketPort)
-	assert.Equal(t, "postgres://localhost/db", loaded.DatabaseURI)
+	assert.Equal(t, "https://issuer.example.com", loaded.OIDCIssuer)
 	assert.Equal(t, "nats://localhost:4222", loaded.NATSURL)
 }
 
@@ -233,20 +233,19 @@ func TestWrite_ErrorWhenDirNotWritable(t *testing.T) {
 	configDir := filepath.Join(tmp, "nonexistent")
 	t.Setenv(envConfigDir, configDir)
 
-	cfg := &Config{RESTPort: 8080}
-	err := Write(cfg)
+	err := Write(&Config{RESTPort: 8080})
 	assert.Error(t, err)
 }
 
 func TestConfig_Fields(t *testing.T) {
 	cfg := Config{
-		RESTPort:    8080,
-		SocketPort:  9000,
-		DatabaseURI: "postgres://user:pass@localhost/db",
-		NATSURL:     "nats://localhost:4222",
+		RESTPort:   8080,
+		SocketPort: 9000,
+		OIDCIssuer: "https://issuer.example.com",
+		NATSURL:    "nats://localhost:4222",
 	}
 	assert.Equal(t, 8080, cfg.RESTPort)
 	assert.Equal(t, 9000, cfg.SocketPort)
-	assert.Equal(t, "postgres://user:pass@localhost/db", cfg.DatabaseURI)
+	assert.Equal(t, "https://issuer.example.com", cfg.OIDCIssuer)
 	assert.Equal(t, "nats://localhost:4222", cfg.NATSURL)
 }
