@@ -3,15 +3,15 @@ description: Wurbs API-only chat service with REST, WebSocket, auth, and NATS in
 
 requirements:
   - category: rest service
-    description: REST JSON API service that emits NATS messages on record changes
+    description: REST JSON API service built with Gin that emits NATS messages on record changes
     items:
-      - The rest service exposes a REST JSON API
+      - The rest service exposes a REST JSON API using Gin
       - Record changes publish matching NATS subject messages
       - The service accepts a --test flag that enables test users and test channels
     passing: false
 
   - category: socket service
-    description: WebSocket service that relays NATS messages to connected clients
+    description: WebSocket service built with Gorilla that relays NATS messages to connected clients
     items:
       - Clients can open a WebSocket connection following a specific channel
       - NATS subject messages are relayed to the corresponding WebSocket channel
@@ -42,23 +42,6 @@ requirements:
     items:
       - Admin users can manage channels
       - Admin users can invite users
-    passing: false
-
-  - category: NATS auth callout
-    description: NATS auth callout using k8s service tokens (client side only)
-    items:
-      - The service handles NATS auth callout using k8s service tokens
-      - Only the client-side integration is implemented
-    passing: false
-
-  - category: configuration
-    description: Config and secrets loaded from files, not environment variables
-    items:
-      - The service reads all configuration from a config file (no env vars for config)
-      - Secrets are loaded from a separate secrets file (no env vars for secrets)
-      - The config file is located at <dir>/config.yaml and the secrets file at <dir>/secret.yaml
-      - The config directory defaults to /etc/wurbs and can be overridden with the WURB_CONFIG env var
-      - In --test mode, if WURB_CONFIG is not set, the service walks up from the working directory to find the git repo root and uses ./config there if it exists
     passing: false
 
   - category: end to end tests
@@ -95,16 +78,53 @@ requirements:
       - make push builds and pushes the container using a docker access token from file
     passing: false
 
-  - category: remove gonf dependency
-    description: Replace all gonf library usage with code owned directly by this repo
+  - category: core/config
+    description: Deep module for loading configuration and secrets from files
     items:
-      - Database initialisation and the GORM DB handle are implemented locally without gonf
-      - Auto-migration is called from local code without gonf
-      - OIDC and client credential auth middleware are implemented locally without gonf
-      - The helper that extracts the authenticated user from context is implemented locally without gonf
-      - NATS connection and publish helpers are implemented locally without gonf
-      - Config and secrets loading is implemented locally without gonf, reading from config and secret files only (no env vars except WURB_CONFIG)
-      - Time parsing helper is implemented locally without gonf
-      - The User model is defined locally without gonf
-      - The gonf replace directive is removed from go.mod and gonf is removed from go.sum
+      - Exposes a narrow public interface for loading config and secrets
+      - Config is read from <dir>/config.yaml and secrets from <dir>/secret.yaml
+      - The config directory defaults to /etc/wurbs and can be overridden with the WURB_CONFIG env var
+      - In test mode, if WURB_CONFIG is not set, the module walks up from the working directory to find the git repo root and uses ./config there if it exists
+    passing: false
+
+  - category: core/pg
+    description: Deep module for initializing a PostgreSQL connection via GORM
+    items:
+      - Exposes a narrow public interface for opening a database connection
+      - Returns a *gorm.DB handle ready for use
+      - Supports auto-migration of models
+    passing: false
+
+  - category: core/auth
+    description: Deep module for authentication middleware and user context
+    items:
+      - Exposes narrow middleware interfaces for OIDC and client credential flows
+      - Exposes a helper to extract the authenticated user from context
+      - Owns the User model
+    passing: false
+
+  - category: core/channel
+    description: Deep module for channel management and membership rules
+    items:
+      - Exposes a narrow public interface for creating and managing channels
+      - Owns the Channel model
+      - Enforces that real channels can only contain real users
+      - Enforces that test channels can contain both real and test users
+    passing: false
+
+  - category: core/message
+    description: Deep module for chat messages
+    items:
+      - Exposes a narrow public interface for creating and querying messages
+      - Owns the Message model
+      - Supports paginated message queries
+      - Publishes messages to NATS on creation
+    passing: false
+
+  - category: core/nats
+    description: Deep module for NATS connection and messaging
+    items:
+      - Exposes a narrow public interface for connecting to NATS
+      - Exposes helpers for publishing messages to NATS subjects
+      - Handles NATS auth callout using k8s service tokens
     passing: false
