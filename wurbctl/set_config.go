@@ -29,7 +29,6 @@ const (
 )
 
 type SecretLoader func(name, namespace, context string) (map[string]string, error)
-type ClusterIPLoader func(context string) (string, error)
 
 func DefaultLoadSecret(name, namespace, context string) (map[string]string, error) {
 	return k8s.GetSecret(name, namespace, context)
@@ -37,29 +36,16 @@ func DefaultLoadSecret(name, namespace, context string) (map[string]string, erro
 
 // SetConfigCmd implements `wurbctl set config`.
 type SetConfigCmd struct {
-	ClusterIP  string `help:"Kubernetes cluster IP for local access. Defaults to the cluster IP from the kubectl context." name:"cluster-ip"`
 	Context    string `help:"Kubernetes context to use." name:"context"`
-	Namespace  string `help:"Kubernetes namespace to use." name:"namespace" default:"wurbs"`
-	Local      bool   `help:"Create configmap and secret files for local development instead of applying to k8s."`
 	OIDCIssuer string `help:"OIDC issuer URL." name:"oidc-issuer" required:""`
 
-	loadSecret    SecretLoader
-	loadClusterIP ClusterIPLoader
+	loadSecret SecretLoader
 }
 
 func (c *SetConfigCmd) Run() error {
-	clusterIP := c.ClusterIP
-
-	if clusterIP == "" {
-		loadClusterIP := c.loadClusterIP
-		if loadClusterIP == nil {
-			loadClusterIP = k8s.GetClusterIP
-		}
-		ip, err := loadClusterIP(c.Context)
-		if err != nil {
-			return fmt.Errorf("failed to get cluster IP from kubectl context: %w", err)
-		}
-		clusterIP = ip
+	clusterIP, err := k8s.GetClusterIP(c.Context)
+	if err != nil {
+		return fmt.Errorf("failed to get cluster IP from kubectl context: %w", err)
 	}
 
 	if !isValidIP(clusterIP) {
@@ -97,18 +83,16 @@ func (c *SetConfigCmd) Run() error {
 		"oidc-issuer": c.OIDCIssuer,
 	}
 
-	if c.Local {
-		configMapPath := filepath.Join(configDir, "configmap.yaml")
-		if err := k8s.WriteConfigmapFile(configMapPath, configMapName, wurbsNamespace, configMapData); err != nil {
-			return fmt.Errorf("failed to write configmap file: %w", err)
-		}
-		fmt.Printf("wrote %s\n", configMapPath)
-	} else {
-		if err := k8s.ApplyConfigmap(configMapName, wurbsNamespace, c.Context, configMapData); err != nil {
-			return fmt.Errorf("failed to apply configmap: %w", err)
-		}
-		fmt.Printf("applied ConfigMap %s to %s namespace\n", configMapName, wurbsNamespace)
+	configMapPath := filepath.Join(configDir, "configmap.yaml")
+	if err := k8s.WriteConfigmapFile(configMapPath, configMapName, wurbsNamespace, configMapData); err != nil {
+		return fmt.Errorf("failed to write configmap file: %w", err)
 	}
+	fmt.Printf("wrote %s\n", configMapPath)
+
+	if err := k8s.ApplyConfigmap(configMapName, wurbsNamespace, c.Context, configMapData); err != nil {
+		return fmt.Errorf("failed to apply configmap: %w", err)
+	}
+	fmt.Printf("applied ConfigMap %s to %s namespace\n", configMapName, wurbsNamespace)
 
 	natsTokenData, err := loadSecret(natsSecret, natsNamespace, c.Context)
 	if err != nil {
@@ -126,18 +110,16 @@ func (c *SetConfigCmd) Run() error {
 		natsTokenKey: natsToken,
 	}
 
-	if c.Local {
-		natsSecretPath := filepath.Join(configDir, "nats-secret.yaml")
-		if err := k8s.WriteSecretFile(natsSecretPath, natsSecretName, wurbsNamespace, natsSecretData); err != nil {
-			return fmt.Errorf("failed to write NATS secret file: %w", err)
-		}
-		fmt.Printf("wrote %s\n", natsSecretPath)
-	} else {
-		if err := k8s.ApplySecret(natsSecretName, wurbsNamespace, c.Context, natsSecretData); err != nil {
-			return fmt.Errorf("failed to apply NATS secret: %w", err)
-		}
-		fmt.Printf("applied Secret %s to %s namespace\n", natsSecretName, wurbsNamespace)
+	natsSecretPath := filepath.Join(configDir, "nats-secret.yaml")
+	if err := k8s.WriteSecretFile(natsSecretPath, natsSecretName, wurbsNamespace, natsSecretData); err != nil {
+		return fmt.Errorf("failed to write NATS secret file: %w", err)
 	}
+	fmt.Printf("wrote %s\n", natsSecretPath)
+
+	if err := k8s.ApplySecret(natsSecretName, wurbsNamespace, c.Context, natsSecretData); err != nil {
+		return fmt.Errorf("failed to apply NATS secret: %w", err)
+	}
+	fmt.Printf("applied Secret %s to %s namespace\n", natsSecretName, wurbsNamespace)
 
 	secretData, err := loadSecret(postgresSecret, postgresNamespace, c.Context)
 	if err != nil {
@@ -178,18 +160,16 @@ func (c *SetConfigCmd) Run() error {
 		"postgres.json": string(postgresJSON),
 	}
 
-	if c.Local {
-		postgresSecretPath := filepath.Join(configDir, "postgres-secret.yaml")
-		if err := k8s.WriteSecretFile(postgresSecretPath, postgresSecret, wurbsNamespace, postgresSecretData); err != nil {
-			return fmt.Errorf("failed to write postgres secret file: %w", err)
-		}
-		fmt.Printf("wrote %s\n", postgresSecretPath)
-	} else {
-		if err := k8s.ApplySecret(postgresSecret, wurbsNamespace, c.Context, postgresSecretData); err != nil {
-			return fmt.Errorf("failed to apply postgres secret: %w", err)
-		}
-		fmt.Printf("applied Secret %s to %s namespace\n", postgresSecret, wurbsNamespace)
+	postgresSecretPath := filepath.Join(configDir, "postgres-secret.yaml")
+	if err := k8s.WriteSecretFile(postgresSecretPath, postgresSecret, wurbsNamespace, postgresSecretData); err != nil {
+		return fmt.Errorf("failed to write postgres secret file: %w", err)
 	}
+	fmt.Printf("wrote %s\n", postgresSecretPath)
+
+	if err := k8s.ApplySecret(postgresSecret, wurbsNamespace, c.Context, postgresSecretData); err != nil {
+		return fmt.Errorf("failed to apply postgres secret: %w", err)
+	}
+	fmt.Printf("applied Secret %s to %s namespace\n", postgresSecret, wurbsNamespace)
 
 	return nil
 }
