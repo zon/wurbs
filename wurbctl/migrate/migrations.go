@@ -1,7 +1,8 @@
 package migrate
 
 import (
-	"github.com/zon/chat/core"
+	"github.com/zon/chat/core/auth"
+	"github.com/zon/chat/core/message"
 
 	"gorm.io/gorm"
 )
@@ -9,7 +10,7 @@ import (
 // RunMigrations applies all pending GORM AutoMigrate migrations.
 func RunMigrations(db *gorm.DB) error {
 	return db.AutoMigrate(
-		&core.User{},
-		&core.Message{},
+		&auth.User{},
+		&message.Message{},
 	)
 }

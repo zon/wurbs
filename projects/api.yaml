@@ -116,7 +116,7 @@ requirements:
       - Exposes a helper to extract the authenticated user from context
       - Owns the User model
       - core/user.go is removed and callers use core/auth directly
-    passing: false
+    passing: true
 
   - category: core/channel
     description: Deep module for channel management and membership rules
