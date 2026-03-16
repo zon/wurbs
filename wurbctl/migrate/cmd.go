@@ -3,9 +3,7 @@ package migrate
 import (
 	"fmt"
 	"log/slog"
-	"path/filepath"
 
-	"github.com/zon/chat/core/config"
 	"github.com/zon/chat/core/pg"
 )
 
@@ -19,18 +17,7 @@ type DBCmd struct{}
 
 // Run applies all pending database migrations against the configured Postgres database.
 func (c *DBCmd) Run() error {
-	configDir, err := config.Dir()
-	if err != nil {
-		return fmt.Errorf("failed to resolve config directory: %w", err)
-	}
-
-	postgresPath := filepath.Join(configDir, "postgres.json")
-	var secret pg.Secret
-	if err := secret.Read(postgresPath); err != nil {
-		return fmt.Errorf("failed to read postgres config: %w", err)
-	}
-
-	db, err := secret.Open()
+	db, err := pg.Open()
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}

@@ -80,7 +80,7 @@ func TestDBCmd_Run_MissingConfigFiles(t *testing.T) {
 	cmd := &DBCmd{}
 	err := cmd.Run()
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "postgres config")
+	assert.Contains(t, err.Error(), "failed to connect to database")
 }
 
 func TestDBCmd_Run_InvalidPostgresJSON(t *testing.T) {
@@ -93,5 +93,5 @@ func TestDBCmd_Run_InvalidPostgresJSON(t *testing.T) {
 	cmd := &DBCmd{}
 	err = cmd.Run()
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "postgres config")
+	assert.Contains(t, err.Error(), "failed to connect to database")
 }

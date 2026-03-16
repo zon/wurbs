@@ -1,9 +1,6 @@
 package core
 
 import (
-	"path/filepath"
-
-	"github.com/zon/chat/core/config"
 	"github.com/zon/chat/core/pg"
 	"gorm.io/gorm"
 )
@@ -11,18 +8,7 @@ import (
 var DB *gorm.DB
 
 func InitDB() error {
-	configDir, err := config.Dir()
-	if err != nil {
-		return err
-	}
-
-	secret := &pg.Secret{}
-	err = secret.Read(filepath.Join(configDir, "postgres.json"))
-	if err != nil {
-		return err
-	}
-
-	db, err := secret.Open()
+	db, err := pg.Open()
 	if err != nil {
 		return err
 	}
@@ -32,7 +18,5 @@ func InitDB() error {
 }
 
 func AutoMigrate() error {
-	return DB.AutoMigrate(
-		&Message{},
-	)
+	return pg.Migrate(DB, &Message{})
 }

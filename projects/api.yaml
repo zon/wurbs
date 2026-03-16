@@ -93,7 +93,7 @@ requirements:
       - Exposes a narrow public interface for opening a database connection
       - Returns a *gorm.DB handle ready for use
       - Supports auto-migration of models
-    passing: false
+    passing: true
 
   - category: core/auth
     description: Deep module for authentication middleware and user context
