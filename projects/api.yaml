@@ -101,7 +101,7 @@ requirements:
       - Exposes narrow middleware interfaces for OIDC and client credential flows
       - Exposes a helper to extract the authenticated user from context
       - Owns the User model
-    passing: false
+    passing: true
 
   - category: core/channel
     description: Deep module for channel management and membership rules

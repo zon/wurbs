@@ -1,7 +1,7 @@
 package core
 
-import "gorm.io/gorm"
+import "github.com/zon/chat/core/auth"
 
-type User struct {
-	gorm.Model
-}
+// User is a type alias for auth.User. The auth module owns the User model;
+// this alias keeps existing references to core.User working.
+type User = auth.User
