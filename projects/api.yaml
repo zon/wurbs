@@ -107,7 +107,7 @@ requirements:
       - Exposes a narrow public interface for opening a database connection
       - Returns a *gorm.DB handle ready for use
       - core/db.go is removed and callers use core/pg directly
-    passing: false
+    passing: true
 
   - category: core/auth
     description: Deep module for authentication middleware and user context
