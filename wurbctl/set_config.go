@@ -1,4 +1,4 @@
-package set
+package main
 
 import (
 	"encoding/json"
@@ -35,7 +35,8 @@ func DefaultLoadSecret(name, namespace, context string) (map[string]string, erro
 	return k8s.GetSecret(name, namespace, context)
 }
 
-type ConfigCmd struct {
+// SetConfigCmd implements `wurbctl set config`.
+type SetConfigCmd struct {
 	ClusterIP  string `help:"Kubernetes cluster IP for local access. Defaults to the cluster IP from the kubectl context." name:"cluster-ip"`
 	Context    string `help:"Kubernetes context to use." name:"context"`
 	Namespace  string `help:"Kubernetes namespace to use." name:"namespace" default:"wurbs"`
@@ -46,7 +47,7 @@ type ConfigCmd struct {
 	loadClusterIP ClusterIPLoader
 }
 
-func (c *ConfigCmd) Run() error {
+func (c *SetConfigCmd) Run() error {
 	clusterIP := c.ClusterIP
 
 	if clusterIP == "" {

@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/json"
@@ -228,6 +229,33 @@ type oidcClaims struct {
 type clientClaims struct {
 	Subject string `json:"sub"`
 	Email   string `json:"email"`
+}
+
+// GenerateRSAKeyPair generates a 2048-bit RSA key pair and returns the
+// PEM-encoded private key and public key as strings.
+func GenerateRSAKeyPair() (privateKeyPEM, publicKeyPEM string, err error) {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return "", "", fmt.Errorf("auth: failed to generate RSA key: %w", err)
+	}
+
+	privBlock := &pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(key),
+	}
+	privateKeyPEM = string(pem.EncodeToMemory(privBlock))
+
+	pubDER, err := x509.MarshalPKIXPublicKey(&key.PublicKey)
+	if err != nil {
+		return "", "", fmt.Errorf("auth: failed to marshal public key: %w", err)
+	}
+	pubBlock := &pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: pubDER,
+	}
+	publicKeyPEM = string(pem.EncodeToMemory(pubBlock))
+
+	return privateKeyPEM, publicKeyPEM, nil
 }
 
 // parseRSAPublicKey parses a PEM-encoded RSA public key.

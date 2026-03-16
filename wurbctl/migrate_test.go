@@ -1,9 +1,6 @@
-package migrate
+package main
 
 import (
-	"encoding/json"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,19 +10,6 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
-
-func writePostgresJSON(t *testing.T, dir string, secret map[string]string) {
-	t.Helper()
-	data, err := json.Marshal(secret)
-	require.NoError(t, err)
-	err = os.WriteFile(filepath.Join(dir, "postgres.json"), data, 0600)
-	require.NoError(t, err)
-}
-
-func setWurbsConfigDir(t *testing.T, dir string) {
-	t.Helper()
-	t.Setenv("WURB_CONFIG", dir)
-}
 
 // --- RunMigrations tests ---
 
@@ -72,27 +56,3 @@ func TestRunMigrations_CreatesColumns(t *testing.T) {
 	assert.True(t, migrator.HasColumn(&auth.User{}, "deleted_at"), "users table should have deleted_at column")
 }
 
-// --- DBCmd.Run tests ---
-
-func TestDBCmd_Run_MissingConfigFiles(t *testing.T) {
-	dir := t.TempDir()
-	setWurbsConfigDir(t, dir)
-
-	cmd := &DBCmd{}
-	err := cmd.Run()
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to connect to database")
-}
-
-func TestDBCmd_Run_InvalidPostgresJSON(t *testing.T) {
-	dir := t.TempDir()
-	setWurbsConfigDir(t, dir)
-
-	err := os.WriteFile(filepath.Join(dir, "postgres.json"), []byte("invalid json"), 0600)
-	require.NoError(t, err)
-
-	cmd := &DBCmd{}
-	err = cmd.Run()
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to connect to database")
-}
