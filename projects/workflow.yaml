@@ -1,0 +1,23 @@
+name: workflow
+description: One-time setup that must complete before Ralph workflows can deploy or test Wurbs
+
+requirements:
+  - category: wurbctl set config
+    description: Creates k8s configmap and secret with all runtime configuration, and manages the test admin user
+    items:
+      - Running wurbctl set config writes a k8s configmap containing the OIDC issuer URL
+      - Running wurbctl set config writes a k8s secret containing postgres and NATS credentials
+      - Running wurbctl set config runs database migrations after writing postgres credentials
+      - Running wurbctl set config checks for a test admin user (IsAdmin=true, IsTest=true) in the database
+      - The test admin user is created if it does not exist
+      - The test admin user's client credential keys are rotated if the user already exists
+      - Test admin credentials are saved to both local config and the ralph namespace k8s secret
+    passing: false
+
+  - category: wurbctl set admin
+    description: Promotes an existing real user to admin
+    items:
+      - Running wurbctl set admin requires the target user to already exist in the database
+      - Running wurbctl set admin only promotes non-test users (test users cannot become real admins)
+      - Running wurbctl set admin sets the user's IsAdmin flag to true
+    passing: false

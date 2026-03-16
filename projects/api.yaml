@@ -33,9 +33,8 @@ requirements:
     items:
       - Users can authenticate using a generic OIDC provider
       - Clients can authenticate using the client credentials flow
-      - Admin users can authenticate with both OIDC and client credentials
-      - Real users can only authenticate with OIDC
-      - Test users can only authenticate with client credentials
+      - Real users (including real admins) can only authenticate with OIDC
+      - Test users (including test admins) can only authenticate with client credentials
       - All test users share the same client credential flow keys
     passing: false
 
@@ -50,14 +49,15 @@ requirements:
   - category: admin users
     description: Admin capabilities for managing the system
     items:
-      - Admin users can manage channels
-      - Admin users can invite users
+      - Admin users can manage channels and invite users
+      - Real admins (IsAdmin=true, IsTest=false) can only alter real channels and users
+      - Test admins (IsAdmin=true, IsTest=true) can only alter test channels and users
     passing: false
 
   - category: end to end tests
     description: Tests that exercise the full system using test channels and users
     items:
-      - Tests require admin client credential flow keys to run
+      - Tests use the test admin user credentials (mounted at /etc/wurbs by ralph workflows) to make REST API calls
       - Tests create and clean up test channels and users
       - Tests avoid real channels, real users, and OIDC auth
     passing: false
@@ -78,6 +78,7 @@ requirements:
       - The rest Deployment includes an init container that runs wurbctl migrate db before the main container starts
       - Both service Deployments use /etc/wurbs as the config directory
       - Both service Deployments pass the Kubernetes service account token path as the --nats-token value
+      - The helm chart mounts the test admin credentials secret (created by wurbctl set config) into /etc/wurbs
     passing: false
 
   - category: makefile

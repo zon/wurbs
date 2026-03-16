@@ -30,7 +30,12 @@ A plan to convert this repo to an API only chat service.
 - Admin users that can:
   - Manage channels
   - Invite users
-  - Auth with both OIDC and client credential flow
+  - Real admins
+    - Authenticate via OIDC only
+    - Can only alter real channels and users
+  - Test admins
+    - Authenticate via client credentials only
+    - Can only alter test channels and users
 - Users
   - Real
     - Can only auth with OIDC
@@ -41,7 +46,7 @@ A plan to convert this repo to an API only chat service.
   - Auth callout using k8s service tokens
     - Only the client side integration
 - End to end tests
-  - Requires admin client credential flow keys
+  - Use the test admin user credentials to make REST API calls
   - Tests create and cleanup test channels and users
   - Tests avoid real channels, users, and OIDC
 - Containerfile
@@ -88,15 +93,19 @@ Create a wurbctl CLI app.
   - requires options providing anything missing the user must provide
     - db credentials
     - oidc settings
-  - --test option to create/update test user client credential flow keys
-    - deployments without test key can't create test users
+  - runs database migrations after writing postgres credentials
+  - checks for a test admin user (a user with both IsAdmin and IsTest set)
+    - creates the test admin user if missing
+    - rotates client credential keys if the test admin user already exists
+  - saves test admin credentials to both local config and the ralph namespace
   - creates/updates k8s configmap and secret
   - --local option to create config and secret files for local development
     - writes `config.yaml` and `secret.yaml` to the output directory
 - wurbctl set admin
   - takes an email argument
-  - creates/updates an admin user
-  - generates admin client credential flow keys and saves to k8s secret
+  - requires the user to already exist in the database
+  - only promotes non-test, non-admin users (test users cannot become real admins)
+  - sets the user's IsAdmin flag to true
 - wurbctl migrate db
   - runs database migrations using connection details from the config and secret files
   - config directory resolved via `WURB_CONFIG` env var, falling back to `/etc/wurbs`
@@ -131,7 +140,10 @@ Wurbs should no longer use the gonf library. All functionality currently provide
 
 ## Ralph Projects
 
-This plan should be converted to two [Ralph](https://github.com/zon/ralph) projects.
+This plan is split into two [Ralph](https://github.com/zon/ralph) projects.
 
-- ./projects/bootstrap.yaml - Everything required to create Wurbs configmap and secret files for Ralph workflows
-- ./projects/api.yaml - Everything else we need to do
+- ./projects/workflow.yaml - One-time setup required before Ralph workflows can deploy or test Wurbs
+  - wurbctl set config: writes k8s configmap/secret, manages test admin user and credentials
+  - wurbctl set admin: promotes an existing real user to admin
+- ./projects/api.yaml - Everything needed to build, deploy, and test the service
+  - Services, auth, channels, core modules, containerfile, helm chart, end-to-end tests
