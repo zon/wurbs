@@ -24,7 +24,7 @@ requirements:
       - WriteConfigmapFile writes a Kubernetes ConfigMap YAML to a local file
       - WriteSecretFile writes a Kubernetes Secret YAML to a local file
       - wurbctl/set imports core/k8s instead of implementing kubectl calls directly
-    passing: false
+    passing: true
 
   - category: wurbctl
     description: CLI tool for configuring and managing the Wurbs service
