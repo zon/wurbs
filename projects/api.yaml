@@ -90,17 +90,6 @@ requirements:
       - make push builds and pushes the container using a docker access token from file
     passing: true
 
-  - category: core/config
-    description: Deep module for loading configuration and secrets from files
-    items:
-      - Exposes a narrow public interface for loading config and secrets
-      - Exposes a Config struct containing the non-sensitive settings required by the apps
-      - Config is read from and written to config.yaml in the config directory
-      - The config directory defaults to /etc/wurbs and can be overridden with the WURB_CONFIG env var
-      - In test mode, if WURB_CONFIG is not set, the module walks up from the working directory to find the git repo root and uses ./config there if it exists
-      - Dir caches its result so the resolution logic runs at most once
-    passing: true
-
   - category: core/pg
     description: Deep module for initializing a PostgreSQL connection via GORM
     items:
@@ -152,21 +141,3 @@ requirements:
       - Handles NATS auth callout using k8s service tokens
     passing: true
 
-  - category: wurbctl
-    description: CLI tool for configuring and managing the Wurbs service
-    items:
-      - wurbctl set config writes config.yaml to the repo config directory with any non-sensitive settings
-      - wurbctl set config applies config.yaml as a ConfigMap in the ralph-wurbs namespace
-      - wurbctl set config copies the NATS dev token from the dev-token key of the nats-secrets secret in the nats namespace into the repo config directory
-      - wurbctl set config copies the NATS dev token into the ralph-wurbs namespace
-      - wurbctl set config copies the postgres secret into the ralph-wurbs namespace with the host set to the internal Kubernetes service address
-    passing: false
-
-  - category: ralph workflow
-    description: Ralph agent workflow configuration for running in Kubernetes
-    items:
-      - The workflow uses /etc/wurbs as the config directory
-      - The workflow mounts config.yaml from the ConfigMap into the config directory
-      - The workflow mounts the NATS dev token into the config directory
-      - The workflow mounts the postgres secret into the config directory
-    passing: false

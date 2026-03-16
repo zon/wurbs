@@ -8,7 +8,18 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/zon/chat/core/config"
 )
+
+func setConfigDir(t *testing.T, dir string) {
+	t.Helper()
+	config.ResetCache()
+	os.Setenv("WURB_CONFIG", dir)
+	t.Cleanup(func() {
+		os.Unsetenv("WURB_CONFIG")
+		config.ResetCache()
+	})
+}
 
 func mockLoadSecret(name, namespace, context string) (map[string]string, error) {
 	return map[string]string{
@@ -29,6 +40,14 @@ func mockLoadSecretFail(name, namespace, context string) (map[string]string, err
 	return nil, errors.New("secret not found")
 }
 
+func mockLoadClusterIP(context string) (string, error) {
+	return "10.96.0.1", nil
+}
+
+func mockLoadClusterIPFail(context string) (string, error) {
+	return "", errors.New("kubectl config view failed")
+}
+
 func fullCmd() ConfigCmd {
 	return ConfigCmd{
 		ClusterIP:  "10.96.0.1",
@@ -39,14 +58,32 @@ func fullCmd() ConfigCmd {
 	}
 }
 
-func TestConfigCmd_MissingClusterIP(t *testing.T) {
+func TestConfigCmd_AutoDetectClusterIP(t *testing.T) {
+	dir := t.TempDir()
+	setConfigDir(t, dir)
+
 	cmd := ConfigCmd{
-		ClusterIP:  "",
-		loadSecret: mockLoadSecret,
+		Namespace:     "wurbs",
+		OIDCIssuer:    "https://issuer.example.com",
+		loadSecret:    mockLoadSecret,
+		loadClusterIP: mockLoadClusterIP,
+	}
+	err := cmd.Run()
+	require.NoError(t, err)
+
+	data, err := os.ReadFile(filepath.Join(dir, "postgres.json"))
+	require.NoError(t, err)
+	assert.Contains(t, string(data), `"host": "10.96.0.1"`)
+}
+
+func TestConfigCmd_AutoDetectClusterIPError(t *testing.T) {
+	cmd := ConfigCmd{
+		loadSecret:    mockLoadSecret,
+		loadClusterIP: mockLoadClusterIPFail,
 	}
 	err := cmd.Run()
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "--cluster-ip")
+	assert.Contains(t, err.Error(), "failed to get cluster IP from kubectl context")
 }
 
 func TestConfigCmd_InvalidClusterIP(t *testing.T) {
@@ -71,8 +108,7 @@ func TestConfigCmd_LoadSecretError(t *testing.T) {
 
 func TestConfigCmd_WritesPostgresConfig(t *testing.T) {
 	dir := t.TempDir()
-	os.Setenv("WURB_CONFIG", dir)
-	defer os.Unsetenv("WURB_CONFIG")
+	setConfigDir(t, dir)
 
 	cmd := fullCmd()
 	err := cmd.Run()
@@ -91,8 +127,7 @@ func TestConfigCmd_WritesPostgresConfig(t *testing.T) {
 
 func TestConfigCmd_PatchesURIFields(t *testing.T) {
 	dir := t.TempDir()
-	os.Setenv("WURB_CONFIG", dir)
-	defer os.Unsetenv("WURB_CONFIG")
+	setConfigDir(t, dir)
 
 	cmd := fullCmd()
 	err := cmd.Run()
@@ -110,6 +145,8 @@ func TestConfigCmd_PatchesURIFields(t *testing.T) {
 }
 
 func TestConfigCmd_DefaultNamespace(t *testing.T) {
+	setConfigDir(t, t.TempDir())
+
 	var capturedNamespace string
 	cmd := ConfigCmd{
 		ClusterIP: "10.96.0.1",

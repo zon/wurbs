@@ -18,28 +18,40 @@ const (
 )
 
 type SecretLoader func(name, namespace, context string) (map[string]string, error)
+type ClusterIPLoader func(context string) (string, error)
 
 func DefaultLoadSecret(name, namespace, context string) (map[string]string, error) {
 	return GetSecret(name, namespace, context)
 }
 
 type ConfigCmd struct {
-	ClusterIP  string `help:"Kubernetes cluster IP for local access." name:"cluster-ip" required:""`
+	ClusterIP  string `help:"Kubernetes cluster IP for local access. Defaults to the cluster IP from the kubectl context." name:"cluster-ip"`
 	Context    string `help:"Kubernetes context to use." name:"context"`
 	Namespace  string `help:"Kubernetes namespace to use." name:"namespace" default:"wurbs"`
 	Local      bool   `help:"Create configmap and secret files for local development instead of applying to k8s."`
 	OIDCIssuer string `help:"OIDC issuer URL." name:"oidc-issuer" required:""`
 
-	loadSecret SecretLoader
+	loadSecret    SecretLoader
+	loadClusterIP ClusterIPLoader
 }
 
 func (c *ConfigCmd) Run() error {
-	if c.ClusterIP == "" {
-		return fmt.Errorf("missing required value: --cluster-ip")
+	clusterIP := c.ClusterIP
+
+	if clusterIP == "" {
+		loadClusterIP := c.loadClusterIP
+		if loadClusterIP == nil {
+			loadClusterIP = GetClusterIP
+		}
+		ip, err := loadClusterIP(c.Context)
+		if err != nil {
+			return fmt.Errorf("failed to get cluster IP from kubectl context: %w", err)
+		}
+		clusterIP = ip
 	}
 
-	if !isValidIP(c.ClusterIP) {
-		return fmt.Errorf("invalid cluster IP: %s", c.ClusterIP)
+	if !isValidIP(clusterIP) {
+		return fmt.Errorf("invalid cluster IP: %s", clusterIP)
 	}
 
 	loadSecret := c.loadSecret
@@ -56,13 +68,13 @@ func (c *ConfigCmd) Run() error {
 		Username:    secretData["username"],
 		Password:    secretData["password"],
 		DBName:      secretData["dbname"],
-		Host:        c.ClusterIP,
+		Host:        clusterIP,
 		Port:        localPostgresPort,
-		URI:         patchURI(secretData["uri"], c.ClusterIP, localPostgresPort),
+		URI:         patchURI(secretData["uri"], clusterIP, localPostgresPort),
 		PGPass:      secretData["pgpass"],
-		JDBCURI:     patchURI(secretData["jdbc-uri"], c.ClusterIP, localPostgresPort),
-		FQDNURI:     patchURI(secretData["fqdn-uri"], c.ClusterIP, localPostgresPort),
-		FQDNJDBCURI: patchURI(secretData["fqdn-jdbc-uri"], c.ClusterIP, localPostgresPort),
+		JDBCURI:     patchURI(secretData["jdbc-uri"], clusterIP, localPostgresPort),
+		FQDNURI:     patchURI(secretData["fqdn-uri"], clusterIP, localPostgresPort),
+		FQDNJDBCURI: patchURI(secretData["fqdn-jdbc-uri"], clusterIP, localPostgresPort),
 	}
 
 	configDir, err := config.Dir()

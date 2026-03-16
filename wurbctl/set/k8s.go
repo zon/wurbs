@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
 	"strings"
@@ -89,6 +90,33 @@ func buildSecretYAML(name, namespace string, data map[string]string) string {
 		sb.WriteString(fmt.Sprintf("  %s: %s\n", k, encoded))
 	}
 	return sb.String()
+}
+
+// GetClusterIP returns the cluster server IP from the kubectl config.
+func GetClusterIP(context string) (string, error) {
+	args := []string{"config", "view", "--minify", "-o", "jsonpath={.clusters[0].cluster.server}"}
+	if context != "" {
+		args = append(args, "--context", context)
+	}
+
+	cmd := exec.Command("kubectl", args...)
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("kubectl config view failed: %w", err)
+	}
+
+	server := strings.TrimSpace(string(output))
+	u, err := url.Parse(server)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse cluster server URL %q: %w", server, err)
+	}
+
+	host := u.Hostname()
+	if host == "" {
+		return "", fmt.Errorf("no host found in cluster server URL %q", server)
+	}
+
+	return host, nil
 }
 
 // GetSecret retrieves a Kubernetes Secret and returns its data as a map.
