@@ -76,7 +76,7 @@ requirements:
       - make install runs go install wurbctl
       - make test runs all tests
       - make push builds and pushes the container using a docker access token from file
-    passing: false
+    passing: true
 
   - category: core/config
     description: Deep module for loading configuration and secrets from files
