@@ -1,6 +1,7 @@
 package set
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 	"os"
@@ -162,16 +163,18 @@ func (c *ConfigCmd) Run() error {
 	}
 	fmt.Printf("wrote %s\n", postgresConfigPath)
 
+	postgresJSON, _ := json.Marshal(secret)
 	postgresSecretData := map[string]string{
-		"username": secretData["username"],
-		"password": secretData["password"],
-		"dbname":   secretData["dbname"],
-		"host":     internalHost,
-		"port":     "5432",
-		"uri":      secretData["uri"],
-		"pgpass":   secretData["pgpass"],
-		"jdbc-uri": secretData["jdbc-uri"],
-		"fqdn-uri": secretData["fqdn-uri"],
+		"username":      secretData["username"],
+		"password":      secretData["password"],
+		"dbname":        secretData["dbname"],
+		"host":          internalHost,
+		"port":          "5432",
+		"uri":           secretData["uri"],
+		"pgpass":        secretData["pgpass"],
+		"jdbc-uri":      secretData["jdbc-uri"],
+		"fqdn-uri":      secretData["fqdn-uri"],
+		"postgres.json": string(postgresJSON),
 	}
 
 	if c.Local {

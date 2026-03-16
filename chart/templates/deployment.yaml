@@ -17,6 +17,15 @@ spec:
       - name: zitadel
         secret:
           secretName: zitadel
+      - name: config
+        configMap:
+          name: wurbs-config
+      - name: nats-token
+        secret:
+          secretName: nats-dev-token
+      - name: postgres
+        secret:
+          secretName: wurbs-postgres-app
       containers:
       - name: main
         image: {{ .Values.image.repo }}:{{ .Values.image.tag }}
@@ -67,6 +76,19 @@ spec:
         - name: zitadel
           readOnly: true
           mountPath: "/etc/wurbs"
+          subPath: token.json
+        - name: config
+          readOnly: true
+          mountPath: "/etc/wurbs"
+          subPath: config.yaml
+        - name: nats-token
+          readOnly: true
+          mountPath: "/etc/wurbs"
+          subPath: nats-token
+        - name: postgres
+          readOnly: true
+          mountPath: "/etc/wurbs"
+          subPath: postgres.json
         command:
         - wurbs-server
         - /etc/wurbs/token.json

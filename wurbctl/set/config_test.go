@@ -265,6 +265,24 @@ func TestConfigCmd_WritesPostgresSecretFile(t *testing.T) {
 	assert.Contains(t, content, "host: cG9zdGdyZXMucmFscGgtd3VyYnMuc3ZjLmNsdXN0ZXIubG9jYWw=")
 }
 
+func TestConfigCmd_PostgresSecretContainsJSON(t *testing.T) {
+	dir := t.TempDir()
+	setConfigDir(t, dir)
+
+	cmd := fullCmd()
+	err := cmd.Run()
+	require.NoError(t, err)
+
+	postgresSecretPath := filepath.Join(dir, "postgres-secret.yaml")
+	data, err := os.ReadFile(postgresSecretPath)
+	require.NoError(t, err)
+
+	content := string(data)
+	assert.Contains(t, content, "postgres.json:")
+	assert.Contains(t, content, "username")
+	assert.Contains(t, content, "password")
+}
+
 func TestConfigCmd_LoadsNatsSecretFromNatsNamespace(t *testing.T) {
 	dir := t.TempDir()
 	setConfigDir(t, dir)

@@ -43,4 +43,4 @@ requirements:
       - The workflow mounts config.yaml from the ConfigMap into the config directory
       - The workflow mounts the NATS dev token into the config directory
       - The workflow mounts the postgres secret into the config directory
-    passing: false
+    passing: true
