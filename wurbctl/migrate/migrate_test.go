@@ -23,7 +23,7 @@ func writePostgresJSON(t *testing.T, dir string, secret map[string]string) {
 
 func setWurbsConfigDir(t *testing.T, dir string) {
 	t.Helper()
-	t.Setenv("WURBS_CONFIG", dir)
+	t.Setenv("WURB_CONFIG", dir)
 }
 
 // --- RunMigrations tests ---

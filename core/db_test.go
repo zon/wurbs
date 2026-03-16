@@ -28,8 +28,8 @@ func TestInitDB_UsesConfigDir(t *testing.T) {
 	err = os.WriteFile(filepath.Join(configDir, "postgres.json"), []byte(postgresJSON), 0644)
 	require.NoError(t, err)
 
-	os.Setenv("WURBS_CONFIG", configDir)
-	defer os.Unsetenv("WURBS_CONFIG")
+	os.Setenv("WURB_CONFIG", configDir)
+	defer os.Unsetenv("WURB_CONFIG")
 
 	dir, err := configDirForTest()
 	require.NoError(t, err)
@@ -37,7 +37,7 @@ func TestInitDB_UsesConfigDir(t *testing.T) {
 }
 
 func configDirForTest() (string, error) {
-	return os.Getenv("WURBS_CONFIG"), nil
+	return os.Getenv("WURB_CONFIG"), nil
 }
 
 func TestDBVariableExists(t *testing.T) {

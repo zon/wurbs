@@ -11,7 +11,7 @@ import (
 var DB *gorm.DB
 
 func InitDB() error {
-	configDir, err := config.ConfigDir()
+	configDir, err := config.Dir()
 	if err != nil {
 		return err
 	}

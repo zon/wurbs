@@ -71,8 +71,8 @@ func TestConfigCmd_LoadSecretError(t *testing.T) {
 
 func TestConfigCmd_WritesPostgresConfig(t *testing.T) {
 	dir := t.TempDir()
-	os.Setenv("WURBS_CONFIG", dir)
-	defer os.Unsetenv("WURBS_CONFIG")
+	os.Setenv("WURB_CONFIG", dir)
+	defer os.Unsetenv("WURB_CONFIG")
 
 	cmd := fullCmd()
 	err := cmd.Run()
@@ -91,8 +91,8 @@ func TestConfigCmd_WritesPostgresConfig(t *testing.T) {
 
 func TestConfigCmd_PatchesURIFields(t *testing.T) {
 	dir := t.TempDir()
-	os.Setenv("WURBS_CONFIG", dir)
-	defer os.Unsetenv("WURBS_CONFIG")
+	os.Setenv("WURB_CONFIG", dir)
+	defer os.Unsetenv("WURB_CONFIG")
 
 	cmd := fullCmd()
 	err := cmd.Run()

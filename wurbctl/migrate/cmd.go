@@ -19,7 +19,7 @@ type DBCmd struct{}
 
 // Run applies all pending database migrations against the configured Postgres database.
 func (c *DBCmd) Run() error {
-	configDir, err := config.ConfigDir()
+	configDir, err := config.Dir()
 	if err != nil {
 		return fmt.Errorf("failed to resolve config directory: %w", err)
 	}

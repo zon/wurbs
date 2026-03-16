@@ -65,7 +65,7 @@ func (c *ConfigCmd) Run() error {
 		FQDNJDBCURI: patchURI(secretData["fqdn-jdbc-uri"], c.ClusterIP, localPostgresPort),
 	}
 
-	configDir, err := config.ConfigDir()
+	configDir, err := config.Dir()
 	if err != nil {
 		return fmt.Errorf("failed to get config directory: %w", err)
 	}
