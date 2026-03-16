@@ -40,6 +40,25 @@ type contextKey int
 
 const userContextKey contextKey = iota
 
+var testMode bool
+
+func SetTestMode(enabled bool) {
+	testMode = enabled
+}
+
+// testClientPublicKey is a shared RSA public key used for client credential
+// authentication in test mode. All test users can authenticate using tokens
+// signed with the corresponding private key.
+const testClientPublicKey = `-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAu1SU1LfVLPHCozMxH2Mo
+4lgOEePzNm0tRgeLezV6ffAt0gunVTLw7onLRnrq0/IzW7yWR7QkrmBL7jTKEn5u
++qKhbwKfBstIs+bMY2Zkp18gnTxKLxoS2tFczGkPLPgizskuemMghRniWaoLcyeh
+kd3qqGElvW/VDL5AaWTg0nLVkjRo9z+40RQzuVaE8AkAFmxZzow3x+VJYKdjykkJ
+0iT9wCS0DRTXu269V264Vf/3jvredZiKRkgwlL9xNAwxXFg0x/XFw005UWVRIkdg
+cKWTjpBP2dPwVZ4WWC+9aGVd+Gyn1o0CLelf4rEjGoXbAAEgAqeGUxrcIlbjXfbcw
+IDAQAB
+-----END PUBLIC KEY-----`
+
 // Errors returned by the auth module.
 var (
 	ErrNoUser       = errors.New("auth: no authenticated user in context")
@@ -118,23 +137,36 @@ func OIDCMiddleware(db *gorm.DB) (func(http.Handler) http.Handler, error) {
 }
 
 // ClientMiddleware returns HTTP middleware that validates client credential
-// JWT tokens signed with RSA keys. It loads the public key from auth secrets.
+// JWT tokens signed with RSA keys.
+//
+// In test mode, it uses a shared test public key. Otherwise, it loads the
+// public key from auth secrets.
 //
 // The db handle is used to look up users. Only admin and test users may
 // authenticate via client credentials; real users are rejected.
 func ClientMiddleware(db *gorm.DB) (func(http.Handler) http.Handler, error) {
-	var s secret
-	if err := config.LoadSecret(&s); err != nil {
-		return nil, fmt.Errorf("auth: failed to load secrets: %w", err)
-	}
+	var pubKey *rsa.PublicKey
+	var err error
 
-	if s.Auth.ClientPublicKey == "" {
-		return nil, fmt.Errorf("auth: client_public_key not configured in secrets")
-	}
+	if testMode {
+		pubKey, err = parseRSAPublicKey(testClientPublicKey)
+		if err != nil {
+			return nil, fmt.Errorf("auth: failed to parse test client public key: %w", err)
+		}
+	} else {
+		var s secret
+		if err := config.LoadSecret(&s); err != nil {
+			return nil, fmt.Errorf("auth: failed to load secrets: %w", err)
+		}
 
-	pubKey, err := parseRSAPublicKey(s.Auth.ClientPublicKey)
-	if err != nil {
-		return nil, fmt.Errorf("auth: failed to parse client public key: %w", err)
+		if s.Auth.ClientPublicKey == "" {
+			return nil, fmt.Errorf("auth: client_public_key not configured in secrets")
+		}
+
+		pubKey, err = parseRSAPublicKey(s.Auth.ClientPublicKey)
+		if err != nil {
+			return nil, fmt.Errorf("auth: failed to parse client public key: %w", err)
+		}
 	}
 
 	return func(next http.Handler) http.Handler {
