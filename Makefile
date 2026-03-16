@@ -7,10 +7,10 @@ infra:
 	cd infra && pulumi up --stack dev --yes
 
 rest:
-	air -build.cmd "go build -o ./tmp/rest ./server" -build.bin "./tmp/rest" -build.args_bin "--test" -build.include_dir "core,server,rest"
+	air -build.cmd "go build -o ./tmp/rest ./cmd/rest" -build.bin "./tmp/rest" -build.args_bin "--test" -build.include_dir "core,rest"
 
 socket:
-	air -build.cmd "go build -o ./tmp/socket ./socketserver" -build.bin "./tmp/socket" -build.args_bin "--test" -build.include_dir "core,socketserver,socket"
+	air -build.cmd "go build -o ./tmp/socket ./cmd/socket" -build.bin "./tmp/socket" -build.args_bin "--test" -build.include_dir "core,socket"
 
 install:
 	go install ./wurbctl

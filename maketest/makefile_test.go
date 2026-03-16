@@ -35,9 +35,9 @@ func TestMakefile_RestTarget_UsesAir(t *testing.T) {
 	assert.Contains(t, out, "air", "rest target should use air")
 }
 
-func TestMakefile_RestTarget_BuildsServer(t *testing.T) {
+func TestMakefile_RestTarget_BuildsRest(t *testing.T) {
 	out := dryRun(t, "rest")
-	assert.Contains(t, out, "./server", "rest target should build the server directory")
+	assert.Contains(t, out, "./cmd/rest", "rest target should build the rest app")
 }
 
 func TestMakefile_RestTarget_TestMode(t *testing.T) {
@@ -50,9 +50,9 @@ func TestMakefile_SocketTarget_UsesAir(t *testing.T) {
 	assert.Contains(t, out, "air", "socket target should use air")
 }
 
-func TestMakefile_SocketTarget_BuildsSocketServer(t *testing.T) {
+func TestMakefile_SocketTarget_BuildsSocket(t *testing.T) {
 	out := dryRun(t, "socket")
-	assert.Contains(t, out, "./socketserver", "socket target should build the socketserver directory")
+	assert.Contains(t, out, "./cmd/socket", "socket target should build the socket app")
 }
 
 func TestMakefile_SocketTarget_TestMode(t *testing.T) {

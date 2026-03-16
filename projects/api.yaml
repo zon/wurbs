@@ -8,7 +8,7 @@ requirements:
       - The client app is removed
       - The server app is removed
       - The rest, socket, and wurbctl apps use Kong for CLI argument handling
-    passing: false
+    passing: true
 
   - category: rest service
     description: REST JSON API service built with Gin that emits NATS messages on record changes
