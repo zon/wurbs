@@ -142,7 +142,7 @@ requirements:
     items:
       - Exposes a narrow public interface for converting Markdown to HTML
       - core/markdown.go is removed and callers use core/markdown directly
-    passing: false
+    passing: true
 
   - category: core/nats
     description: Deep module for NATS connection and messaging

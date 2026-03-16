@@ -1,4 +1,4 @@
-package core
+package markdown
 
 import (
 	"bytes"
@@ -19,7 +19,7 @@ func GetMdConverter() goldmark.Markdown {
 	)
 }
 
-func MarkdownToHtml(md string) (string, error) {
+func ToHTML(md string) (string, error) {
 	text := strings.ReplaceAll(md, "<br>", "\n")
 	text = html.UnescapeString(text)
 	var result bytes.Buffer
