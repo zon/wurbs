@@ -87,6 +87,29 @@ func (c *Conn) Publish(subject string, data any) error {
 	return nil
 }
 
+// Subscription wraps a NATS subscription.
+type Subscription struct {
+	sub *nats.Subscription
+}
+
+// Subscribe registers a callback for messages on the given NATS subject.
+// The callback receives the raw message payload. Returns a Subscription
+// that can be unsubscribed.
+func (c *Conn) Subscribe(subject string, cb func([]byte)) (*Subscription, error) {
+	sub, err := c.nc.Subscribe(subject, func(msg *nats.Msg) {
+		cb(msg.Data)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("nats: subscribe failed: %w", err)
+	}
+	return &Subscription{sub: sub}, nil
+}
+
+// Unsubscribe removes the subscription.
+func (s *Subscription) Unsubscribe() error {
+	return s.sub.Unsubscribe()
+}
+
 // Close closes the NATS connection.
 func (c *Conn) Close() {
 	c.nc.Close()

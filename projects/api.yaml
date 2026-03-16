@@ -16,7 +16,7 @@ requirements:
       - Clients can open a WebSocket connection following a specific channel
       - NATS subject messages are relayed to the corresponding WebSocket channel
       - The service accepts a --test flag that enables test users and test channels
-    passing: false
+    passing: true
 
   - category: auth
     description: Authentication via OIDC and client credential flow
