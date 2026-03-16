@@ -2,66 +2,59 @@ package main
 
 import (
 	"log/slog"
+	"net/http"
 	"os"
 
 	"github.com/alecthomas/kong"
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/zon/chat/core"
-	"github.com/zon/gonf"
+	"github.com/zon/chat/core/auth"
+	"github.com/zon/chat/core/config"
+	corenats "github.com/zon/chat/core/nats"
+	"github.com/zon/chat/core/pg"
+	"github.com/zon/chat/rest"
 )
 
 var cli struct {
-	Key       string `arg:"" type:"existingfile" help:"Path to Zitadel API private key json file"`
-	Subdomain string `help:"Zitadel application subdomain" default:"wurbs-2d2isd"`
-	Port      string `help:"Port to host on" default:"8080"`
+	Port string `help:"Port to listen on" default:"8080"`
+	Test bool   `help:"Enable test mode (test users and test channels)"`
 }
 
 func main() {
-	ktx := kong.Parse(&cli)
-	ktx.FatalIfErrorf(ktx.Error)
+	kong.Parse(&cli)
 
-	err := gonf.LoadConfig()
+	if cli.Test {
+		config.SetTestMode(true)
+	}
+
+	db, err := pg.Open()
 	if err != nil {
-		slog.Error("config", "error", err)
+		slog.Error("database connection failed", "error", err)
 		os.Exit(1)
 	}
 
-	err = core.InitDB()
+	// NATS is optional; the service runs without it.
+	var nc *corenats.Conn
+	nc, err = corenats.Connect()
 	if err != nil {
-		slog.Error("db", "error", err)
-		os.Exit(1)
+		slog.Warn("NATS connection failed, running without NATS", "error", err)
 	}
 
-	err = gonf.InitAuthMiddleware(cli.Subdomain, cli.Key)
+	// Use client credential middleware for auth. In production, OIDC middleware
+	// would also be wired in; for the REST service the client middleware covers
+	// both admin and test user flows.
+	authMW, err := auth.ClientMiddleware(db)
 	if err != nil {
-		slog.Error("zitadel auth middleware could not initialize", "error", err)
-		os.Exit(1)
+		slog.Warn("client auth middleware unavailable, using passthrough", "error", err)
+		authMW = func(next http.Handler) http.Handler { return next }
 	}
 
-	err = gonf.Connect()
-	if err != nil {
-		slog.Error("nats connection failed", "error", err)
-		os.Exit(1)
+	deps := rest.Deps{
+		DB:   db,
+		NATS: nc,
 	}
 
-	app := fiber.New()
-	app.Use(cors.New())
-	app.Use(logger.New())
-
-	app.Get("/health", func(c *fiber.Ctx) error {
-		return c.JSON("ok")
-	})
-
-	app.Use(gonf.AuthMiddleware)
-
-	gonf.AddRoutes(app)
-	app.Get("/messages", getMessages)
-	app.Post("/messages", postMessage)
-
-	err = app.Listen(":" + cli.Port)
-	if err != nil {
-		slog.Error("Listen failed", "error", err)
+	engine := rest.New(deps, authMW)
+	if err := engine.Run(":" + cli.Port); err != nil {
+		slog.Error("server failed", "error", err)
+		os.Exit(1)
 	}
 }

@@ -1,0 +1,409 @@
+package rest
+
+import (
+	"errors"
+	"fmt"
+	"net/http"
+	"strconv"
+
+	"github.com/gin-gonic/gin"
+	"github.com/zon/chat/core/auth"
+	"github.com/zon/chat/core/channel"
+	"github.com/zon/chat/core/message"
+	corenats "github.com/zon/chat/core/nats"
+	"gorm.io/gorm"
+)
+
+// Deps holds the dependencies for the REST service.
+type Deps struct {
+	DB   *gorm.DB
+	NATS *corenats.Conn // may be nil; NATS publishing is skipped when nil
+}
+
+// New creates a Gin engine with all REST API routes registered.
+// The auth middleware parameter wraps standard net/http middleware that
+// sets the authenticated user in the request context.
+func New(deps Deps, authMiddleware func(http.Handler) http.Handler) *gin.Engine {
+	r := gin.New()
+	r.Use(gin.Recovery())
+
+	r.GET("/health", health)
+
+	api := r.Group("")
+	api.Use(wrapMiddleware(authMiddleware))
+
+	h := &handler{deps: deps}
+
+	api.POST("/channels", h.createChannel)
+	api.GET("/channels", h.listChannels)
+	api.GET("/channels/:id", h.getChannel)
+	api.DELETE("/channels/:id", h.deleteChannel)
+
+	api.POST("/channels/:id/members", h.addMember)
+	api.DELETE("/channels/:id/members/:user_id", h.removeMember)
+	api.GET("/channels/:id/members", h.listMembers)
+
+	api.POST("/channels/:id/messages", h.createMessage)
+	api.GET("/channels/:id/messages", h.listMessages)
+
+	return r
+}
+
+// health is the unauthenticated health check endpoint.
+func health(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+}
+
+// wrapMiddleware adapts a standard net/http middleware to a Gin middleware.
+func wrapMiddleware(mw func(http.Handler) http.Handler) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// The net/http middleware calls next.ServeHTTP on success.
+		// We wrap the Gin context so the middleware can set context values.
+		var called bool
+		wrapped := mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Replace the Gin request with the one from the middleware
+			// (which may have an updated context with the authenticated user).
+			c.Request = r
+			called = true
+		}))
+		wrapped.ServeHTTP(c.Writer, c.Request)
+		if !called {
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
+
+// handler holds route handler methods and shared dependencies.
+type handler struct {
+	deps Deps
+}
+
+// parseID parses a uint path parameter. Returns 0 and sends a 400 response on failure.
+func parseID(c *gin.Context, param string) (uint, bool) {
+	raw := c.Param(param)
+	id, err := strconv.ParseUint(raw, 10, 64)
+	if err != nil || id == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid " + param})
+		return 0, false
+	}
+	return uint(id), true
+}
+
+// currentUser extracts the authenticated user from the Gin request context.
+func currentUser(c *gin.Context) (*auth.User, bool) {
+	u, err := auth.UserFromContext(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return nil, false
+	}
+	return u, true
+}
+
+// --- Channel handlers ---
+
+type createChannelRequest struct {
+	Name     string `json:"name" binding:"required"`
+	IsPublic bool   `json:"is_public"`
+	IsTest   bool   `json:"is_test"`
+}
+
+func (h *handler) createChannel(c *gin.Context) {
+	user, ok := currentUser(c)
+	if !ok {
+		return
+	}
+	if !user.IsAdmin {
+		c.JSON(http.StatusForbidden, gin.H{"error": "admin required"})
+		return
+	}
+
+	var req createChannelRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ch, err := channel.Create(h.deps.DB, req.Name, req.IsPublic, req.IsTest)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Publish channel creation to NATS.
+	if h.deps.NATS != nil {
+		_ = h.deps.NATS.Publish(fmt.Sprintf("channel.%d.created", ch.ID), ch)
+	}
+
+	c.JSON(http.StatusCreated, ch)
+}
+
+func (h *handler) listChannels(c *gin.Context) {
+	if _, ok := currentUser(c); !ok {
+		return
+	}
+
+	channels, err := channel.List(h.deps.DB)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, channels)
+}
+
+func (h *handler) getChannel(c *gin.Context) {
+	if _, ok := currentUser(c); !ok {
+		return
+	}
+
+	id, ok := parseID(c, "id")
+	if !ok {
+		return
+	}
+
+	ch, err := channel.Get(h.deps.DB, id)
+	if err != nil {
+		if errors.Is(err, channel.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "channel not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, ch)
+}
+
+func (h *handler) deleteChannel(c *gin.Context) {
+	user, ok := currentUser(c)
+	if !ok {
+		return
+	}
+	if !user.IsAdmin {
+		c.JSON(http.StatusForbidden, gin.H{"error": "admin required"})
+		return
+	}
+
+	id, ok := parseID(c, "id")
+	if !ok {
+		return
+	}
+
+	err := channel.Delete(h.deps.DB, id)
+	if err != nil {
+		if errors.Is(err, channel.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "channel not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Publish channel deletion to NATS.
+	if h.deps.NATS != nil {
+		_ = h.deps.NATS.Publish(fmt.Sprintf("channel.%d.deleted", id), gin.H{"id": id})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"deleted": true})
+}
+
+// --- Member handlers ---
+
+type addMemberRequest struct {
+	UserID uint `json:"user_id" binding:"required"`
+}
+
+func (h *handler) addMember(c *gin.Context) {
+	user, ok := currentUser(c)
+	if !ok {
+		return
+	}
+	if !user.IsAdmin {
+		c.JSON(http.StatusForbidden, gin.H{"error": "admin required"})
+		return
+	}
+
+	channelID, ok := parseID(c, "id")
+	if !ok {
+		return
+	}
+
+	var req addMemberRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Look up the target user.
+	var target auth.User
+	if err := h.deps.DB.First(&target, req.UserID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	err := channel.AddMember(h.deps.DB, channelID, &target)
+	if err != nil {
+		if errors.Is(err, channel.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "channel not found"})
+			return
+		}
+		if errors.Is(err, channel.ErrTestUserInReal) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Publish membership change to NATS.
+	if h.deps.NATS != nil {
+		_ = h.deps.NATS.Publish(fmt.Sprintf("channel.%d.members.added", channelID), gin.H{
+			"channel_id": channelID,
+			"user_id":    req.UserID,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"added": true})
+}
+
+func (h *handler) removeMember(c *gin.Context) {
+	user, ok := currentUser(c)
+	if !ok {
+		return
+	}
+	if !user.IsAdmin {
+		c.JSON(http.StatusForbidden, gin.H{"error": "admin required"})
+		return
+	}
+
+	channelID, ok := parseID(c, "id")
+	if !ok {
+		return
+	}
+
+	userID, ok := parseID(c, "user_id")
+	if !ok {
+		return
+	}
+
+	err := channel.RemoveMember(h.deps.DB, channelID, userID)
+	if err != nil {
+		if errors.Is(err, channel.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "member not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Publish membership change to NATS.
+	if h.deps.NATS != nil {
+		_ = h.deps.NATS.Publish(fmt.Sprintf("channel.%d.members.removed", channelID), gin.H{
+			"channel_id": channelID,
+			"user_id":    userID,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"removed": true})
+}
+
+func (h *handler) listMembers(c *gin.Context) {
+	if _, ok := currentUser(c); !ok {
+		return
+	}
+
+	channelID, ok := parseID(c, "id")
+	if !ok {
+		return
+	}
+
+	members, err := channel.Members(h.deps.DB, channelID)
+	if err != nil {
+		if errors.Is(err, channel.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "channel not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, members)
+}
+
+// --- Message handlers ---
+
+type createMessageRequest struct {
+	Content string `json:"content" binding:"required"`
+}
+
+func (h *handler) createMessage(c *gin.Context) {
+	user, ok := currentUser(c)
+	if !ok {
+		return
+	}
+
+	channelID, ok := parseID(c, "id")
+	if !ok {
+		return
+	}
+
+	var req createMessageRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// message.Create publishes to NATS internally when nc is non-nil.
+	msg, err := message.Create(h.deps.DB, h.deps.NATS, channelID, user.ID, req.Content)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, msg)
+}
+
+func (h *handler) listMessages(c *gin.Context) {
+	if _, ok := currentUser(c); !ok {
+		return
+	}
+
+	channelID, ok := parseID(c, "id")
+	if !ok {
+		return
+	}
+
+	var cursor uint
+	if raw := c.Query("cursor"); raw != "" {
+		v, err := strconv.ParseUint(raw, 10, 64)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid cursor"})
+			return
+		}
+		cursor = uint(v)
+	}
+
+	var limit int
+	if raw := c.Query("limit"); raw != "" {
+		v, err := strconv.Atoi(raw)
+		if err != nil || v <= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid limit"})
+			return
+		}
+		limit = v
+	}
+
+	page, err := message.List(h.deps.DB, channelID, cursor, limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, page)
+}

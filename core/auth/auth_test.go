@@ -67,7 +67,7 @@ func signToken(t *testing.T, key *rsa.PrivateKey, stdClaims jwt.Claims, email st
 
 func TestUserFromContext_WithUser(t *testing.T) {
 	u := &User{Email: "test@example.com"}
-	ctx := withUser(context.Background(), u)
+	ctx := ContextWithUser(context.Background(), u)
 
 	got, err := UserFromContext(ctx)
 	require.NoError(t, err)

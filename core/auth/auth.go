@@ -56,8 +56,10 @@ func UserFromContext(ctx context.Context) (*User, error) {
 	return u, nil
 }
 
-// withUser returns a new context with the authenticated user set.
-func withUser(ctx context.Context, u *User) context.Context {
+// ContextWithUser returns a new context with the authenticated user set.
+// This is used by auth middleware internally and may be used in tests
+// to inject a user into the request context.
+func ContextWithUser(ctx context.Context, u *User) context.Context {
 	return context.WithValue(ctx, userContextKey, u)
 }
 
@@ -109,7 +111,7 @@ func OIDCMiddleware(db *gorm.DB) (func(http.Handler) http.Handler, error) {
 				return
 			}
 
-			r = r.WithContext(withUser(r.Context(), user))
+			r = r.WithContext(ContextWithUser(r.Context(), user))
 			next.ServeHTTP(w, r)
 		})
 	}, nil
@@ -161,7 +163,7 @@ func ClientMiddleware(db *gorm.DB) (func(http.Handler) http.Handler, error) {
 				return
 			}
 
-			r = r.WithContext(withUser(r.Context(), user))
+			r = r.WithContext(ContextWithUser(r.Context(), user))
 			next.ServeHTTP(w, r)
 		})
 	}, nil
