@@ -130,11 +130,6 @@ func TestOpen_BadConnection(t *testing.T) {
 	_, _ = Open()
 }
 
-func TestMigrate_NilDB(t *testing.T) {
-	err := Migrate(nil)
-	assert.Error(t, err, "Migrate should fail with nil db")
-}
-
 func TestSecret_WriteRoundTrip(t *testing.T) {
 	tmpDir := t.TempDir()
 	testFile := filepath.Join(tmpDir, "postgres.json")

@@ -18,5 +18,5 @@ func InitDB() error {
 }
 
 func AutoMigrate() error {
-	return pg.Migrate(DB, &Message{})
+	return DB.AutoMigrate(&Message{})
 }

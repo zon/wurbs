@@ -79,11 +79,3 @@ func Open() (*gorm.DB, error) {
 
 	return s.open()
 }
-
-// Migrate runs GORM AutoMigrate for the given models.
-func Migrate(db *gorm.DB, models ...any) error {
-	if db == nil {
-		return fmt.Errorf("pg: nil database handle")
-	}
-	return db.AutoMigrate(models...)
-}

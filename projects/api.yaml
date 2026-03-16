@@ -2,13 +2,20 @@ name: api
 description: Wurbs API-only chat service with REST, WebSocket, auth, and NATS integration
 
 requirements:
+  - category: apps
+    description: The repo contains only the rest, socket, and wurbctl apps
+    items:
+      - The client app is removed
+      - The server app is removed
+    passing: false
+
   - category: rest service
     description: REST JSON API service built with Gin that emits NATS messages on record changes
     items:
       - The rest service exposes a REST JSON API using Gin
       - Record changes publish matching NATS subject messages
       - The service accepts a --test flag that enables test users and test channels
-    passing: true
+    passing: false
 
   - category: socket service
     description: WebSocket service built with Gorilla that relays NATS messages to connected clients
@@ -85,6 +92,7 @@ requirements:
       - Config is read from <dir>/config.yaml and secrets from <dir>/secret.yaml
       - The config directory defaults to /etc/wurbs and can be overridden with the WURB_CONFIG env var
       - In test mode, if WURB_CONFIG is not set, the module walks up from the working directory to find the git repo root and uses ./config there if it exists
+      - Dir caches its result so the resolution logic runs at most once
     passing: true
 
   - category: core/pg
@@ -92,8 +100,8 @@ requirements:
     items:
       - Exposes a narrow public interface for opening a database connection
       - Returns a *gorm.DB handle ready for use
-      - Supports auto-migration of models
-    passing: true
+      - core/db.go is removed and callers use core/pg directly
+    passing: false
 
   - category: core/auth
     description: Deep module for authentication middleware and user context
@@ -101,7 +109,8 @@ requirements:
       - Exposes narrow middleware interfaces for OIDC and client credential flows
       - Exposes a helper to extract the authenticated user from context
       - Owns the User model
-    passing: true
+      - core/user.go is removed and callers use core/auth directly
+    passing: false
 
   - category: core/channel
     description: Deep module for channel management and membership rules
@@ -119,7 +128,15 @@ requirements:
       - Owns the Message model
       - Supports paginated message queries
       - Publishes messages to NATS on creation
-    passing: true
+      - core/message.go is removed and callers use core/message directly
+    passing: false
+
+  - category: core/markdown
+    description: Deep module for converting Markdown to HTML
+    items:
+      - Exposes a narrow public interface for converting Markdown to HTML
+      - core/markdown.go is removed and callers use core/markdown directly
+    passing: false
 
   - category: core/nats
     description: Deep module for NATS connection and messaging
