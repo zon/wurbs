@@ -119,7 +119,7 @@ requirements:
       - Owns the Message model
       - Supports paginated message queries
       - Publishes messages to NATS on creation
-    passing: false
+    passing: true
 
   - category: core/nats
     description: Deep module for NATS connection and messaging
