@@ -110,7 +110,7 @@ requirements:
       - Owns the Channel model
       - Enforces that real channels can only contain real users
       - Enforces that test channels can contain both real and test users
-    passing: false
+    passing: true
 
   - category: core/message
     description: Deep module for chat messages
