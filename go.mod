@@ -6,6 +6,7 @@ require (
 	github.com/alecthomas/kong v1.12.0
 	github.com/go-jose/go-jose/v4 v4.1.1
 	github.com/gofiber/fiber/v2 v2.52.9
+	github.com/nats-io/nats.go v1.43.0
 	github.com/stretchr/testify v1.10.0
 	github.com/yuin/goldmark v1.7.12
 	github.com/zon/gonf v0.0.0-20250723153004-6adb4865e600
@@ -33,7 +34,6 @@ require (
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/mattn/go-sqlite3 v1.14.28 // indirect
 	github.com/muhlemmer/gu v0.3.1 // indirect
-	github.com/nats-io/nats.go v1.43.0 // indirect
 	github.com/nats-io/nkeys v0.4.11 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect

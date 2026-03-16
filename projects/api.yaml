@@ -127,4 +127,4 @@ requirements:
       - Exposes a narrow public interface for connecting to NATS
       - Exposes helpers for publishing messages to NATS subjects
       - Handles NATS auth callout using k8s service tokens
-    passing: false
+    passing: true
