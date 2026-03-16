@@ -135,7 +135,7 @@ requirements:
       - Supports paginated message queries
       - Publishes messages to NATS on creation
       - core/message.go is removed and callers use core/message directly
-    passing: false
+    passing: true
 
   - category: core/markdown
     description: Deep module for converting Markdown to HTML
