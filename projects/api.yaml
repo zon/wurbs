@@ -7,6 +7,7 @@ requirements:
     items:
       - The client app is removed
       - The server app is removed
+      - The rest, socket, and wurbctl apps use Kong for CLI argument handling
     passing: false
 
   - category: rest service
@@ -15,6 +16,7 @@ requirements:
       - The rest service exposes a REST JSON API using Gin
       - Record changes publish matching NATS subject messages
       - The service accepts a --test flag that enables test users and test channels
+      - The service accepts a --nats-token flag with a file path to a NATS auth token, which overrides the token in the config directory when present
     passing: false
 
   - category: socket service
@@ -23,7 +25,8 @@ requirements:
       - Clients can open a WebSocket connection following a specific channel
       - NATS subject messages are relayed to the corresponding WebSocket channel
       - The service accepts a --test flag that enables test users and test channels
-    passing: true
+      - The service accepts a --nats-token flag with a file path to a NATS auth token, which overrides the token in the config directory when present
+    passing: false
 
   - category: auth
     description: Authentication via OIDC and client credential flow
@@ -73,6 +76,8 @@ requirements:
       - The rest service has its own Deployment
       - The socket service has its own Deployment
       - The rest Deployment includes an init container that runs wurbctl migrate db before the main container starts
+      - Both service Deployments use /etc/wurbs as the config directory
+      - Both service Deployments pass the Kubernetes service account token path as the --nats-token value
     passing: false
 
   - category: makefile
@@ -89,11 +94,12 @@ requirements:
     description: Deep module for loading configuration and secrets from files
     items:
       - Exposes a narrow public interface for loading config and secrets
-      - Config is read from <dir>/config.yaml and secrets from <dir>/secret.yaml
+      - Exposes a Config struct containing the non-sensitive settings required by the apps
+      - Config is read from and written to config.yaml in the config directory
       - The config directory defaults to /etc/wurbs and can be overridden with the WURB_CONFIG env var
       - In test mode, if WURB_CONFIG is not set, the module walks up from the working directory to find the git repo root and uses ./config there if it exists
       - Dir caches its result so the resolution logic runs at most once
-    passing: true
+    passing: false
 
   - category: core/pg
     description: Deep module for initializing a PostgreSQL connection via GORM
@@ -145,3 +151,22 @@ requirements:
       - Exposes helpers for publishing messages to NATS subjects
       - Handles NATS auth callout using k8s service tokens
     passing: true
+
+  - category: wurbctl
+    description: CLI tool for configuring and managing the Wurbs service
+    items:
+      - wurbctl set config writes config.yaml to the repo config directory with any non-sensitive settings
+      - wurbctl set config applies config.yaml as a ConfigMap in the ralph-wurbs namespace
+      - wurbctl set config copies the NATS dev token from the dev-token key of the nats-secrets secret in the nats namespace into the repo config directory
+      - wurbctl set config copies the NATS dev token into the ralph-wurbs namespace
+      - wurbctl set config copies the postgres secret into the ralph-wurbs namespace with the host set to the internal Kubernetes service address
+    passing: false
+
+  - category: ralph workflow
+    description: Ralph agent workflow configuration for running in Kubernetes
+    items:
+      - The workflow uses /etc/wurbs as the config directory
+      - The workflow mounts config.yaml from the ConfigMap into the config directory
+      - The workflow mounts the NATS dev token into the config directory
+      - The workflow mounts the postgres secret into the config directory
+    passing: false
