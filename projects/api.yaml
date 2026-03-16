@@ -99,7 +99,7 @@ requirements:
       - The config directory defaults to /etc/wurbs and can be overridden with the WURB_CONFIG env var
       - In test mode, if WURB_CONFIG is not set, the module walks up from the working directory to find the git repo root and uses ./config there if it exists
       - Dir caches its result so the resolution logic runs at most once
-    passing: false
+    passing: true
 
   - category: core/pg
     description: Deep module for initializing a PostgreSQL connection via GORM
