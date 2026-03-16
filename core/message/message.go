@@ -5,9 +5,13 @@ import (
 	"fmt"
 
 	"github.com/zon/chat/core/auth"
-	corenats "github.com/zon/chat/core/nats"
 	"gorm.io/gorm"
 )
+
+// NATSPublisher defines the interface for publishing to NATS.
+type NATSPublisher interface {
+	Publish(subject string, data any) error
+}
 
 // Message is the chat message model. The message module owns this type.
 type Message struct {
@@ -37,7 +41,7 @@ func natsSubject(channelID uint) string {
 
 // Create persists a new message and publishes it to NATS. The nc parameter
 // may be nil, in which case NATS publishing is skipped.
-func Create(db *gorm.DB, nc *corenats.Conn, channelID, userID uint, content string) (*Message, error) {
+func Create(db *gorm.DB, nc NATSPublisher, channelID, userID uint, content string) (*Message, error) {
 	m := &Message{
 		ChannelID: channelID,
 		UserID:    userID,

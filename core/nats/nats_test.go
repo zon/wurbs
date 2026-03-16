@@ -10,9 +10,12 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/zon/chat/core/config"
 )
 
 func TestConnect_MissingSecretFile(t *testing.T) {
+	config.ResetCache()
+	defer config.ResetCache()
 	tmpDir := t.TempDir()
 	t.Setenv("WURB_CONFIG", tmpDir)
 
@@ -21,6 +24,8 @@ func TestConnect_MissingSecretFile(t *testing.T) {
 }
 
 func TestConnect_EmptyURL(t *testing.T) {
+	config.ResetCache()
+	defer config.ResetCache()
 	tmpDir := t.TempDir()
 	content := "nats:\n  url: \"\"\n"
 	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "secret.yaml"), []byte(content), 0644))
@@ -32,6 +37,8 @@ func TestConnect_EmptyURL(t *testing.T) {
 }
 
 func TestConnect_DialFailure(t *testing.T) {
+	config.ResetCache()
+	defer config.ResetCache()
 	tmpDir := t.TempDir()
 	content := "nats:\n  url: nats://localhost:4222\n"
 	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "secret.yaml"), []byte(content), 0644))
@@ -49,6 +56,8 @@ func TestConnect_DialFailure(t *testing.T) {
 }
 
 func TestConnect_Success(t *testing.T) {
+	config.ResetCache()
+	defer config.ResetCache()
 	tmpDir := t.TempDir()
 	content := "nats:\n  url: nats://localhost:4222\n"
 	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "secret.yaml"), []byte(content), 0644))
@@ -80,6 +89,8 @@ func TestConnect_Success(t *testing.T) {
 }
 
 func TestConnect_WithServiceToken(t *testing.T) {
+	config.ResetCache()
+	defer config.ResetCache()
 	tmpDir := t.TempDir()
 	content := "nats:\n  url: nats://localhost:4222\n"
 	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "secret.yaml"), []byte(content), 0644))
@@ -136,6 +147,8 @@ func TestConnect_WithoutServiceToken(t *testing.T) {
 }
 
 func TestConnect_TokenReadError(t *testing.T) {
+	config.ResetCache()
+	defer config.ResetCache()
 	tmpDir := t.TempDir()
 	content := "nats:\n  url: nats://localhost:4222\n"
 	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "secret.yaml"), []byte(content), 0644))
@@ -238,6 +251,8 @@ func TestReadToken_ReturnsToken(t *testing.T) {
 }
 
 func TestConnect_URLPassedToDial(t *testing.T) {
+	config.ResetCache()
+	defer config.ResetCache()
 	tmpDir := t.TempDir()
 	content := "nats:\n  url: nats://custom-host:9999\n"
 	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "secret.yaml"), []byte(content), 0644))
@@ -263,6 +278,8 @@ func TestConnect_URLPassedToDial(t *testing.T) {
 }
 
 func TestSecret_NestedYAMLParsing(t *testing.T) {
+	config.ResetCache()
+	defer config.ResetCache()
 	tmpDir := t.TempDir()
 	content := `
 nats:
@@ -290,4 +307,114 @@ other:
 
 	_, _ = Connect()
 	assert.Equal(t, "nats://my-server:4222", capturedURL, "should correctly parse nested NATS URL from secret.yaml")
+}
+
+func TestConnect_WithNatsTokenFile(t *testing.T) {
+	config.ResetCache()
+	defer config.ResetCache()
+
+	tmpDir := t.TempDir()
+	content := "nats:\n  url: nats://localhost:4222\n"
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "secret.yaml"), []byte(content), 0644))
+	t.Setenv("WURB_CONFIG", tmpDir)
+
+	tokenFile := filepath.Join(tmpDir, "token")
+	require.NoError(t, os.WriteFile(tokenFile, []byte("file-based-token"), 0644))
+	t.Setenv("WURB_NATS_TOKEN_FILE", tokenFile)
+
+	origDial := dial
+	origReadToken := readToken
+	origReadTokenFromFile := readTokenFromFile
+	defer func() {
+		dial = origDial
+		readToken = origReadToken
+		readTokenFromFile = origReadTokenFromFile
+	}()
+
+	var capturedOpts []nats.Option
+	dial = func(url string, opts ...nats.Option) (*nats.Conn, error) {
+		capturedOpts = opts
+		return nil, errors.New("test: stop here")
+	}
+
+	_, _ = Connect()
+	assert.Len(t, capturedOpts, 1, "should pass token option when token file is set")
+}
+
+func TestConnect_NatsTokenFileOverridesServiceToken(t *testing.T) {
+	config.ResetCache()
+	defer config.ResetCache()
+
+	tmpDir := t.TempDir()
+	content := "nats:\n  url: nats://localhost:4222\n"
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "secret.yaml"), []byte(content), 0644))
+	t.Setenv("WURB_CONFIG", tmpDir)
+
+	tokenFile := filepath.Join(tmpDir, "token")
+	require.NoError(t, os.WriteFile(tokenFile, []byte("file-token"), 0644))
+	t.Setenv("WURB_NATS_TOKEN_FILE", tokenFile)
+
+	origDial := dial
+	origReadToken := readToken
+	origReadTokenFromFile := readTokenFromFile
+	defer func() {
+		dial = origDial
+		readToken = origReadToken
+		readTokenFromFile = origReadTokenFromFile
+	}()
+
+	var serviceTokenCalled bool
+	readToken = func() (string, error) {
+		serviceTokenCalled = true
+		return "k8s-service-token", nil
+	}
+
+	readTokenFromFile = func(path string) (string, error) {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return "", err
+		}
+		return string(data), nil
+	}
+
+	var capturedOpts []nats.Option
+	dial = func(url string, opts ...nats.Option) (*nats.Conn, error) {
+		capturedOpts = opts
+		return nil, errors.New("test: stop here")
+	}
+
+	_, _ = Connect()
+	assert.False(t, serviceTokenCalled, "service token should not be read when token file is set")
+	assert.Len(t, capturedOpts, 1, "should pass token option")
+}
+
+func TestConnect_NatsTokenFileNotExist(t *testing.T) {
+	config.ResetCache()
+	defer config.ResetCache()
+
+	tmpDir := t.TempDir()
+	content := "nats:\n  url: nats://localhost:4222\n"
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "secret.yaml"), []byte(content), 0644))
+	t.Setenv("WURB_CONFIG", tmpDir)
+
+	t.Setenv("WURB_NATS_TOKEN_FILE", "/nonexistent/token/file")
+
+	origDial := dial
+	origReadToken := readToken
+	origReadTokenFromFile := readTokenFromFile
+	defer func() {
+		dial = origDial
+		readToken = origReadToken
+		readTokenFromFile = origReadTokenFromFile
+	}()
+
+	readToken = func() (string, error) { return "", nil }
+
+	readTokenFromFile = func(path string) (string, error) {
+		return "", errors.New("token file not found")
+	}
+
+	_, err := Connect()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "token file")
 }

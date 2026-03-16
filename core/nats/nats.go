@@ -14,6 +14,8 @@ const (
 	k8sTokenPath = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 )
 
+const envNatsTokenFile = "WURB_NATS_TOKEN_FILE"
+
 // secret holds NATS connection details loaded from secret.yaml.
 type secret struct {
 	NATS struct {
@@ -39,6 +41,19 @@ var readToken = func() (string, error) {
 	return string(data), nil
 }
 
+// readTokenFromFile reads a NATS token from a custom file path.
+// Returns an empty string if the file does not exist.
+var readTokenFromFile = func(path string) (string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", nil
+		}
+		return "", fmt.Errorf("nats: failed to read token file: %w", err)
+	}
+	return string(data), nil
+}
+
 // dial opens a NATS connection. It is a package-level variable so tests can
 // replace it.
 var dial = func(url string, opts ...nats.Option) (*nats.Conn, error) {
@@ -47,6 +62,8 @@ var dial = func(url string, opts ...nats.Option) (*nats.Conn, error) {
 
 // Connect loads the NATS URL from secret.yaml, reads a k8s service account
 // token for auth callout if available, and returns a connected Conn.
+// If WURB_NATS_TOKEN_FILE is set, the token from that file takes precedence
+// over the k8s service account token.
 func Connect() (*Conn, error) {
 	var s secret
 	if err := config.LoadSecret(&s); err != nil {
@@ -59,7 +76,12 @@ func Connect() (*Conn, error) {
 
 	var opts []nats.Option
 
-	token, err := readToken()
+	token, err := func() (string, error) {
+		if tokenFile := os.Getenv(envNatsTokenFile); tokenFile != "" {
+			return readTokenFromFile(tokenFile)
+		}
+		return readToken()
+	}()
 	if err != nil {
 		return nil, err
 	}

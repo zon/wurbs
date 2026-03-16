@@ -10,14 +10,18 @@ import (
 	"github.com/zon/chat/core/auth"
 	"github.com/zon/chat/core/channel"
 	"github.com/zon/chat/core/message"
-	corenats "github.com/zon/chat/core/nats"
 	"gorm.io/gorm"
 )
+
+// NATSPublisher defines the interface for publishing to NATS.
+type NATSPublisher interface {
+	Publish(subject string, data any) error
+}
 
 // Deps holds the dependencies for the REST service.
 type Deps struct {
 	DB   *gorm.DB
-	NATS *corenats.Conn // may be nil; NATS publishing is skipped when nil
+	NATS NATSPublisher // may be nil; NATS publishing is skipped when nil
 }
 
 // New creates a Gin engine with all REST API routes registered.
@@ -360,7 +364,10 @@ func (h *handler) createMessage(c *gin.Context) {
 	}
 
 	// message.Create publishes to NATS internally when nc is non-nil.
-	msg, err := message.Create(h.deps.DB, h.deps.NATS, channelID, user.ID, req.Content)
+	var nc interface {
+		Publish(subject string, data any) error
+	} = h.deps.NATS
+	msg, err := message.Create(h.deps.DB, nc, channelID, user.ID, req.Content)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

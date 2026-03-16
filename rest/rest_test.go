@@ -14,9 +14,30 @@ import (
 	"github.com/zon/chat/core/auth"
 	"github.com/zon/chat/core/channel"
 	"github.com/zon/chat/core/message"
+	corenats "github.com/zon/chat/core/nats"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
+
+type mockNATS struct {
+	published []natsMessage
+}
+
+type natsMessage struct {
+	subject string
+	data    any
+}
+
+func (m *mockNATS) Publish(subject string, data any) error {
+	m.published = append(m.published, natsMessage{subject: subject, data: data})
+	return nil
+}
+
+func (m *mockNATS) Subscribe(subject string, cb func([]byte)) (*corenats.Subscription, error) {
+	return nil, nil
+}
+
+func (m *mockNATS) Close() {}
 
 func init() {
 	gin.SetMode(gin.TestMode)
@@ -740,4 +761,104 @@ func TestMessageResponseIsJSON(t *testing.T) {
 
 	w = doJSON(t, engine, "POST", "/channels/"+channelID+"/messages", map[string]any{"content": "test"})
 	assert.Contains(t, w.Header().Get("Content-Type"), "application/json")
+}
+
+// --- NATS publishing tests ---
+
+func newTestEngineWithNATS(t *testing.T, db *gorm.DB, user *auth.User, nats *mockNATS) *gin.Engine {
+	t.Helper()
+	deps := Deps{DB: db, NATS: nats}
+	return New(deps, fakeAuth(user))
+}
+
+func TestNATS_PublishesOnChannelCreated(t *testing.T) {
+	db := setupTestDB(t)
+	admin := createTestUser(t, db, "admin@test.com", "sub-admin", true, false)
+	mn := &mockNATS{}
+	engine := newTestEngineWithNATS(t, db, admin, mn)
+
+	w := doJSON(t, engine, "POST", "/channels", map[string]any{
+		"name":      "nats-test-chan",
+		"is_public": true,
+	})
+
+	assert.Equal(t, http.StatusCreated, w.Code)
+	assert.Len(t, mn.published, 1)
+	assert.Contains(t, mn.published[0].subject, "channel.")
+	assert.Contains(t, mn.published[0].subject, ".created")
+}
+
+func TestNATS_PublishesOnChannelDeleted(t *testing.T) {
+	db := setupTestDB(t)
+	admin := createTestUser(t, db, "admin@test.com", "sub-admin", true, false)
+	mn := &mockNATS{}
+	engine := newTestEngineWithNATS(t, db, admin, mn)
+
+	w := doJSON(t, engine, "POST", "/channels", map[string]any{"name": "delete-nats"})
+	created := parseJSON(t, w)
+	channelID := fmt.Sprintf("%.0f", created["ID"])
+
+	w = doJSON(t, engine, "DELETE", "/channels/"+channelID, nil)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	assert.Len(t, mn.published, 2)
+	assert.Contains(t, mn.published[1].subject, "channel.")
+	assert.Contains(t, mn.published[1].subject, ".deleted")
+}
+
+func TestNATS_PublishesOnMemberAdded(t *testing.T) {
+	db := setupTestDB(t)
+	admin := createTestUser(t, db, "admin@test.com", "sub-admin", true, false)
+	member := createTestUser(t, db, "member@test.com", "sub-member", false, false)
+	mn := &mockNATS{}
+	engine := newTestEngineWithNATS(t, db, admin, mn)
+
+	w := doJSON(t, engine, "POST", "/channels", map[string]any{"name": "member-test"})
+	created := parseJSON(t, w)
+	channelID := fmt.Sprintf("%.0f", created["ID"])
+
+	w = doJSON(t, engine, "POST", "/channels/"+channelID+"/members", map[string]any{
+		"user_id": member.ID,
+	})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	assert.Len(t, mn.published, 2)
+	assert.Contains(t, mn.published[1].subject, "channel.")
+	assert.Contains(t, mn.published[1].subject, ".members.added")
+}
+
+func TestNATS_PublishesOnMemberRemoved(t *testing.T) {
+	db := setupTestDB(t)
+	admin := createTestUser(t, db, "admin@test.com", "sub-admin", true, false)
+	member := createTestUser(t, db, "member@test.com", "sub-member", false, false)
+	mn := &mockNATS{}
+	engine := newTestEngineWithNATS(t, db, admin, mn)
+
+	w := doJSON(t, engine, "POST", "/channels", map[string]any{"name": "remove-test"})
+	created := parseJSON(t, w)
+	channelID := fmt.Sprintf("%.0f", created["ID"])
+
+	doJSON(t, engine, "POST", "/channels/"+channelID+"/members", map[string]any{
+		"user_id": member.ID,
+	})
+
+	memberIDStr := fmt.Sprintf("%d", member.ID)
+	w = doJSON(t, engine, "DELETE", "/channels/"+channelID+"/members/"+memberIDStr, nil)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	assert.Len(t, mn.published, 3)
+	assert.Contains(t, mn.published[2].subject, "channel.")
+	assert.Contains(t, mn.published[2].subject, ".members.removed")
+}
+
+func TestNATS_SkippedWhenNil(t *testing.T) {
+	db := setupTestDB(t)
+	admin := createTestUser(t, db, "admin@test.com", "sub-admin", true, false)
+	engine := newTestEngine(t, db, admin)
+
+	w := doJSON(t, engine, "POST", "/channels", map[string]any{
+		"name": "no-nats",
+	})
+
+	assert.Equal(t, http.StatusCreated, w.Code)
 }

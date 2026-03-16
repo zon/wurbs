@@ -17,7 +17,7 @@ requirements:
       - Record changes publish matching NATS subject messages
       - The service accepts a --test flag that enables test users and test channels
       - The service accepts a --nats-token flag with a file path to a NATS auth token, which overrides the token in the config directory when present
-    passing: false
+    passing: true
 
   - category: socket service
     description: WebSocket service built with Gorilla that relays NATS messages to connected clients

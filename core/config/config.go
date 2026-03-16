@@ -30,6 +30,12 @@ func resetCache() {
 	dirCached = false
 }
 
+// ResetCache clears the cached configuration directory.
+// This is useful for testing when the config directory needs to be re-resolved.
+func ResetCache() {
+	resetCache()
+}
+
 // Dir returns the configuration directory path.
 // Resolution order:
 //  1. WURB_CONFIG environment variable
