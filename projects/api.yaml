@@ -26,7 +26,7 @@ requirements:
       - NATS subject messages are relayed to the corresponding WebSocket channel
       - The service accepts a --test flag that enables test users and test channels
       - The service accepts a --nats-token flag with a file path to a NATS auth token, which overrides the token in the config directory when present
-    passing: false
+    passing: true
 
   - category: auth
     description: Authentication via OIDC and client credential flow
