@@ -34,7 +34,7 @@ requirements:
       - wurbctl set config copies the NATS dev token from the dev-token key of the nats-secrets secret in the nats namespace into the repo config directory
       - wurbctl set config copies the NATS dev token into the ralph-wurbs namespace
       - wurbctl set config copies the postgres secret into the ralph-wurbs namespace with the host set to the internal Kubernetes service address
-    passing: false
+    passing: true
 
   - category: ralph workflow
     description: Ralph agent workflow configuration for running in Kubernetes
