@@ -16,13 +16,6 @@ const (
 
 const envNatsTokenFile = "WURB_NATS_TOKEN_FILE"
 
-// secret holds NATS connection details loaded from secret.yaml.
-type secret struct {
-	NATS struct {
-		URL string `yaml:"url"`
-	} `yaml:"nats"`
-}
-
 // Conn wraps a NATS connection.
 type Conn struct {
 	nc *nats.Conn
@@ -60,18 +53,18 @@ var dial = func(url string, opts ...nats.Option) (*nats.Conn, error) {
 	return nats.Connect(url, opts...)
 }
 
-// Connect loads the NATS URL from secret.yaml, reads a k8s service account
+// Connect loads the NATS URL from config, reads a k8s service account
 // token for auth callout if available, and returns a connected Conn.
 // If WURB_NATS_TOKEN_FILE is set, the token from that file takes precedence
 // over the k8s service account token.
 func Connect() (*Conn, error) {
-	var s secret
-	if err := config.LoadSecret(&s); err != nil {
-		return nil, fmt.Errorf("nats: failed to load secrets: %w", err)
+	var cfg config.Config
+	if err := config.Load(&cfg); err != nil {
+		return nil, fmt.Errorf("nats: failed to load config: %w", err)
 	}
 
-	if s.NATS.URL == "" {
-		return nil, fmt.Errorf("nats: url not configured in secrets")
+	if cfg.NATSURL == "" {
+		return nil, fmt.Errorf("nats: natsURL not configured in config.yaml")
 	}
 
 	var opts []nats.Option
@@ -89,7 +82,7 @@ func Connect() (*Conn, error) {
 		opts = append(opts, nats.Token(token))
 	}
 
-	nc, err := dial(s.NATS.URL, opts...)
+	nc, err := dial(cfg.NATSURL, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("nats: connection failed: %w", err)
 	}

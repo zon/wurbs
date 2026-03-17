@@ -707,7 +707,7 @@ func TestTestUserCannotCreateChannel(t *testing.T) {
 func TestAdminTestUser(t *testing.T) {
 	// Admin test users can manage everything.
 	db := setupTestDB(t)
-	adminTest := createTestUser(t, db, "admin-test@test.com", "sub-admin-test", true, true)
+	adminTest := createTestUser(t, db, "test-admin@example.com", "sub-admin-test", true, true)
 	engine := newTestEngine(t, db, adminTest)
 
 	w := doJSON(t, engine, "POST", "/channels", map[string]any{

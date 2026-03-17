@@ -12,16 +12,16 @@ import (
 )
 
 const (
-	wurbsNamespace      = "ralph-wurbs"
-	postgresNamespace   = "wurbs"
-	natsNamespace       = "nats"
-	postgresSecret      = "wurbs-postgres-app"
-	natsSecret          = "nats-secrets"
-	natsTokenKey        = "dev-token"
-	localPostgresPort   = "32432"
-	testAdminEmail      = "admin-test@test.com"
-	testAdminSecretName = "test-admin"
-	configMapName       = "wurbs"
+	ralphWorkflowNamespace = "ralph-wurbs"
+	wurbsNamespace         = "wurbs"
+	natsNamespace          = "nats"
+	postgresSecret         = "wurbs-postgres-app"
+	natsSecret             = "nats-secrets"
+	natsTokenKey           = "dev-token"
+	localPostgresPort      = "32432"
+	testAdminEmail         = "test-admin@example.com"
+	testAdminSecretName    = "test-admin"
+	configMapName          = "wurbs"
 )
 
 // SetConfigCmd implements `wurbctl set config`.
@@ -87,10 +87,10 @@ func (c *SetConfigCmd) writeConfig(tree *config.ConfigTree) error {
 		return fmt.Errorf("failed to marshal config map: %w", err)
 	}
 
-	if err := k8s.ApplyConfigmap(configMapName, wurbsNamespace, c.Context, configmapData); err != nil {
-		return fmt.Errorf("failed to apply configmap to %s: %w", wurbsNamespace, err)
+	if err := k8s.ApplyConfigmap(configMapName, ralphWorkflowNamespace, c.Context, configmapData); err != nil {
+		return fmt.Errorf("failed to apply configmap to %s: %w", ralphWorkflowNamespace, err)
 	}
-	fmt.Printf("applied configmap %s to %s namespace\n", configMapName, wurbsNamespace)
+	fmt.Printf("applied configmap %s to %s namespace\n", configMapName, ralphWorkflowNamespace)
 
 	return nil
 }
@@ -107,10 +107,10 @@ func (c *SetConfigCmd) writeNATSDevToken(tree *config.ConfigTree) error {
 	}
 	fmt.Printf("wrote %s\n", tree.NATSDevToken)
 
-	if err := k8s.ApplySecret(natsSecret, wurbsNamespace, c.Context, map[string]string{natsTokenKey: token}); err != nil {
-		return fmt.Errorf("failed to apply NATS secret to %s: %w", wurbsNamespace, err)
+	if err := k8s.ApplySecret(natsSecret, ralphWorkflowNamespace, c.Context, map[string]string{natsTokenKey: token}); err != nil {
+		return fmt.Errorf("failed to apply NATS secret to %s: %w", ralphWorkflowNamespace, err)
 	}
-	fmt.Printf("applied secret %s to %s namespace\n", natsSecret, wurbsNamespace)
+	fmt.Printf("applied secret %s to %s namespace\n", natsSecret, ralphWorkflowNamespace)
 	return nil
 }
 
@@ -121,7 +121,7 @@ func (c *SetConfigCmd) writePostgresSecret(tree *config.ConfigTree) error {
 	}
 
 	var secret pg.Secret
-	if err := secret.ReadK8s(postgresSecret, postgresNamespace, c.Context); err != nil {
+	if err := secret.ReadK8s(postgresSecret, wurbsNamespace, c.Context); err != nil {
 		return fmt.Errorf("failed to load postgres secret: %w", err)
 	}
 	secret.Patch(clusterIP, localPostgresPort)
@@ -131,10 +131,10 @@ func (c *SetConfigCmd) writePostgresSecret(tree *config.ConfigTree) error {
 	}
 	fmt.Printf("wrote %s\n", tree.Postgres)
 
-	if err := secret.WriteK8s(postgresSecret, wurbsNamespace, c.Context); err != nil {
-		return fmt.Errorf("failed to apply postgres secret to %s: %w", wurbsNamespace, err)
+	if err := secret.WriteK8s(postgresSecret, ralphWorkflowNamespace, c.Context); err != nil {
+		return fmt.Errorf("failed to apply postgres secret to %s: %w", ralphWorkflowNamespace, err)
 	}
-	fmt.Printf("applied secret %s to %s namespace\n", postgresSecret, wurbsNamespace)
+	fmt.Printf("applied secret %s to %s namespace\n", postgresSecret, ralphWorkflowNamespace)
 	return nil
 }
 
@@ -158,47 +158,29 @@ func (c *SetConfigCmd) ensureTestAdmin(db *gorm.DB, tree *config.ConfigTree) err
 		return fmt.Errorf("failed to generate test admin client credential keys: %w", err)
 	}
 
-	if err := c.saveTestAdminCredentials(tree, user.Email, privateKey, publicKey); err != nil {
+	if err := c.writeTestAdmin(tree, user.Email, privateKey, publicKey); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (c *SetConfigCmd) saveTestAdminCredentials(tree *config.ConfigTree, email, privateKey, publicKey string) error {
-	secretData := map[string]string{
-		"TEST_ADMIN_EMAIL":      email,
-		"TEST_ADMIN_CLIENT_KEY": privateKey,
-		"TEST_ADMIN_CLIENT_PUB": publicKey,
+func (c *SetConfigCmd) writeTestAdmin(tree *config.ConfigTree, email, privateKey, publicKey string) error {
+	ta := auth.TestAdmin{
+		Email:      email,
+		PublicKey:  publicKey,
+		PrivateKey: privateKey,
 	}
 
-	if err := k8s.ApplySecret(testAdminSecretName, wurbsNamespace, c.Context, secretData); err != nil {
-		return fmt.Errorf("failed to apply test admin secret to %s: %w", wurbsNamespace, err)
+	if err := ta.WriteK8s(testAdminSecretName, ralphWorkflowNamespace, c.Context); err != nil {
+		return fmt.Errorf("failed to apply test admin secret to %s: %w", ralphWorkflowNamespace, err)
 	}
-	fmt.Printf("applied secret %s to %s namespace\n", testAdminSecretName, wurbsNamespace)
+	fmt.Printf("applied secret %s to %s namespace\n", testAdminSecretName, ralphWorkflowNamespace)
 
-	localSecretPath := tree.Parent + "/secret.yaml"
-	if err := writeSecretFile(localSecretPath, email, privateKey, publicKey); err != nil {
-		return fmt.Errorf("failed to write test admin credentials to local config: %w", err)
+	if err := ta.Write(tree.TestAdmin); err != nil {
+		return fmt.Errorf("failed to write test admin credentials: %w", err)
 	}
-	fmt.Printf("wrote %s\n", localSecretPath)
+	fmt.Printf("wrote %s\n", tree.TestAdmin)
 
 	return nil
-}
-
-func writeSecretFile(path, email, privateKey, publicKey string) error {
-	secret := map[string]any{
-		"auth": map[string]string{
-			"client_public_key":  publicKey,
-			"client_private_key": privateKey,
-			"test_admin_email":   email,
-		},
-	}
-
-	data, err := config.MarshalSecret(secret)
-	if err != nil {
-		return fmt.Errorf("failed to marshal secret: %w", err)
-	}
-
-	return os.WriteFile(path, data, 0600)
 }

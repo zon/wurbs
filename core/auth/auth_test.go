@@ -17,6 +17,7 @@ import (
 	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/zon/chat/core/config"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -525,13 +526,14 @@ func TestClientMiddleware_RejectsNoToken(t *testing.T) {
 func TestClientMiddleware_MissingConfig(t *testing.T) {
 	db := setupTestDB(t)
 
-	// Point to empty config dir — no secret.yaml.
+	// Point to empty config dir — no config files.
+	config.ResetCache()
 	tmpDir := t.TempDir()
 	t.Setenv("WURB_CONFIG", tmpDir)
 
 	_, err := ClientMiddleware(db)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to load secrets")
+	assert.Contains(t, err.Error(), "failed to load test admin credentials")
 }
 
 func TestClientMiddleware_MissingPublicKey(t *testing.T) {
@@ -542,7 +544,7 @@ func TestClientMiddleware_MissingPublicKey(t *testing.T) {
 
 	_, err := ClientMiddleware(db)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "client_public_key not configured")
+	assert.Contains(t, err.Error(), "publicKey not configured")
 }
 
 // --- OIDCMiddleware integration tests ---
@@ -735,12 +737,14 @@ func TestOIDCMiddleware_CreatesNewUser(t *testing.T) {
 func TestOIDCMiddleware_MissingConfig(t *testing.T) {
 	db := setupTestDB(t)
 
+	// Point to empty config dir.
+	config.ResetCache()
 	tmpDir := t.TempDir()
 	t.Setenv("WURB_CONFIG", tmpDir)
 
 	_, err := OIDCMiddleware(db)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to load secrets")
+	assert.Contains(t, err.Error(), "failed to load config")
 }
 
 func TestOIDCMiddleware_MissingIssuerURL(t *testing.T) {
@@ -750,7 +754,7 @@ func TestOIDCMiddleware_MissingIssuerURL(t *testing.T) {
 
 	_, err := OIDCMiddleware(db)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "issuer_url not configured")
+	assert.Contains(t, err.Error(), "oidc_issuer not configured")
 }
 
 // --- EnsureAdminUser ---
@@ -808,14 +812,14 @@ func TestEnsureAdminUser_RejectsTestUser(t *testing.T) {
 func TestEnsureTestAdminUser_CreatesUser(t *testing.T) {
 	db := setupTestDB(t)
 
-	user, err := EnsureTestAdminUser(db, "admin-test@test.com")
+	user, err := EnsureTestAdminUser(db, "test-admin@example.com")
 	require.NoError(t, err)
-	assert.Equal(t, "admin-test@test.com", user.Email)
+	assert.Equal(t, "test-admin@example.com", user.Email)
 	assert.True(t, user.IsAdmin)
 	assert.True(t, user.IsTest)
 
 	var found User
-	require.NoError(t, db.Where("email = ?", "admin-test@test.com").First(&found).Error)
+	require.NoError(t, db.Where("email = ?", "test-admin@example.com").First(&found).Error)
 	assert.True(t, found.IsAdmin)
 	assert.True(t, found.IsTest)
 }
@@ -823,15 +827,15 @@ func TestEnsureTestAdminUser_CreatesUser(t *testing.T) {
 func TestEnsureTestAdminUser_UpdatesExistingUser(t *testing.T) {
 	db := setupTestDB(t)
 
-	require.NoError(t, db.Create(&User{Email: "admin-test@test.com", IsAdmin: false, IsTest: false}).Error)
+	require.NoError(t, db.Create(&User{Email: "test-admin@example.com", IsAdmin: false, IsTest: false}).Error)
 
-	user, err := EnsureTestAdminUser(db, "admin-test@test.com")
+	user, err := EnsureTestAdminUser(db, "test-admin@example.com")
 	require.NoError(t, err)
 	assert.True(t, user.IsAdmin)
 	assert.True(t, user.IsTest)
 
 	var found User
-	require.NoError(t, db.Where("email = ?", "admin-test@test.com").First(&found).Error)
+	require.NoError(t, db.Where("email = ?", "test-admin@example.com").First(&found).Error)
 	assert.True(t, found.IsAdmin)
 	assert.True(t, found.IsTest)
 }
@@ -839,10 +843,10 @@ func TestEnsureTestAdminUser_UpdatesExistingUser(t *testing.T) {
 func TestEnsureTestAdminUser_IdempotentForExistingTestAdmin(t *testing.T) {
 	db := setupTestDB(t)
 
-	user1, err := EnsureTestAdminUser(db, "admin-test@test.com")
+	user1, err := EnsureTestAdminUser(db, "test-admin@example.com")
 	require.NoError(t, err)
 
-	user2, err := EnsureTestAdminUser(db, "admin-test@test.com")
+	user2, err := EnsureTestAdminUser(db, "test-admin@example.com")
 	require.NoError(t, err)
 
 	assert.Equal(t, user1.ID, user2.ID)
@@ -1196,26 +1200,26 @@ dT8vW3eK7jF2pL9tY5qH2nK3vP6tX5rL9dT8vW4eK6jF3pL8tY7qH2nK8vP5tX3rL
 
 func setupTestConfig(t *testing.T, issuerURL, clientPublicKey string) {
 	t.Helper()
+	config.ResetCache()
 	tmpDir := t.TempDir()
 	t.Setenv("WURB_CONFIG", tmpDir)
 
-	var content string
-	if issuerURL != "" || clientPublicKey != "" {
-		content = "auth:\n"
-		if issuerURL != "" {
-			content += "  issuer_url: " + issuerURL + "\n"
-		}
-		if clientPublicKey != "" {
-			// Use YAML literal block scalar for multi-line PEM.
-			content += "  client_public_key: |\n"
-			for _, line := range splitLines(clientPublicKey) {
-				content += "    " + line + "\n"
-			}
+	configPath := tmpDir + "/config.yaml"
+	configContent := ""
+	if issuerURL != "" {
+		configContent = "oidcIssuer: " + issuerURL + "\n"
+	}
+	require.NoError(t, os.WriteFile(configPath, []byte(configContent), 0644))
+
+	adminPath := tmpDir + "/admin.yaml"
+	adminContent := ""
+	if clientPublicKey != "" {
+		adminContent = "publicKey: |\n"
+		for _, line := range splitLines(clientPublicKey) {
+			adminContent += "  " + line + "\n"
 		}
 	}
-
-	secretPath := tmpDir + "/secret.yaml"
-	require.NoError(t, os.WriteFile(secretPath, []byte(content), 0644))
+	require.NoError(t, os.WriteFile(adminPath, []byte(adminContent), 0644))
 }
 
 func splitLines(s string) []string {

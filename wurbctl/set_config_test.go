@@ -17,7 +17,7 @@ func TestSetConfigCmd_ConfigmapWithOIDCIssuer(t *testing.T) {
 		"oidc-issuer": cmd.OIDCIssuer,
 	}
 
-	yaml := k8s.BuildConfigmapYAML("wurbs-config", wurbsNamespace, data)
+	yaml := k8s.BuildConfigmapYAML("wurbs-config", ralphWorkflowNamespace, data)
 
 	assert.Contains(t, yaml, "apiVersion: v1")
 	assert.Contains(t, yaml, "kind: ConfigMap")
@@ -27,13 +27,13 @@ func TestSetConfigCmd_ConfigmapWithOIDCIssuer(t *testing.T) {
 }
 
 func TestSetConfigCmd_Constants(t *testing.T) {
-	assert.Equal(t, "ralph-wurbs", wurbsNamespace)
-	assert.Equal(t, "wurbs", postgresNamespace)
+	assert.Equal(t, "ralph-wurbs", ralphWorkflowNamespace)
+	assert.Equal(t, "wurbs", wurbsNamespace)
 	assert.Equal(t, "nats", natsNamespace)
 	assert.Equal(t, "wurbs-postgres-app", postgresSecret)
 	assert.Equal(t, "nats-secrets", natsSecret)
 	assert.Equal(t, "dev-token", natsTokenKey)
 	assert.Equal(t, "32432", localPostgresPort)
-	assert.Equal(t, "admin-test@test.com", testAdminEmail)
+	assert.Equal(t, "test-admin@example.com", testAdminEmail)
 	assert.Equal(t, "test-admin", testAdminSecretName)
 }

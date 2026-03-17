@@ -78,14 +78,6 @@ func (t *TestAdmin) Read(path string) error {
 	return yaml.Unmarshal(data, t)
 }
 
-// Secret holds auth-related secrets loaded from secret.yaml.
-type secret struct {
-	Auth struct {
-		IssuerURL       string `yaml:"issuerUrl"`
-		ClientPublicKey string `yaml:"clientPublicKey"`
-	} `yaml:"auth"`
-}
-
 type contextKey int
 
 const userContextKey contextKey = iota
@@ -135,23 +127,23 @@ func ContextWithUser(ctx context.Context, u *User) context.Context {
 }
 
 // OIDCMiddleware returns HTTP middleware that validates OIDC bearer tokens.
-// It loads the issuer URL from auth secrets, fetches the provider's JWKS,
+// It loads the issuer URL from config, fetches the provider's JWKS,
 // validates the token, and resolves the user by subject. The user is stored
 // in the request context for retrieval via UserFromContext.
 //
 // The db handle is used to look up or create users. Only real and admin
 // users may authenticate via OIDC; test users are rejected.
 func OIDCMiddleware(db *gorm.DB) (func(http.Handler) http.Handler, error) {
-	var s secret
-	if err := config.LoadSecret(&s); err != nil {
-		return nil, fmt.Errorf("auth: failed to load secrets: %w", err)
+	var cfg config.Config
+	if err := config.Load(&cfg); err != nil {
+		return nil, fmt.Errorf("auth: failed to load config: %w", err)
 	}
 
-	if s.Auth.IssuerURL == "" {
-		return nil, fmt.Errorf("auth: issuer_url not configured in secrets")
+	if cfg.OIDCIssuer == "" {
+		return nil, fmt.Errorf("auth: oidc_issuer not configured in config.yaml")
 	}
 
-	jwks, err := fetchJWKS(s.Auth.IssuerURL)
+	jwks, err := fetchJWKS(cfg.OIDCIssuer)
 	if err != nil {
 		return nil, fmt.Errorf("auth: failed to fetch JWKS: %w", err)
 	}
@@ -164,7 +156,7 @@ func OIDCMiddleware(db *gorm.DB) (func(http.Handler) http.Handler, error) {
 				return
 			}
 
-			claims, err := validateOIDCToken(token, jwks, s.Auth.IssuerURL)
+			claims, err := validateOIDCToken(token, jwks, cfg.OIDCIssuer)
 			if err != nil {
 				http.Error(w, "unauthorized", http.StatusUnauthorized)
 				return
@@ -192,7 +184,7 @@ func OIDCMiddleware(db *gorm.DB) (func(http.Handler) http.Handler, error) {
 // JWT tokens signed with RSA keys.
 //
 // In test mode, it uses a shared test public key. Otherwise, it loads the
-// public key from auth secrets.
+// public key from test admin credentials.
 //
 // The db handle is used to look up users. Only admin and test users may
 // authenticate via client credentials; real users are rejected.
@@ -206,16 +198,21 @@ func ClientMiddleware(db *gorm.DB) (func(http.Handler) http.Handler, error) {
 			return nil, fmt.Errorf("auth: failed to parse test client public key: %w", err)
 		}
 	} else {
-		var s secret
-		if err := config.LoadSecret(&s); err != nil {
-			return nil, fmt.Errorf("auth: failed to load secrets: %w", err)
+		tree, err := config.Dir()
+		if err != nil {
+			return nil, err
 		}
 
-		if s.Auth.ClientPublicKey == "" {
-			return nil, fmt.Errorf("auth: client_public_key not configured in secrets")
+		var ta TestAdmin
+		if err := ta.Read(tree.TestAdmin); err != nil {
+			return nil, fmt.Errorf("auth: failed to load test admin credentials: %w", err)
 		}
 
-		pubKey, err = parseRSAPublicKey(s.Auth.ClientPublicKey)
+		if ta.PublicKey == "" {
+			return nil, fmt.Errorf("auth: publicKey not configured in %s", tree.TestAdmin)
+		}
+
+		pubKey, err = parseRSAPublicKey(ta.PublicKey)
 		if err != nil {
 			return nil, fmt.Errorf("auth: failed to parse client public key: %w", err)
 		}
