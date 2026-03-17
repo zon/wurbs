@@ -97,7 +97,7 @@ Create a wurbctl CLI app.
   - checks for a test admin user (a user with both IsAdmin and IsTest set)
     - creates the test admin user if missing
     - rotates client credential keys if the test admin user already exists
-  - saves test admin credentials to both local config and the ralph namespace
+  - saves test admin credentials to both local config and the ralph-wurbs namespace
   - creates/updates k8s configmap and secret
   - --local option to create config and secret files for local development
     - writes `config.yaml` and `secret.yaml` to the output directory

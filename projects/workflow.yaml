@@ -11,7 +11,7 @@ requirements:
       - Running wurbctl set config checks for a test admin user (IsAdmin=true, IsTest=true) in the database
       - The test admin user is created if it does not exist
       - The test admin user's client credential keys are rotated if the user already exists
-      - Test admin credentials are saved to both local config and the ralph namespace k8s secret
+      - Test admin credentials are saved to both local config and the ralph-wurbs namespace k8s secret
     passing: true
 
   - category: wurbctl set admin

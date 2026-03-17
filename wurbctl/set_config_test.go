@@ -28,7 +28,6 @@ func TestSetConfigCmd_ConfigmapWithOIDCIssuer(t *testing.T) {
 
 func TestSetConfigCmd_Constants(t *testing.T) {
 	assert.Equal(t, "ralph-wurbs", wurbsNamespace)
-	assert.Equal(t, "ralph", ralphNamespace)
 	assert.Equal(t, "wurbs", postgresNamespace)
 	assert.Equal(t, "nats", natsNamespace)
 	assert.Equal(t, "wurbs-postgres-app", postgresSecret)
@@ -36,4 +35,5 @@ func TestSetConfigCmd_Constants(t *testing.T) {
 	assert.Equal(t, "dev-token", natsTokenKey)
 	assert.Equal(t, "32432", localPostgresPort)
 	assert.Equal(t, "admin-test@test.com", testAdminEmail)
+	assert.Equal(t, "test-admin", testAdminSecretName)
 }

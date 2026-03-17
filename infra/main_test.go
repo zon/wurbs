@@ -43,7 +43,7 @@ func TestMainGoExists(t *testing.T) {
 	}
 }
 
-func TestMainGoContainsRalphNamespace(t *testing.T) {
+func TestMainGoContainsRalphWurbsNamespace(t *testing.T) {
 	content, err := os.ReadFile("main.go")
 	if err != nil {
 		t.Fatalf("Failed to read main.go: %v", err)

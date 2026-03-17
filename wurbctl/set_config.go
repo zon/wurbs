@@ -12,16 +12,16 @@ import (
 )
 
 const (
-	wurbsNamespace    = "ralph-wurbs"
-	ralphNamespace    = "ralph"
-	postgresNamespace = "wurbs"
-	natsNamespace     = "nats"
-	postgresSecret    = "wurbs-postgres-app"
-	natsSecret        = "nats-secrets"
-	natsTokenKey      = "dev-token"
-	localPostgresPort = "32432"
-	testAdminEmail    = "admin-test@test.com"
-	configMapName     = "wurbs"
+	wurbsNamespace      = "ralph-wurbs"
+	postgresNamespace   = "wurbs"
+	natsNamespace       = "nats"
+	postgresSecret      = "wurbs-postgres-app"
+	natsSecret          = "nats-secrets"
+	natsTokenKey        = "dev-token"
+	localPostgresPort   = "32432"
+	testAdminEmail      = "admin-test@test.com"
+	testAdminSecretName = "test-admin"
+	configMapName       = "wurbs"
 )
 
 // SetConfigCmd implements `wurbctl set config`.
@@ -172,10 +172,10 @@ func (c *SetConfigCmd) saveTestAdminCredentials(tree *config.ConfigTree, email, 
 		"TEST_ADMIN_CLIENT_PUB": publicKey,
 	}
 
-	if err := k8s.ApplySecret("wurbs-test-admin", ralphNamespace, c.Context, secretData); err != nil {
-		return fmt.Errorf("failed to apply test admin secret to %s: %w", ralphNamespace, err)
+	if err := k8s.ApplySecret(testAdminSecretName, wurbsNamespace, c.Context, secretData); err != nil {
+		return fmt.Errorf("failed to apply test admin secret to %s: %w", wurbsNamespace, err)
 	}
-	fmt.Printf("applied secret wurbs-test-admin to %s namespace\n", ralphNamespace)
+	fmt.Printf("applied secret %s to %s namespace\n", testAdminSecretName, wurbsNamespace)
 
 	localSecretPath := tree.Parent + "/secret.yaml"
 	if err := writeSecretFile(localSecretPath, email, privateKey, publicKey); err != nil {
