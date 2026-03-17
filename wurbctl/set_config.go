@@ -11,7 +11,7 @@ import (
 
 const (
 	wurbsNamespace    = "ralph-wurbs"
-	postgresNamespace = "ralph-wurbs"
+	postgresNamespace = "wurbs"
 	natsNamespace     = "nats"
 	postgresSecret    = "wurbs-postgres-app"
 	natsSecret        = "nats-secrets"
@@ -26,7 +26,7 @@ type SetConfigCmd struct {
 }
 
 func (c *SetConfigCmd) Run() error {
-	tree, err := config.Dir()
+	tree, err := config.RepoDir()
 	if err != nil {
 		return fmt.Errorf("failed to get config directory: %w", err)
 	}
@@ -52,14 +52,14 @@ func (c *SetConfigCmd) writeConfig(tree *config.ConfigTree) error {
 	}
 
 	var cfg config.Config
-	config.Load(&cfg) // ignore error — file may not exist yet
+	config.ReadAt(tree.Config, &cfg) // ignore error — file may not exist yet
 	if c.OIDCIssuer != "" {
 		cfg.OIDCIssuer = c.OIDCIssuer
 	}
 	if cfg.OIDCIssuer == "" {
 		return fmt.Errorf("--oidc-issuer is required when not already set in config")
 	}
-	if err := config.Write(&cfg); err != nil {
+	if err := config.WriteAt(tree.Config, &cfg); err != nil {
 		return fmt.Errorf("failed to write config: %w", err)
 	}
 	fmt.Printf("wrote %s\n", tree.Config)

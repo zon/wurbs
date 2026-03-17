@@ -49,6 +49,34 @@ func newConfigTree(parent string) *ConfigTree {
 	}
 }
 
+// findRepoRoot walks up from the working directory to find the git repo root.
+func findRepoRoot() (string, error) {
+	dir, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	for {
+		if isDir(filepath.Join(dir, ".git")) {
+			return dir, nil
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return "", os.ErrNotExist
+		}
+		dir = parent
+	}
+}
+
+// RepoDir returns a ConfigTree rooted at <git-repo-root>/config.
+// The config directory does not need to exist yet.
+func RepoDir() (*ConfigTree, error) {
+	root, err := findRepoRoot()
+	if err != nil {
+		return nil, err
+	}
+	return newConfigTree(filepath.Join(root, "config")), nil
+}
+
 // Dir returns a ConfigTree rooted at the configuration directory.
 // Resolution order:
 //  1. WURB_CONFIG environment variable
@@ -104,29 +132,17 @@ func loadYAML(path string, v any) error {
 	return yaml.Unmarshal(data, v)
 }
 
-// findRepoConfigDir walks up from the working directory looking for a .git
-// directory. If found, it returns <repo-root>/config when that directory exists.
+// findRepoConfigDir returns <git-repo-root>/config if it exists.
 func findRepoConfigDir() (string, error) {
-	dir, err := os.Getwd()
+	root, err := findRepoRoot()
 	if err != nil {
 		return "", err
 	}
-
-	for {
-		if isDir(filepath.Join(dir, ".git")) {
-			configDir := filepath.Join(dir, "config")
-			if isDir(configDir) {
-				return configDir, nil
-			}
-			return "", os.ErrNotExist
-		}
-
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			return "", os.ErrNotExist
-		}
-		dir = parent
+	configDir := filepath.Join(root, "config")
+	if !isDir(configDir) {
+		return "", os.ErrNotExist
 	}
+	return configDir, nil
 }
 
 func isDir(path string) bool {
@@ -147,6 +163,14 @@ func Write(cfg *Config) error {
 		return err
 	}
 	return saveYAML(tree.Config, cfg)
+}
+
+func ReadAt(path string, cfg *Config) error {
+	return loadYAML(path, cfg)
+}
+
+func WriteAt(path string, cfg *Config) error {
+	return saveYAML(path, cfg)
 }
 
 func saveYAML(path string, v any) error {
