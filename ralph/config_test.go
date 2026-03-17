@@ -125,30 +125,31 @@ func TestRalphConfig_ConfigMapMounted(t *testing.T) {
 	require.NotEmpty(t, cfg.Workflow.ConfigMaps, "configMaps should be defined")
 	var found bool
 	for _, cm := range cfg.Workflow.ConfigMaps {
-		if cm.Name == "wurbs-config" {
+		if cm.Name == "wurbs" {
 			found = true
-			assert.Equal(t, "./config/main.yaml", cm.DestFile)
+			assert.Equal(t, "/etc/wurbs/config.yaml", cm.DestFile)
 		}
 	}
-	assert.True(t, found, "wurbs-config configmap should be mounted to ./config/main.yaml")
+	assert.True(t, found, "wurbs configmap should be mounted to /etc/wurbs/config.yaml")
 }
 
-func TestRalphConfig_SecretMounted(t *testing.T) {
+func TestRalphConfig_SecretsMounted(t *testing.T) {
 	cfg := loadRalphConfig(t)
 	require.NotEmpty(t, cfg.Workflow.Secrets, "secrets should be defined")
-	var found bool
+
+	secrets := make(map[string]string)
 	for _, s := range cfg.Workflow.Secrets {
-		if s.Name == "wurbs-secret" {
-			found = true
-			assert.Equal(t, "./config/secrets.yaml", s.DestFile)
-		}
+		secrets[s.Name] = s.DestFile
 	}
-	assert.True(t, found, "wurbs-secret secret should be mounted to ./config/secrets.yaml")
+
+	assert.Equal(t, "/etc/wurbs/nats-dev-token", secrets["nats-dev-token"], "nats-dev-token secret should be mounted to /etc/wurbs/nats-dev-token")
+	assert.Equal(t, "/etc/wurbs/postgres.json", secrets["wurbs-postgres-app"], "postgres secret should be mounted to /etc/wurbs/postgres.json")
+	assert.Equal(t, "/etc/wurbs/test-admin.yaml", secrets["test-admin"], "test-admin secret should be mounted to /etc/wurbs/test-admin.yaml")
 }
 
 func TestRalphConfig_WurbConfigEnv(t *testing.T) {
 	cfg := loadRalphConfig(t)
 	val, ok := cfg.Workflow.Env["WURB_CONFIG"]
 	assert.True(t, ok, "WURB_CONFIG env var should be set")
-	assert.Equal(t, "/workspace/config", val, "WURB_CONFIG should be /workspace/config")
+	assert.Equal(t, "/etc/wurbs", val, "WURB_CONFIG should be /etc/wurbs")
 }

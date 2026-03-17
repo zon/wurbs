@@ -31,7 +31,7 @@ requirements:
       - .ralph/config.yaml mounts the nats-dev-token secret as nats-dev-token in /etc/wurbs
       - .ralph/config.yaml mounts the postgres secret as postgres.json in /etc/wurbs
       - .ralph/config.yaml mounts the test-admin secret as test-admin.yaml in /etc/wurbs
-    passing: false
+    passing: true
 
   - category: wurbctl set config
     description: wurbctl set config writes ConfigMap and secret structs to both the local filesystem and Kubernetes — secret.yaml is not used
