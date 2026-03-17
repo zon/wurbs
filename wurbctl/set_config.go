@@ -101,7 +101,7 @@ func (c *SetConfigCmd) writeNATSDevToken(tree *config.ConfigTree) error {
 	}
 	token := data[natsTokenKey]
 
-	if err := os.WriteFile(tree.NATSDevToken, []byte(token), 0600); err != nil {
+	if err := config.WriteNATSToken(tree.NATSDevToken, token); err != nil {
 		return fmt.Errorf("failed to write NATS token: %w", err)
 	}
 	fmt.Printf("wrote %s\n", tree.NATSDevToken)

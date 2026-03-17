@@ -38,6 +38,7 @@ type ConfigTree struct {
 	Config       string
 	Postgres     string
 	NATSDevToken string
+	TestAdmin    string
 }
 
 func newConfigTree(parent string) *ConfigTree {
@@ -46,6 +47,7 @@ func newConfigTree(parent string) *ConfigTree {
 		Config:       filepath.Join(parent, "config.yaml"),
 		Postgres:     filepath.Join(parent, "postgres.json"),
 		NATSDevToken: filepath.Join(parent, "nats-token"),
+		TestAdmin:    filepath.Join(parent, "admin.yaml"),
 	}
 }
 
@@ -151,10 +153,10 @@ func isDir(path string) bool {
 }
 
 type Config struct {
-	RESTPort   int    `yaml:"rest_port"`
-	SocketPort int    `yaml:"socket_port"`
-	OIDCIssuer string `yaml:"oidc_issuer"`
-	NATSURL    string `yaml:"nats_url"`
+	RESTPort   int    `yaml:"restPort"`
+	SocketPort int    `yaml:"socketPort"`
+	OIDCIssuer string `yaml:"oidcIssuer"`
+	NATSURL    string `yaml:"natsURL"`
 }
 
 func Write(cfg *Config) error {
@@ -183,4 +185,8 @@ func saveYAML(path string, v any) error {
 
 func MarshalSecret(v map[string]any) ([]byte, error) {
 	return yaml.Marshal(v)
+}
+
+func WriteNATSToken(path string, token string) error {
+	return os.WriteFile(path, []byte(token), 0600)
 }
