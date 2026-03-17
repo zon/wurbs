@@ -9,7 +9,7 @@ requirements:
       - ConfigMap can be loaded from config.yaml in the local config directory
       - ConfigMap can be written to config.yaml in the local config directory
       - ConfigMap can be written to the wurbs ConfigMap in the ralph-wurbs Kubernetes namespace
-    passing: false
+    passing: true
 
   - category: Config struct
     description: Config is a runtime-only container that is never directly marshaled or unmarshaled
