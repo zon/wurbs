@@ -134,8 +134,8 @@ func ContextWithUser(ctx context.Context, u *User) context.Context {
 // The db handle is used to look up or create users. Only real and admin
 // users may authenticate via OIDC; test users are rejected.
 func OIDCMiddleware(db *gorm.DB) (func(http.Handler) http.Handler, error) {
-	var cfg config.Config
-	if err := config.Load(&cfg); err != nil {
+	cfg, err := config.Load()
+	if err != nil {
 		return nil, fmt.Errorf("auth: failed to load config: %w", err)
 	}
 

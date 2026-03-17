@@ -16,8 +16,9 @@ const (
 	wurbsNamespace         = "wurbs"
 	natsNamespace          = "nats"
 	postgresSecret         = "wurbs-postgres-app"
-	natsSecret             = "nats-secrets"
-	natsTokenKey           = "dev-token"
+	natsReadSecret         = "nats-secrets"
+	natsReadTokenKey       = "dev-token"
+	natsWriteSecret        = "nats-dev-token"
 	localPostgresPort      = "32432"
 	testAdminEmail         = "test-admin@example.com"
 	testAdminSecretName    = "test-admin"
@@ -96,21 +97,21 @@ func (c *SetConfigCmd) writeConfig(tree *config.ConfigTree) error {
 }
 
 func (c *SetConfigCmd) writeNATSDevToken(tree *config.ConfigTree) error {
-	data, err := k8s.GetSecret(natsSecret, natsNamespace, c.Context)
+	data, err := k8s.GetSecret(natsReadSecret, natsNamespace, c.Context)
 	if err != nil {
 		return fmt.Errorf("failed to load NATS secret: %w", err)
 	}
-	token := data[natsTokenKey]
+	token := data[natsReadTokenKey]
 
 	if err := config.WriteNATSToken(tree.NATSDevToken, token); err != nil {
 		return fmt.Errorf("failed to write NATS token: %w", err)
 	}
 	fmt.Printf("wrote %s\n", tree.NATSDevToken)
 
-	if err := k8s.ApplySecret(natsSecret, ralphWorkflowNamespace, c.Context, map[string]string{natsTokenKey: token}); err != nil {
+	if err := k8s.ApplySecret(natsWriteSecret, ralphWorkflowNamespace, c.Context, map[string]string{natsReadTokenKey: token}); err != nil {
 		return fmt.Errorf("failed to apply NATS secret to %s: %w", ralphWorkflowNamespace, err)
 	}
-	fmt.Printf("applied secret %s to %s namespace\n", natsSecret, ralphWorkflowNamespace)
+	fmt.Printf("applied secret %s to %s namespace\n", natsWriteSecret, ralphWorkflowNamespace)
 	return nil
 }
 

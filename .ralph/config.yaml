@@ -15,11 +15,15 @@ model: minimax/MiniMax-M2.5
 #     args: [socket]
 workflow:
   namespace: ralph-wurbs
-  # configMaps:
-  #   - name: wurbs-config
-  #     destFile: ./config/main.yaml
-  # secrets:
-  #   - name: wurbs-secret
-  #     destFile: ./config/secrets.yaml
-  # env:
-  #   WURB_CONFIG: /workspace/config
+  configMaps:
+    - name: wurbs
+      destFile: /etc/wurbs/config.yaml
+  secrets:
+    - name: nats-dev-token
+      destFile: /etc/wurbs/nats-dev-token
+    - name: wurbs-postgres-app
+      destFile: /etc/wurbs/postgres.json
+    - name: test-admin
+      destFile: /etc/wurbs/test-admin.yaml
+  env:
+    WURB_CONFIG: /etc/wurbs

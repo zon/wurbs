@@ -1,8 +1,11 @@
 package config
 
 import (
+	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -46,8 +49,8 @@ func newConfigTree(parent string) *ConfigTree {
 		Parent:       parent,
 		Config:       filepath.Join(parent, "config.yaml"),
 		Postgres:     filepath.Join(parent, "postgres.json"),
-		NATSDevToken: filepath.Join(parent, "nats-token"),
-		TestAdmin:    filepath.Join(parent, "admin.yaml"),
+		NATSDevToken: filepath.Join(parent, "nats-dev-token"),
+		TestAdmin:    filepath.Join(parent, "test-admin.yaml"),
 	}
 }
 
@@ -108,8 +111,8 @@ func Dir() (*ConfigTree, error) {
 	return cachedTree, nil
 }
 
-// Load reads config.yaml from the config directory and unmarshals it into v.
-func Load(v any) error {
+// LoadYAML reads config.yaml from the config directory and unmarshals it into v.
+func LoadYAML(v any) error {
 	tree, err := Dir()
 	if err != nil {
 		return err
@@ -152,11 +155,129 @@ func isDir(path string) bool {
 	return err == nil && info.IsDir()
 }
 
-type Config struct {
+type ConfigMap struct {
 	RESTPort   int    `yaml:"restPort"`
 	SocketPort int    `yaml:"socketPort"`
 	OIDCIssuer string `yaml:"oidcIssuer"`
 	NATSURL    string `yaml:"natsURL"`
+}
+
+func (c *ConfigMap) Load() error {
+	return LoadYAML(c)
+}
+
+func (c *ConfigMap) Write() error {
+	tree, err := Dir()
+	if err != nil {
+		return err
+	}
+	return saveYAML(tree.Config, c)
+}
+
+func (c *ConfigMap) WriteToK8s(context string) error {
+	data, err := c.MarshalConfigMap()
+	if err != nil {
+		return err
+	}
+	return k8sApplyConfigmap(configMapName, ralphWorkflowNamespace, context, data)
+}
+
+func (c *ConfigMap) MarshalConfigMap() (map[string]string, error) {
+	data, err := yaml.Marshal(c)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]string{
+		"config.yaml": string(data),
+	}, nil
+}
+
+const (
+	configMapName          = "wurbs"
+	ralphWorkflowNamespace = "ralph-wurbs"
+)
+
+func k8sApplyConfigmap(name, namespace, context string, data map[string]string) error {
+	yaml := BuildConfigmapYAML(name, namespace, data)
+	return kubectlApply(yaml, namespace, context)
+}
+
+func kubectlApply(yaml, namespace, context string) error {
+	args := []string{"apply", "-f", "-"}
+	if namespace != "" {
+		args = append(args, "--namespace", namespace)
+	}
+	if context != "" {
+		args = append(args, "--context", context)
+	}
+
+	cmd := exec.Command("kubectl", args...)
+	cmd.Stdin = strings.NewReader(yaml)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("kubectl apply failed: %w", err)
+	}
+	return nil
+}
+
+func BuildConfigmapYAML(name, namespace string, data map[string]string) string {
+	var sb strings.Builder
+	sb.WriteString("apiVersion: v1\n")
+	sb.WriteString("kind: ConfigMap\n")
+	sb.WriteString("metadata:\n")
+	sb.WriteString(fmt.Sprintf("  name: %s\n", name))
+	if namespace != "" {
+		sb.WriteString(fmt.Sprintf("  namespace: %s\n", namespace))
+	}
+	sb.WriteString("data:\n")
+	for k, v := range data {
+		sb.WriteString(fmt.Sprintf("  %s: %q\n", k, v))
+	}
+	return sb.String()
+}
+
+type Config struct {
+	RESTPort     int
+	SocketPort   int
+	OIDCIssuer   string
+	NATSURL      string
+	NATSDevToken string
+	TestAdmin    string
+	Postgres     string
+}
+
+func Load() (*Config, error) {
+	tree, err := Dir()
+	if err != nil {
+		return nil, err
+	}
+
+	cfg := &Config{}
+
+	var cm ConfigMap
+	if err := loadYAML(tree.Config, &cm); err != nil {
+		return nil, err
+	}
+	cfg.RESTPort = cm.RESTPort
+	cfg.SocketPort = cm.SocketPort
+	cfg.OIDCIssuer = cm.OIDCIssuer
+	cfg.NATSURL = cm.NATSURL
+
+	if data, err := os.ReadFile(tree.NATSDevToken); err == nil {
+		cfg.NATSDevToken = strings.TrimSpace(string(data))
+	}
+
+	if data, err := os.ReadFile(tree.TestAdmin); err == nil {
+		cfg.TestAdmin = strings.TrimSpace(string(data))
+	}
+
+	if data, err := os.ReadFile(tree.Postgres); err == nil {
+		cfg.Postgres = strings.TrimSpace(string(data))
+	}
+
+	return cfg, nil
 }
 
 func (c *Config) MarshalConfigMap() (map[string]string, error) {
