@@ -20,6 +20,7 @@ const (
 	natsTokenKey      = "dev-token"
 	localPostgresPort = "32432"
 	testAdminEmail    = "admin-test@test.com"
+	configMapName     = "wurbs"
 )
 
 // SetConfigCmd implements `wurbctl set config`.
@@ -75,22 +76,16 @@ func (c *SetConfigCmd) writeConfig(tree *config.ConfigTree) error {
 	}
 	fmt.Printf("wrote %s\n", tree.Config)
 
-	if err := c.writeConfigmap(tree); err != nil {
-		return err
+	configmapData, err := cfg.MarshalConfigMap()
+	if err != nil {
+		return fmt.Errorf("failed to marshal config map: %w", err)
 	}
 
-	return nil
-}
-
-func (c *SetConfigCmd) writeConfigmap(tree *config.ConfigTree) error {
-	configmapData := map[string]string{
-		"oidc-issuer": c.OIDCIssuer,
-	}
-
-	if err := k8s.ApplyConfigmap("wurbs-config", wurbsNamespace, c.Context, configmapData); err != nil {
+	if err := k8s.ApplyConfigmap(configMapName, wurbsNamespace, c.Context, configmapData); err != nil {
 		return fmt.Errorf("failed to apply configmap to %s: %w", wurbsNamespace, err)
 	}
-	fmt.Printf("applied configmap wurbs-config to %s namespace\n", wurbsNamespace)
+	fmt.Printf("applied configmap %s to %s namespace\n", configMapName, wurbsNamespace)
+
 	return nil
 }
 

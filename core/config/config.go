@@ -159,6 +159,16 @@ type Config struct {
 	NATSURL    string `yaml:"natsURL"`
 }
 
+func (c *Config) MarshalConfigMap() (map[string]string, error) {
+	data, err := yaml.Marshal(c)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]string{
+		"config.yaml": string(data),
+	}, nil
+}
+
 func Write(cfg *Config) error {
 	tree, err := Dir()
 	if err != nil {
@@ -181,6 +191,10 @@ func saveYAML(path string, v any) error {
 		return err
 	}
 	return os.WriteFile(path, data, 0644)
+}
+
+func Marshal(v any) ([]byte, error) {
+	return yaml.Marshal(v)
 }
 
 func MarshalSecret(v map[string]any) ([]byte, error) {
