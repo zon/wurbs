@@ -62,8 +62,10 @@ IDAQAB
 
 // Errors returned by the auth module.
 var (
-	ErrNoUser       = errors.New("auth: no authenticated user in context")
-	ErrUnauthorized = errors.New("auth: unauthorized")
+	ErrNoUser        = errors.New("auth: no authenticated user in context")
+	ErrUnauthorized  = errors.New("auth: unauthorized")
+	ErrUserNotFound  = errors.New("auth: user not found")
+	ErrTestUserAdmin = errors.New("auth: test users cannot become real admins")
 )
 
 // UserFromContext extracts the authenticated user from the context.
@@ -451,21 +453,24 @@ func decodeJSON(r io.Reader, v any) error {
 	return json.NewDecoder(r).Decode(v)
 }
 
-// EnsureAdminUser creates or updates a user with the given email, ensuring IsAdmin is true.
+// EnsureAdminUser promotes an existing user to admin. It requires the user
+// to already exist in the database and rejects promotion of test users.
 func EnsureAdminUser(db *gorm.DB, email string) (*User, error) {
 	user := &User{}
 
 	result := db.Where("email = ?", email).First(user)
-	if result.Error != nil && result.Error != gorm.ErrRecordNotFound {
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, ErrUserNotFound
+		}
 		return nil, fmt.Errorf("auth: failed to find user: %w", result.Error)
 	}
 
-	if result.Error == gorm.ErrRecordNotFound {
-		user = &User{Email: email, IsAdmin: true}
-		if err := db.Create(user).Error; err != nil {
-			return nil, fmt.Errorf("auth: failed to create user: %w", err)
-		}
-	} else if !user.IsAdmin {
+	if user.IsTest {
+		return nil, ErrTestUserAdmin
+	}
+
+	if !user.IsAdmin {
 		if err := db.Model(user).Update("is_admin", true).Error; err != nil {
 			return nil, fmt.Errorf("auth: failed to update admin flag: %w", err)
 		}
