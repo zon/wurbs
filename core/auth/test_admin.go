@@ -53,21 +53,3 @@ func (t *TestAdmin) Read(path string) error {
 	return yaml.Unmarshal(data, t)
 }
 
-var testMode bool
-
-func SetTestMode(enabled bool) {
-	testMode = enabled
-}
-
-// testClientPublicKey is a shared RSA public key used for client credential
-// authentication in test mode. All test users can authenticate using tokens
-// signed with the corresponding private key.
-const testClientPublicKey = `-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAu1SU1LfVLPHCozMxH2Mo
-4lgOEePzNm0tRgeLezV6ffAt0gunVTLw7onLRnrq0/IzW7yWR7QkrmBL7jTKEn5u
-+qKhbwKfBstIs+bMY2Zkp18gnTxKLxoS2tFczGkPLPgizskuemMghRniWaoLcyeh
-kd3qqGElvW/VDL5AaWTg0nLVkjRo9z+40RQzuVaE8AkAFmxZzow3x+VJYKdjykkJ
-0iT9wCS0DRTXu269V264Vf/3jvredZiKRkgwlL9xNAwxXFg0x/XFw005UWVRIkdg
-cKWTjpBP2dPwVZ4WWC+9aGVd+Gyn1o0CLelf4rEjGoXbAAEgAqeGUxrcIlbjXfbcw
-IDAQAB
------END PUBLIC KEY-----`

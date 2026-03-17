@@ -6,7 +6,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/go-jose/go-jose/v4"
@@ -65,68 +64,16 @@ func setupTestConfig(t *testing.T, issuerURL, clientPublicKey string) {
 	tmpDir := t.TempDir()
 	t.Setenv("WURB_CONFIG", tmpDir)
 
-	configPath := tmpDir + "/config.yaml"
+	tree, err := config.Dir()
+	require.NoError(t, err)
+
 	configContent := ""
 	if issuerURL != "" {
 		configContent = "oidcIssuer: " + issuerURL + "\n"
 	}
-	require.NoError(t, os.WriteFile(configPath, []byte(configContent), 0644))
+	require.NoError(t, os.WriteFile(tree.Config, []byte(configContent), 0644))
 
-	adminPath := tmpDir + "/admin.yaml"
-	adminContent := ""
-	if clientPublicKey != "" {
-		adminContent = "publicKey: |\n"
-		for _, line := range splitLines(clientPublicKey) {
-			adminContent += "  " + line + "\n"
-		}
-	}
-	require.NoError(t, os.WriteFile(adminPath, []byte(adminContent), 0644))
+	ta := TestAdmin{PublicKey: clientPublicKey}
+	require.NoError(t, ta.Write(tree.TestAdmin))
 }
 
-func splitLines(s string) []string {
-	var lines []string
-	for _, line := range strings.Split(s, "\n") {
-		if line != "" {
-			lines = append(lines, line)
-		}
-	}
-	return lines
-}
-
-// testClientPrivateKey is the RSA private key corresponding to the testClientPublicKey
-// in auth.go. It is used to sign tokens for testing the test mode authentication.
-const testClientPrivateKey = `-----BEGIN PRIVATE KEY-----
-MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDaVLTVPXMkN4Lc
-hY5n7hK4Vj4JWCLmJfJK2F0VITHgW8yVTVWaZOKzN9Q0e1r4VjvIJuFLV3drdT1S
-VQy6Jq3oZ9k8yJ8XoS7d9wV7nN3qXdH1fM8YqK2pL5rT6vE1uW3sH4vK9jF2dP5t
-qX3sL8mV1wK9yP6nH2vT4fL7eR5jG1dP8vW3qH9nK2pX5tR8vL4eK6jF3dP9tY7q
-H2nK8vP5tX3rL6dT9vW4eK7jF3pL8tY5qH2nK3vP6tX5rL9dT8vW4eK6jF2pL9tY
-7qH3nK2vP8tX6rL5dT8vW3eK7jF2pL9tY6qH3nK2vP7tX5rL8dT9vW4eK6jF3pL8
-tY5qH2nK3vP6tX5rL9dT8vW4eK7jF2pAgMBAAECggEAVKHKl3tVNKxI7z+U3sK9
-mB3vL5dT8nK2pX4tR7vW3eK6jF2pL9tY5qH3nK2vP7tX6rL5dT9vW4eK7jF2pL8t
-Y6qH3nK2vP8tX5rL6dT8vW3eK7jF2pL9tY5qH2nK3vP6tX5rL9dT8vW4eK6jF3pL8
-tY7qH2nK8vP5tX3rL6dT9vW4eK7jF2pL9tY6qH3nK2vP7tX5rL8dT9vW3eK6jF3pL
-8tY5qH2nK3vP6tX5rL9dT8vW4eK7jF2pL9tY6qH3nK2vP8tX5rL6dT8vW3eK7jF2p
-L9tY5qH2nK3vP6tX5rL9dT8vW4eK6jF3pL8tY7qH2nK8vP5tX3rL6dT9vW4eK7jF2
-pL9tY6qH3nK2vP7tX5rL8dT9vW3eK6jF3pL8tY5qH2nK3vP6tX5rL9dT8vW4eK7jF
-2pL9tY6qH3nK2vP8tX5rL6dT8vW3eK7jF2pL9tY5qH2nK3vP6tX5rL9dT8vW4eK6j
-F3pL8tY7qH2nK8vP5tX3rL6dT9vW4eK7jF2pL9tY6qH3nK2vP7tX5rL8dT9vW3eK6
-jF3pL8tY5qH2nK3vP6tX5rL9dT8vW4eK7jF2pL9tY6qH3nK2vP8tX5rL6dT8vW3eK
-7jF2pL9tY5qH2nK3vP6tX5rL9dT8vW4eK6jF3pL8tY7qH2nK8vP5tX3rL6dT9vW4e
-K7jF2pL9tY6qH3nK2vP7tX5rL8dT9vW3eK6jF3pL8tY5qH2nK3vP6tX5rL9dT8vW4
-eK7jF2pL9tY6qH3nK2vP8tX5rL6dT8vW3eK7jF2pL9tY5qH2nK3vP6tX5rL9dT8vW
-4eK6jF3pL8tY7qH2nK8vP5tX3rL6dT9vW4eK7jF2pL9tY6qH3nK2vP7tX5rL8dT9v
-W3eK6jF3pL8tY5qH2nK3vP6tX5rL9dT8vW4eK7jF2pL9tY6qH3nK2vP8tX5rL6dT8
-vW3eK7jF2pL9tY5qH2nK3vP6tX5rL9dT8vW4eK6jF3pL8tY7qH2nK8vP5tX3rL6dT
-9vW4eK7jF2pL9tY6qH3nK2vP7tX5rL8dT9vW3eK6jF3pL8tY5qH2nK3vP6tX5rL9d
-T8vW4eK7jF2pL9tY6qH3nK2vP8tX5rL6dT8vW3eK7jF2pL9tY5qH2nK3vP6tX5rL9d
-T8vW4eK6jF3pL8tY7qH2nK8vP5tX3rL6dT9vW4eK7jF2pL9tY6qH3nK2vP7tX5rL8
-dT9vW3eK6jF3pL8tY5qH2nK3vP6tX5rL9dT8vW4eK7jF2pL9tY6qH3nK2vP8tX5rL6
-dT8vW3eK7jF2pL9tY5qH2nK3vP6tX5rL9dT8vW4eK6jF3pL8tY7qH2nK8vP5tX3rL
-6dT9vW4eK7jF2pL9tY6qH3nK2vP7tX5rL8dT9vW3eK6jF3pL8tY5qH2nK3vP6tX5rL
-9dT8vW4eK7jF2pL9tY6qH3nK2vP8tX5rL6dT8vW3eK7jF2pL9tY5qH2nK3vP6tX5rL
-9dT8vW4eK6jF3pL8tY7qH2nK8vP5tX3rL6dT9vW4eK7jF2pL9tY6qH3nK2vP7tX5rL
-8dT9vW3eK6jF3pL8tY5qH2nK3vP6tX5rL9dT8vW4eK7jF2pL9tY6qH3nK2vP8tX5rL
-6dT8vW3eK7jF2pL9tY5qH2nK3vP6tX5rL9dT8vW4eK6jF3pL8tY7qH2nK8vP5tX3rL
-6dT9vW4eK7jF2pL9tY6qH3nK2vP7tX5rL8dT9vW3eK6jF3pL8tY5qH2nK3vP6tX5rL
-9dT8vW4eK7jF2pL9tY6qH3nK2vP8tX5rLAlternative<br>Key-----END PRIVATE KEY-----`

@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"crypto/rsa"
 	"fmt"
 	"net/http"
 	"strings"
@@ -73,33 +72,23 @@ func OIDCMiddleware(db *gorm.DB) (func(http.Handler) http.Handler, error) {
 // The db handle is used to look up users. Only admin and test users may
 // authenticate via client credentials; real users are rejected.
 func ClientMiddleware(db *gorm.DB) (func(http.Handler) http.Handler, error) {
-	var pubKey *rsa.PublicKey
-	var err error
+	tree, err := config.Dir()
+	if err != nil {
+		return nil, err
+	}
 
-	if testMode {
-		pubKey, err = parseRSAPublicKey(testClientPublicKey)
-		if err != nil {
-			return nil, fmt.Errorf("auth: failed to parse test client public key: %w", err)
-		}
-	} else {
-		tree, err := config.Dir()
-		if err != nil {
-			return nil, err
-		}
+	var ta TestAdmin
+	if err := ta.Read(tree.TestAdmin); err != nil {
+		return nil, fmt.Errorf("auth: failed to load test admin credentials: %w", err)
+	}
 
-		var ta TestAdmin
-		if err := ta.Read(tree.TestAdmin); err != nil {
-			return nil, fmt.Errorf("auth: failed to load test admin credentials: %w", err)
-		}
+	if ta.PublicKey == "" {
+		return nil, fmt.Errorf("auth: publicKey not configured in %s", tree.TestAdmin)
+	}
 
-		if ta.PublicKey == "" {
-			return nil, fmt.Errorf("auth: publicKey not configured in %s", tree.TestAdmin)
-		}
-
-		pubKey, err = parseRSAPublicKey(ta.PublicKey)
-		if err != nil {
-			return nil, fmt.Errorf("auth: failed to parse client public key: %w", err)
-		}
+	pubKey, err := parseRSAPublicKey(ta.PublicKey)
+	if err != nil {
+		return nil, fmt.Errorf("auth: failed to parse client public key: %w", err)
 	}
 
 	return func(next http.Handler) http.Handler {
