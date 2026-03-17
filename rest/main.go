@@ -10,7 +10,6 @@ import (
 	"github.com/zon/chat/core/config"
 	corenats "github.com/zon/chat/core/nats"
 	"github.com/zon/chat/core/pg"
-	"github.com/zon/chat/socket"
 )
 
 var cli struct {
@@ -19,7 +18,7 @@ var cli struct {
 	NatsToken string `help:"Path to NATS auth token file" type:"path"`
 }
 
-func main() {
+func Main() {
 	kong.Parse(&cli)
 
 	if cli.Test {
@@ -48,9 +47,18 @@ func main() {
 		authMW = func(next http.Handler) http.Handler { return next }
 	}
 
-	handler := socket.New(nc, authMW)
-	if err := http.ListenAndServe(":"+cli.Port, handler); err != nil {
+	deps := Deps{
+		DB:   db,
+		NATS: nc,
+	}
+
+	engine := New(deps, authMW)
+	if err := engine.Run(":" + cli.Port); err != nil {
 		slog.Error("server failed", "error", err)
 		os.Exit(1)
 	}
+}
+
+func main() {
+	Main()
 }
