@@ -474,3 +474,35 @@ func EnsureAdminUser(db *gorm.DB, email string) (*User, error) {
 
 	return user, nil
 }
+
+// EnsureTestAdminUser creates or updates a test admin user with the given email,
+// ensuring IsAdmin and IsTest are both true.
+func EnsureTestAdminUser(db *gorm.DB, email string) (*User, error) {
+	user := &User{}
+
+	result := db.Where("email = ?", email).First(user)
+	if result.Error != nil && result.Error != gorm.ErrRecordNotFound {
+		return nil, fmt.Errorf("auth: failed to find user: %w", result.Error)
+	}
+
+	if result.Error == gorm.ErrRecordNotFound {
+		user = &User{Email: email, IsAdmin: true, IsTest: true}
+		if err := db.Create(user).Error; err != nil {
+			return nil, fmt.Errorf("auth: failed to create test admin user: %w", err)
+		}
+		fmt.Printf("created test admin user: %s\n", email)
+	} else {
+		updates := map[string]any{
+			"is_admin": true,
+			"is_test":  true,
+		}
+		if err := db.Model(user).Updates(updates).Error; err != nil {
+			return nil, fmt.Errorf("auth: failed to update test admin user: %w", err)
+		}
+		user.IsAdmin = true
+		user.IsTest = true
+		fmt.Printf("test admin user already exists: %s (keys will be rotated)\n", email)
+	}
+
+	return user, nil
+}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/zon/chat/core/auth"
 	"github.com/zon/chat/core/config"
 	"github.com/zon/chat/core/k8s"
 	"github.com/zon/chat/core/pg"
@@ -11,12 +12,14 @@ import (
 
 const (
 	wurbsNamespace    = "ralph-wurbs"
+	ralphNamespace    = "ralph"
 	postgresNamespace = "wurbs"
 	natsNamespace     = "nats"
 	postgresSecret    = "wurbs-postgres-app"
 	natsSecret        = "nats-secrets"
 	natsTokenKey      = "dev-token"
 	localPostgresPort = "32432"
+	testAdminEmail    = "admin-test@test.com"
 )
 
 // SetConfigCmd implements `wurbctl set config`.
@@ -43,6 +46,14 @@ func (c *SetConfigCmd) Run() error {
 		return err
 	}
 
+	if err := c.runMigrations(); err != nil {
+		return err
+	}
+
+	if err := c.ensureTestAdmin(tree); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -63,6 +74,23 @@ func (c *SetConfigCmd) writeConfig(tree *config.ConfigTree) error {
 		return fmt.Errorf("failed to write config: %w", err)
 	}
 	fmt.Printf("wrote %s\n", tree.Config)
+
+	if err := c.writeConfigmap(tree); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *SetConfigCmd) writeConfigmap(tree *config.ConfigTree) error {
+	configmapData := map[string]string{
+		"oidc-issuer": c.OIDCIssuer,
+	}
+
+	if err := k8s.ApplyConfigmap("wurbs-config", wurbsNamespace, c.Context, configmapData); err != nil {
+		return fmt.Errorf("failed to apply configmap to %s: %w", wurbsNamespace, err)
+	}
+	fmt.Printf("applied configmap wurbs-config to %s namespace\n", wurbsNamespace)
 	return nil
 }
 
@@ -107,4 +135,79 @@ func (c *SetConfigCmd) writePostgresSecret(tree *config.ConfigTree) error {
 	}
 	fmt.Printf("applied secret %s to %s namespace\n", postgresSecret, wurbsNamespace)
 	return nil
+}
+
+func (c *SetConfigCmd) runMigrations() error {
+	db, err := pg.Open()
+	if err != nil {
+		return fmt.Errorf("failed to connect to database: %w", err)
+	}
+
+	if err := RunMigrations(db); err != nil {
+		return fmt.Errorf("migration failed: %w", err)
+	}
+
+	fmt.Println("database migrations complete")
+	return nil
+}
+
+func (c *SetConfigCmd) ensureTestAdmin(tree *config.ConfigTree) error {
+	db, err := pg.Open()
+	if err != nil {
+		return fmt.Errorf("failed to connect to database: %w", err)
+	}
+
+	user, err := auth.EnsureTestAdminUser(db, testAdminEmail)
+	if err != nil {
+		return fmt.Errorf("failed to ensure test admin user: %w", err)
+	}
+
+	privateKey, publicKey, err := auth.GenerateRSAKeyPair()
+	if err != nil {
+		return fmt.Errorf("failed to generate test admin client credential keys: %w", err)
+	}
+
+	if err := c.saveTestAdminCredentials(tree, user.Email, privateKey, publicKey); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *SetConfigCmd) saveTestAdminCredentials(tree *config.ConfigTree, email, privateKey, publicKey string) error {
+	secretData := map[string]string{
+		"TEST_ADMIN_EMAIL":      email,
+		"TEST_ADMIN_CLIENT_KEY": privateKey,
+		"TEST_ADMIN_CLIENT_PUB": publicKey,
+	}
+
+	if err := k8s.ApplySecret("wurbs-test-admin", ralphNamespace, c.Context, secretData); err != nil {
+		return fmt.Errorf("failed to apply test admin secret to %s: %w", ralphNamespace, err)
+	}
+	fmt.Printf("applied secret wurbs-test-admin to %s namespace\n", ralphNamespace)
+
+	localSecretPath := tree.Parent + "/secret.yaml"
+	if err := writeSecretFile(localSecretPath, email, privateKey, publicKey); err != nil {
+		return fmt.Errorf("failed to write test admin credentials to local config: %w", err)
+	}
+	fmt.Printf("wrote %s\n", localSecretPath)
+
+	return nil
+}
+
+func writeSecretFile(path, email, privateKey, publicKey string) error {
+	secret := map[string]any{
+		"auth": map[string]string{
+			"client_public_key":  publicKey,
+			"client_private_key": privateKey,
+			"test_admin_email":   email,
+		},
+	}
+
+	data, err := config.MarshalSecret(secret)
+	if err != nil {
+		return fmt.Errorf("failed to marshal secret: %w", err)
+	}
+
+	return os.WriteFile(path, data, 0600)
 }

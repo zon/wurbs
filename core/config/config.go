@@ -34,17 +34,17 @@ func ResetCache() {
 
 // ConfigTree holds absolute paths to the config directory and each config file within it.
 type ConfigTree struct {
-	Parent         string
-	Config         string
-	Postgres  string
+	Parent       string
+	Config       string
+	Postgres     string
 	NATSDevToken string
 }
 
 func newConfigTree(parent string) *ConfigTree {
 	return &ConfigTree{
-		Parent:         parent,
-		Config:         filepath.Join(parent, "config.yaml"),
-		Postgres:  filepath.Join(parent, "postgres.json"),
+		Parent:       parent,
+		Config:       filepath.Join(parent, "config.yaml"),
+		Postgres:     filepath.Join(parent, "postgres.json"),
 		NATSDevToken: filepath.Join(parent, "nats-token"),
 	}
 }
@@ -179,4 +179,8 @@ func saveYAML(path string, v any) error {
 		return err
 	}
 	return os.WriteFile(path, data, 0644)
+}
+
+func MarshalSecret(v map[string]any) ([]byte, error) {
+	return yaml.Marshal(v)
 }

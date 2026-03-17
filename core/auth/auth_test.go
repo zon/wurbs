@@ -795,6 +795,53 @@ func TestEnsureAdminUser_IdempotentForExistingAdmin(t *testing.T) {
 	assert.True(t, user2.IsAdmin)
 }
 
+// --- EnsureTestAdminUser ---
+
+func TestEnsureTestAdminUser_CreatesUser(t *testing.T) {
+	db := setupTestDB(t)
+
+	user, err := EnsureTestAdminUser(db, "admin-test@test.com")
+	require.NoError(t, err)
+	assert.Equal(t, "admin-test@test.com", user.Email)
+	assert.True(t, user.IsAdmin)
+	assert.True(t, user.IsTest)
+
+	var found User
+	require.NoError(t, db.Where("email = ?", "admin-test@test.com").First(&found).Error)
+	assert.True(t, found.IsAdmin)
+	assert.True(t, found.IsTest)
+}
+
+func TestEnsureTestAdminUser_UpdatesExistingUser(t *testing.T) {
+	db := setupTestDB(t)
+
+	require.NoError(t, db.Create(&User{Email: "admin-test@test.com", IsAdmin: false, IsTest: false}).Error)
+
+	user, err := EnsureTestAdminUser(db, "admin-test@test.com")
+	require.NoError(t, err)
+	assert.True(t, user.IsAdmin)
+	assert.True(t, user.IsTest)
+
+	var found User
+	require.NoError(t, db.Where("email = ?", "admin-test@test.com").First(&found).Error)
+	assert.True(t, found.IsAdmin)
+	assert.True(t, found.IsTest)
+}
+
+func TestEnsureTestAdminUser_IdempotentForExistingTestAdmin(t *testing.T) {
+	db := setupTestDB(t)
+
+	user1, err := EnsureTestAdminUser(db, "admin-test@test.com")
+	require.NoError(t, err)
+
+	user2, err := EnsureTestAdminUser(db, "admin-test@test.com")
+	require.NoError(t, err)
+
+	assert.Equal(t, user1.ID, user2.ID)
+	assert.True(t, user2.IsAdmin)
+	assert.True(t, user2.IsTest)
+}
+
 // --- User model tests ---
 
 func TestUserModel_Fields(t *testing.T) {
