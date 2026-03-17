@@ -74,15 +74,15 @@ func (s *Secret) ReadK8s(name, namespace, context string) error {
 // WriteK8s applies the secret to a Kubernetes namespace.
 func (s *Secret) WriteK8s(name, namespace, context string) error {
 	return k8s.ApplySecret(name, namespace, context, map[string]string{
-		"username":     s.Username,
-		"password":     s.Password,
-		"dbname":       s.DBName,
-		"host":         s.Host,
-		"port":         s.Port,
-		"uri":          s.URI,
-		"pgpass":       s.PGPass,
-		"jdbc-uri":     s.JDBCURI,
-		"fqdn-uri":     s.FQDNURI,
+		"username":      s.Username,
+		"password":      s.Password,
+		"dbname":        s.DBName,
+		"host":          s.Host,
+		"port":          s.Port,
+		"uri":           s.URI,
+		"pgpass":        s.PGPass,
+		"jdbc-uri":      s.JDBCURI,
+		"fqdn-uri":      s.FQDNURI,
 		"fqdn-jdbc-uri": s.FQDNJDBCURI,
 	})
 }

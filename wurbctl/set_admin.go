@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/zon/chat/core/auth"
+	"github.com/zon/chat/core/config"
 	"github.com/zon/chat/core/k8s"
 	"github.com/zon/chat/core/pg"
 )
@@ -31,23 +32,36 @@ func (c *SetAdminCmd) Run() error {
 		return fmt.Errorf("failed to generate admin client credential keys: %w", err)
 	}
 
-	secretName := adminSecretName(c.Email)
-
-	secretData := map[string]string{
-		"ADMIN_CLIENT_PRIVATE_KEY": privateKey,
-		"ADMIN_CLIENT_PUBLIC_KEY":  publicKey,
-		"ADMIN_EMAIL":              user.Email,
+	admin := &auth.TestAdmin{
+		Email:      user.Email,
+		PublicKey:  publicKey,
+		PrivateKey: privateKey,
 	}
 
+	tree, err := config.RepoDir()
+	if err != nil {
+		return fmt.Errorf("failed to get config directory: %w", err)
+	}
+
+	if err := admin.Write(tree.TestAdmin); err != nil {
+		return fmt.Errorf("failed to write admin config: %w", err)
+	}
+	fmt.Printf("wrote %s\n", tree.TestAdmin)
+
+	secretName := adminSecretName(c.Email)
 	filename := secretName + ".yaml"
-	if err := k8s.WriteSecretFile(filename, secretName, "ralph", secretData); err != nil {
+
+	if err := k8s.WriteSecretFile(filename, secretName, "ralph", map[string]string{
+		"email":      admin.Email,
+		"publicKey":  admin.PublicKey,
+		"privateKey": admin.PrivateKey,
+	}); err != nil {
 		return fmt.Errorf("failed to write admin secret file: %w", err)
 	}
 	fmt.Printf("wrote %s\n", filename)
 
 	return nil
 }
-
 
 // adminSecretName produces a valid Kubernetes resource name from an email address.
 func adminSecretName(email string) string {
@@ -62,4 +76,3 @@ func adminSecretName(email string) string {
 	}
 	return "wurbs-admin-" + sb.String()
 }
-
