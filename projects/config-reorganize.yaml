@@ -1,0 +1,45 @@
+name: config-reorganize
+description: Reorganize core/config to separate ConfigMap from runtime Config
+
+requirements:
+  - category: ConfigMap struct
+    description: A ConfigMap struct holds non-sensitive configuration properties and handles its own persistence
+    items:
+      - A ConfigMap struct exists in core/config with fields RESTPort, SocketPort, OIDCIssuer, and NATSURL
+      - ConfigMap can be loaded from config.yaml in the local config directory
+      - ConfigMap can be written to config.yaml in the local config directory
+      - ConfigMap can be written to the wurbs ConfigMap in the ralph-wurbs Kubernetes namespace
+    passing: false
+
+  - category: Config struct
+    description: Config is a runtime-only container that is never directly marshaled or unmarshaled
+    items:
+      - A Config struct exists in core/config containing RESTPort, SocketPort, OIDCIssuer, NATSURL, NATSDevToken, TestAdmin, and Postgres fields
+      - Config has no YAML struct tags and is never directly marshaled to or unmarshaled from YAML
+      - config.Load takes no arguments and returns a *Config built from cached values
+      - config.Load always reads from local files in the config directory — it never reads from Kubernetes directly
+      - config.Load reads ConfigMap fields from config.yaml
+      - config.Load reads NATSDevToken from a file named nats-dev-token in the config directory
+      - config.Load reads TestAdmin from a file named test-admin.yaml in the config directory
+      - config.Load reads Postgres credentials from postgres.json in the config directory
+    passing: false
+
+  - category: ralph config
+    description: The ralph workflow config mounts the wurbs ConfigMap and secrets at the default config path so config.Load can read from local files
+    items:
+      - .ralph/config.yaml mounts the wurbs ConfigMap as config.yaml in /etc/wurbs
+      - .ralph/config.yaml mounts the nats-dev-token secret as nats-dev-token in /etc/wurbs
+      - .ralph/config.yaml mounts the postgres secret as postgres.json in /etc/wurbs
+      - .ralph/config.yaml mounts the test-admin secret as test-admin.yaml in /etc/wurbs
+    passing: false
+
+  - category: wurbctl set config
+    description: wurbctl set config writes ConfigMap and secret structs to both the local filesystem and Kubernetes — secret.yaml is not used
+    items:
+      - No code reads from secret.yaml
+      - No code writes to secret.yaml
+      - wurbctl set config writes ConfigMap to config.yaml in the local config directory and to the wurbs ConfigMap in the ralph-wurbs namespace
+      - wurbctl set config writes NATSDevToken to a local nats-dev-token file and to the nats-dev-token Kubernetes secret in the ralph-wurbs namespace
+      - wurbctl set config writes TestAdmin to a local test-admin.yaml file and to the test-admin Kubernetes secret in the ralph-wurbs namespace
+      - wurbctl set config reads Postgres credentials from the wurbs-postgres-app secret and writes them to a local postgres.json file and back to the wurbs-postgres-app Kubernetes secret in the ralph-wurbs namespace
+    passing: false
