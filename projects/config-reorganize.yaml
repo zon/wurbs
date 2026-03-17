@@ -42,4 +42,4 @@ requirements:
       - wurbctl set config writes NATSDevToken to a local nats-dev-token file and to the nats-dev-token Kubernetes secret in the ralph-wurbs namespace
       - wurbctl set config writes TestAdmin to a local test-admin.yaml file and to the test-admin Kubernetes secret in the ralph-wurbs namespace
       - wurbctl set config reads Postgres credentials from the wurbs-postgres-app secret and writes them to a local postgres.json file and back to the wurbs-postgres-app Kubernetes secret in the ralph-wurbs namespace
-    passing: false
+    passing: true
