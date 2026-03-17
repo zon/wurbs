@@ -22,7 +22,7 @@ requirements:
       - config.Load reads NATSDevToken from a file named nats-dev-token in the config directory
       - config.Load reads TestAdmin from a file named test-admin.yaml in the config directory
       - config.Load reads Postgres credentials from postgres.json in the config directory
-    passing: false
+    passing: true
 
   - category: ralph config
     description: The ralph workflow config mounts the wurbs ConfigMap and secrets at the default config path so config.Load can read from local files

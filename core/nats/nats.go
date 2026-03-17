@@ -58,8 +58,8 @@ var dial = func(url string, opts ...nats.Option) (*nats.Conn, error) {
 // If WURB_NATS_TOKEN_FILE is set, the token from that file takes precedence
 // over the k8s service account token.
 func Connect() (*Conn, error) {
-	var cfg config.Config
-	if err := config.Load(&cfg); err != nil {
+	cfg, err := config.Load()
+	if err != nil {
 		return nil, fmt.Errorf("nats: failed to load config: %w", err)
 	}
 

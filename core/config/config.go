@@ -49,8 +49,8 @@ func newConfigTree(parent string) *ConfigTree {
 		Parent:       parent,
 		Config:       filepath.Join(parent, "config.yaml"),
 		Postgres:     filepath.Join(parent, "postgres.json"),
-		NATSDevToken: filepath.Join(parent, "nats-token"),
-		TestAdmin:    filepath.Join(parent, "admin.yaml"),
+		NATSDevToken: filepath.Join(parent, "nats-dev-token"),
+		TestAdmin:    filepath.Join(parent, "test-admin.yaml"),
 	}
 }
 
@@ -111,8 +111,8 @@ func Dir() (*ConfigTree, error) {
 	return cachedTree, nil
 }
 
-// Load reads config.yaml from the config directory and unmarshals it into v.
-func Load(v any) error {
+// LoadYAML reads config.yaml from the config directory and unmarshals it into v.
+func LoadYAML(v any) error {
 	tree, err := Dir()
 	if err != nil {
 		return err
@@ -163,7 +163,7 @@ type ConfigMap struct {
 }
 
 func (c *ConfigMap) Load() error {
-	return Load(c)
+	return LoadYAML(c)
 }
 
 func (c *ConfigMap) Write() error {
@@ -239,10 +239,45 @@ func BuildConfigmapYAML(name, namespace string, data map[string]string) string {
 }
 
 type Config struct {
-	RESTPort   int    `yaml:"restPort"`
-	SocketPort int    `yaml:"socketPort"`
-	OIDCIssuer string `yaml:"oidcIssuer"`
-	NATSURL    string `yaml:"natsURL"`
+	RESTPort     int
+	SocketPort   int
+	OIDCIssuer   string
+	NATSURL      string
+	NATSDevToken string
+	TestAdmin    string
+	Postgres     string
+}
+
+func Load() (*Config, error) {
+	tree, err := Dir()
+	if err != nil {
+		return nil, err
+	}
+
+	cfg := &Config{}
+
+	var cm ConfigMap
+	if err := loadYAML(tree.Config, &cm); err != nil {
+		return nil, err
+	}
+	cfg.RESTPort = cm.RESTPort
+	cfg.SocketPort = cm.SocketPort
+	cfg.OIDCIssuer = cm.OIDCIssuer
+	cfg.NATSURL = cm.NATSURL
+
+	if data, err := os.ReadFile(tree.NATSDevToken); err == nil {
+		cfg.NATSDevToken = strings.TrimSpace(string(data))
+	}
+
+	if data, err := os.ReadFile(tree.TestAdmin); err == nil {
+		cfg.TestAdmin = strings.TrimSpace(string(data))
+	}
+
+	if data, err := os.ReadFile(tree.Postgres); err == nil {
+		cfg.Postgres = strings.TrimSpace(string(data))
+	}
+
+	return cfg, nil
 }
 
 func (c *Config) MarshalConfigMap() (map[string]string, error) {
