@@ -8,6 +8,7 @@ import (
 	"github.com/zon/chat/core/config"
 	"github.com/zon/chat/core/k8s"
 	"github.com/zon/chat/core/pg"
+	"gorm.io/gorm"
 )
 
 const (
@@ -29,7 +30,7 @@ type SetConfigCmd struct {
 	OIDCIssuer string `help:"OIDC issuer URL." name:"oidc-issuer"`
 }
 
-func (c *SetConfigCmd) Run() error {
+func (c *SetConfigCmd) Run(ctx *Context) error {
 	tree, err := config.RepoDir()
 	if err != nil {
 		return fmt.Errorf("failed to get config directory: %w", err)
@@ -47,11 +48,16 @@ func (c *SetConfigCmd) Run() error {
 		return err
 	}
 
-	if err := c.runMigrations(); err != nil {
+	db, err := ctx.DB()
+	if err != nil {
 		return err
 	}
 
-	if err := c.ensureTestAdmin(tree); err != nil {
+	if err := c.runMigrations(db); err != nil {
+		return err
+	}
+
+	if err := c.ensureTestAdmin(db, tree); err != nil {
 		return err
 	}
 
@@ -132,12 +138,7 @@ func (c *SetConfigCmd) writePostgresSecret(tree *config.ConfigTree) error {
 	return nil
 }
 
-func (c *SetConfigCmd) runMigrations() error {
-	db, err := pg.Open()
-	if err != nil {
-		return fmt.Errorf("failed to connect to database: %w", err)
-	}
-
+func (c *SetConfigCmd) runMigrations(db *gorm.DB) error {
 	if err := RunMigrations(db); err != nil {
 		return fmt.Errorf("migration failed: %w", err)
 	}
@@ -146,12 +147,7 @@ func (c *SetConfigCmd) runMigrations() error {
 	return nil
 }
 
-func (c *SetConfigCmd) ensureTestAdmin(tree *config.ConfigTree) error {
-	db, err := pg.Open()
-	if err != nil {
-		return fmt.Errorf("failed to connect to database: %w", err)
-	}
-
+func (c *SetConfigCmd) ensureTestAdmin(db *gorm.DB, tree *config.ConfigTree) error {
 	user, err := auth.EnsureTestAdminUser(db, testAdminEmail)
 	if err != nil {
 		return fmt.Errorf("failed to ensure test admin user: %w", err)

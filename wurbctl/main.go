@@ -8,9 +8,13 @@ var cli struct {
 }
 
 func main() {
+	ctx := &Context{}
+	defer ctx.Close()
+
 	ktx := kong.Parse(&cli,
 		kong.Name("wurbctl"),
 		kong.Description("CLI for managing Wurbs configuration and database."),
+		kong.Bind(ctx),
 	)
 	ktx.FatalIfErrorf(ktx.Run())
 }

@@ -7,7 +7,6 @@ import (
 	"github.com/zon/chat/core/auth"
 	"github.com/zon/chat/core/config"
 	"github.com/zon/chat/core/k8s"
-	"github.com/zon/chat/core/pg"
 )
 
 // SetAdminCmd implements `wurbctl set admin`.
@@ -16,10 +15,10 @@ type SetAdminCmd struct {
 }
 
 // Run executes the set admin command.
-func (c *SetAdminCmd) Run() error {
-	db, err := pg.Open()
+func (c *SetAdminCmd) Run(ctx *Context) error {
+	db, err := ctx.DB()
 	if err != nil {
-		return fmt.Errorf("failed to connect to database: %w", err)
+		return err
 	}
 
 	user, err := auth.EnsureAdminUser(db, c.Email)

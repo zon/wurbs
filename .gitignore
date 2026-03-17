@@ -1,4 +1,5 @@
 /wurbctl/wurbctl
+/wurbctl/wurbctl_bin
 *_templ.go
 *_templ.txt
 *.db

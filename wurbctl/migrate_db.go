@@ -6,7 +6,6 @@ import (
 
 	"github.com/zon/chat/core/auth"
 	"github.com/zon/chat/core/message"
-	"github.com/zon/chat/core/pg"
 	"gorm.io/gorm"
 )
 
@@ -14,10 +13,10 @@ import (
 type MigrateDBCmd struct{}
 
 // Run applies all pending database migrations against the configured Postgres database.
-func (c *MigrateDBCmd) Run() error {
-	db, err := pg.Open()
+func (c *MigrateDBCmd) Run(ctx *Context) error {
+	db, err := ctx.DB()
 	if err != nil {
-		return fmt.Errorf("failed to connect to database: %w", err)
+		return err
 	}
 
 	if err := RunMigrations(db); err != nil {
