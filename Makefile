@@ -1,7 +1,10 @@
-.PHONY: infra rest socket install test push
+.PHONY: infra rest socket install test push spec
 
 IMAGE = zvonimir/wurbs
 VERSION = $(shell cat ./version)
+
+spec:
+	asyncapi generate fromTemplate asyncapi.yaml @asyncapi/html-template --output ./docs/spec
 
 infra:
 	cd infra && pulumi up --stack dev --yes

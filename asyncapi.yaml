@@ -1,0 +1,677 @@
+asyncapi: 3.1.0
+
+info:
+  title: Wurbs
+  version: 1.0.0
+  description: |
+    Chat application API.
+
+    REST endpoints accept `application/json` or `application/yaml` request and response bodies.
+    Most endpoints require an OAuth2 bearer token. OIDC endpoints are unauthenticated.
+
+    **Authorization rules:**
+    - Admins can create and edit users; only admins can set `admin` or `inactive` on a user
+    - Users can edit their own profile
+    - Admins can create, edit, and disable channels; admins are implicit members of every channel
+    - Admins can invite users to private channels
+    - Message bodies are Markdown
+    - Message owners can edit their own messages
+    - Message owners and admins can delete messages
+
+servers:
+  rest:
+    host: localhost:8080
+    protocol: http
+    description: REST API server
+    security:
+      - $ref: '#/components/securitySchemes/oidc'
+
+  websocket:
+    host: localhost:8081
+    protocol: ws
+    description: WebSocket event server
+    security:
+      - $ref: '#/components/securitySchemes/oidc'
+
+channels:
+  oidcLogin:
+    address: /auth/login
+    servers:
+      - $ref: '#/servers/rest'
+    description: Initiates the OIDC authorization code flow. Redirects to the identity provider.
+
+  oidcCallback:
+    address: /auth/callback
+    servers:
+      - $ref: '#/servers/rest'
+    description: OIDC redirect URI. Exchanges the authorization code for tokens.
+    messages:
+      TokenResponse:
+        $ref: '#/components/messages/TokenResponse'
+
+  oidcLogout:
+    address: /auth/logout
+    servers:
+      - $ref: '#/servers/rest'
+    description: Ends the session and optionally redirects to the OIDC end-session endpoint.
+
+  oidcRefresh:
+    address: /auth/refresh
+    servers:
+      - $ref: '#/servers/rest'
+    description: Exchanges a refresh token for a new access token.
+    messages:
+      RefreshRequest:
+        $ref: '#/components/messages/RefreshRequest'
+      TokenResponse:
+        $ref: '#/components/messages/TokenResponse'
+
+  user:
+    address: /users/{userId}
+    servers:
+      - $ref: '#/servers/rest'
+    parameters:
+      userId:
+        $ref: '#/components/parameters/userId'
+    messages:
+      UpdateUserRequest:
+        $ref: '#/components/messages/UpdateUserRequest'
+      UserResponse:
+        $ref: '#/components/messages/UserResponse'
+
+  chatChannels:
+    address: /channels
+    servers:
+      - $ref: '#/servers/rest'
+    messages:
+      CreateChannelRequest:
+        $ref: '#/components/messages/CreateChannelRequest'
+      ChannelResponse:
+        $ref: '#/components/messages/ChannelResponse'
+
+  chatChannel:
+    address: /channels/{channelId}
+    servers:
+      - $ref: '#/servers/rest'
+    parameters:
+      channelId:
+        $ref: '#/components/parameters/channelId'
+    messages:
+      UpdateChannelRequest:
+        $ref: '#/components/messages/UpdateChannelRequest'
+      ChannelResponse:
+        $ref: '#/components/messages/ChannelResponse'
+
+  channelMembers:
+    address: /channels/{channelId}/members
+    servers:
+      - $ref: '#/servers/rest'
+    parameters:
+      channelId:
+        $ref: '#/components/parameters/channelId'
+    messages:
+      InviteMemberRequest:
+        $ref: '#/components/messages/InviteMemberRequest'
+      MemberResponse:
+        $ref: '#/components/messages/MemberResponse'
+
+  channelMessages:
+    address: /channels/{channelId}/messages
+    servers:
+      - $ref: '#/servers/rest'
+    parameters:
+      channelId:
+        $ref: '#/components/parameters/channelId'
+    messages:
+      MessageRequest:
+        $ref: '#/components/messages/MessageRequest'
+      MessageResponse:
+        $ref: '#/components/messages/MessageResponse'
+      MessagePageResponse:
+        $ref: '#/components/messages/MessagePageResponse'
+
+  message:
+    address: /messages/{messageId}
+    servers:
+      - $ref: '#/servers/rest'
+    parameters:
+      messageId:
+        $ref: '#/components/parameters/messageId'
+    messages:
+      MessageRequest:
+        $ref: '#/components/messages/MessageRequest'
+      MessageResponse:
+        $ref: '#/components/messages/MessageResponse'
+
+  channelEvents:
+    address: /channels/{channelId}
+    servers:
+      - $ref: '#/servers/websocket'
+    description: Real-time event stream for a channel. Only channel members may connect.
+    parameters:
+      channelId:
+        $ref: '#/components/parameters/channelId'
+    messages:
+      MessageEvent:
+        $ref: '#/components/messages/MessageEvent'
+      MemberEvent:
+        $ref: '#/components/messages/MemberEvent'
+      UserEvent:
+        $ref: '#/components/messages/UserEvent'
+
+operations:
+  # OIDC
+
+  login:
+    action: send
+    summary: Initiate OIDC login. Redirects to the identity provider authorization endpoint.
+    channel:
+      $ref: '#/channels/oidcLogin'
+    bindings:
+      http:
+        method: GET
+
+  callback:
+    action: send
+    summary: OIDC callback. Exchanges the authorization code for tokens, matches the identity provider email to a user record and stores the subject ID, then returns an access token.
+    channel:
+      $ref: '#/channels/oidcCallback'
+    bindings:
+      http:
+        method: GET
+    reply:
+      messages:
+        - $ref: '#/channels/oidcCallback/messages/TokenResponse'
+
+  logout:
+    action: send
+    summary: End the session. Revokes the refresh token and redirects to the OIDC end-session endpoint.
+    channel:
+      $ref: '#/channels/oidcLogout'
+    bindings:
+      http:
+        method: POST
+
+  refresh:
+    action: send
+    summary: Exchange a refresh token for a new access token.
+    channel:
+      $ref: '#/channels/oidcRefresh'
+    bindings:
+      http:
+        method: POST
+    messages:
+      - $ref: '#/channels/oidcRefresh/messages/RefreshRequest'
+    reply:
+      messages:
+        - $ref: '#/channels/oidcRefresh/messages/TokenResponse'
+
+  # Users
+
+  getUser:
+    action: send
+    summary: Get a user by ID
+    channel:
+      $ref: '#/channels/user'
+    bindings:
+      http:
+        method: GET
+    reply:
+      messages:
+        - $ref: '#/channels/user/messages/UserResponse'
+
+  updateUser:
+    action: send
+    summary: Update a user. Users may edit themselves; only admins may set `admin` or `inactive`.
+    channel:
+      $ref: '#/channels/user'
+    bindings:
+      http:
+        method: PATCH
+    messages:
+      - $ref: '#/channels/user/messages/UpdateUserRequest'
+    reply:
+      messages:
+        - $ref: '#/channels/user/messages/UserResponse'
+
+  # Channels
+
+  createChannel:
+    action: send
+    summary: Create a channel (admin only)
+    channel:
+      $ref: '#/channels/chatChannels'
+    bindings:
+      http:
+        method: POST
+    messages:
+      - $ref: '#/channels/chatChannels/messages/CreateChannelRequest'
+    reply:
+      messages:
+        - $ref: '#/channels/chatChannels/messages/ChannelResponse'
+
+  getChannel:
+    action: send
+    summary: Get a channel by ID
+    channel:
+      $ref: '#/channels/chatChannel'
+    bindings:
+      http:
+        method: GET
+    reply:
+      messages:
+        - $ref: '#/channels/chatChannel/messages/ChannelResponse'
+
+  updateChannel:
+    action: send
+    summary: Update a channel (admin only). Channels may be inactive but not deleted.
+    channel:
+      $ref: '#/channels/chatChannel'
+    bindings:
+      http:
+        method: PATCH
+    messages:
+      - $ref: '#/channels/chatChannel/messages/UpdateChannelRequest'
+    reply:
+      messages:
+        - $ref: '#/channels/chatChannel/messages/ChannelResponse'
+
+  inviteMember:
+    action: send
+    summary: Invite a user to a channel by email (admin only). Creates the user if no account with that email exists.
+    channel:
+      $ref: '#/channels/channelMembers'
+    bindings:
+      http:
+        method: POST
+    messages:
+      - $ref: '#/channels/channelMembers/messages/InviteMemberRequest'
+    reply:
+      messages:
+        - $ref: '#/channels/channelMembers/messages/MemberResponse'
+
+  # Messages
+
+  listMessages:
+    action: send
+    summary: List messages in a channel, paged by time
+    channel:
+      $ref: '#/channels/channelMessages'
+    bindings:
+      http:
+        method: GET
+    reply:
+      messages:
+        - $ref: '#/channels/channelMessages/messages/MessagePageResponse'
+
+  createMessage:
+    action: send
+    summary: Post a message to a channel
+    channel:
+      $ref: '#/channels/channelMessages'
+    bindings:
+      http:
+        method: POST
+    messages:
+      - $ref: '#/channels/channelMessages/messages/MessageRequest'
+    reply:
+      messages:
+        - $ref: '#/channels/channelMessages/messages/MessageResponse'
+
+  updateMessage:
+    action: send
+    summary: Edit a message (owner only)
+    channel:
+      $ref: '#/channels/message'
+    bindings:
+      http:
+        method: PATCH
+    messages:
+      - $ref: '#/channels/message/messages/MessageRequest'
+    reply:
+      messages:
+        - $ref: '#/channels/message/messages/MessageResponse'
+
+  deleteMessage:
+    action: send
+    summary: Delete a message (owner or admin)
+    channel:
+      $ref: '#/channels/message'
+    bindings:
+      http:
+        method: DELETE
+
+  # WebSocket
+
+  subscribeChannelEvents:
+    action: receive
+    summary: Receive real-time events for a channel. Channel members only.
+    channel:
+      $ref: '#/channels/channelEvents'
+    messages:
+      - $ref: '#/channels/channelEvents/messages/MessageEvent'
+      - $ref: '#/channels/channelEvents/messages/MemberEvent'
+      - $ref: '#/channels/channelEvents/messages/UserEvent'
+
+components:
+  securitySchemes:
+    oidc:
+      type: openIdConnect
+      openIdConnectUrl: https://auth.example.com/.well-known/openid-configuration
+
+  parameters:
+    userId:
+      description: User identifier
+    channelId:
+      description: Channel identifier
+    messageId:
+      description: Message identifier
+
+  messages:
+    RefreshRequest:
+      name: RefreshRequest
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/RefreshInput'
+
+    TokenResponse:
+      name: TokenResponse
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/TokenSet'
+
+    UserResponse:
+      name: UserResponse
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/User'
+
+    UpdateUserRequest:
+      name: UpdateUserRequest
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/UpdateUserInput'
+
+    CreateChannelRequest:
+      name: CreateChannelRequest
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/CreateChannelInput'
+
+    ChannelResponse:
+      name: ChannelResponse
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/Channel'
+
+    UpdateChannelRequest:
+      name: UpdateChannelRequest
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/UpdateChannelInput'
+
+    InviteMemberRequest:
+      name: InviteMemberRequest
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/InviteMemberInput'
+
+    MemberResponse:
+      name: MemberResponse
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/Member'
+
+    MessagePageResponse:
+      name: MessagePageResponse
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/MessagePage'
+
+    MessageRequest:
+      name: MessageRequest
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/MessageInput'
+
+    MessageResponse:
+      name: MessageResponse
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/Message'
+
+    MessageEvent:
+      name: MessageEvent
+      summary: Emitted when a message is created, edited, or deleted
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/MessageEvent'
+
+    MemberEvent:
+      name: MemberEvent
+      summary: Emitted when a user joins or leaves a channel
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/MemberEvent'
+
+    UserEvent:
+      name: UserEvent
+      summary: Emitted when a channel member updates their username
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/UserEvent'
+
+  schemas:
+    RefreshInput:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+
+    TokenSet:
+      type: object
+      required: [accessToken, tokenType, expiresIn]
+      properties:
+        accessToken:
+          type: string
+        tokenType:
+          type: string
+          enum: [Bearer]
+        expiresIn:
+          type: integer
+          description: Seconds until the access token expires
+        refreshToken:
+          type: string
+        idToken:
+          type: string
+          description: OIDC ID token (JWT)
+
+    User:
+      type: object
+      required: [id, email, admin, inactive, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+          description: Null until the user completes onboarding after first login
+          nullable: true
+        email:
+          type: string
+          format: email
+        admin:
+          type: boolean
+        inactive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    UpdateUserInput:
+      type: object
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+          description: Admin only.
+        admin:
+          type: boolean
+          description: Admin only.
+        inactive:
+          type: boolean
+          description: Admin only.
+
+    Channel:
+      type: object
+      required: [id, name, public, inactive, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        public:
+          type: boolean
+        inactive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateChannelInput:
+      type: object
+      required: [name, public]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        public:
+          type: boolean
+
+    UpdateChannelInput:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        public:
+          type: boolean
+        inactive:
+          type: boolean
+
+    Member:
+      type: object
+      required: [channelId, userId, joinedAt]
+      properties:
+        channelId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        joinedAt:
+          type: string
+          format: date-time
+
+    InviteMemberInput:
+      oneOf:
+        - type: object
+          required: [userId]
+          properties:
+            userId:
+              type: string
+              format: uuid
+        - type: object
+          required: [email]
+          description: Creates a new user with this email if no account exists, then invites them.
+          properties:
+            email:
+              type: string
+              format: email
+
+    Message:
+      type: object
+      required: [id, channelId, userId, body, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        channelId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        body:
+          type: string
+          description: Markdown body
+        createdAt:
+          type: string
+          format: date-time
+        editedAt:
+          type: string
+          format: date-time
+          description: Present if the message has been edited
+
+    MessagePage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+        before:
+          type: string
+          format: date-time
+          description: Pass as query param to fetch messages before this timestamp
+        after:
+          type: string
+          format: date-time
+          description: Pass as query param to fetch messages after this timestamp
+
+    MessageInput:
+      type: object
+      required: [body]
+      properties:
+        body:
+          type: string
+          description: Markdown body
+
+    MessageEvent:
+      type: object
+      required: [type, message]
+      properties:
+        type:
+          type: string
+          enum: [created, updated, deleted]
+        message:
+          $ref: '#/components/schemas/Message'
+
+    MemberEvent:
+      type: object
+      required: [type, user]
+      properties:
+        type:
+          type: string
+          enum: [joined, left]
+        user:
+          $ref: '#/components/schemas/User'
+
+    UserEvent:
+      type: object
+      required: [userId, username]
+      properties:
+        userId:
+          type: string
+          format: uuid
+        username:
+          type: string
