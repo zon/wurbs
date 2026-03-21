@@ -52,6 +52,17 @@ requirements:
       - All NATS subjects are prefixed with "wurbs." to avoid conflicts with other apps
     passing: true
 
+  - category: handler package
+    description: REST handlers are organized in a rest/handler sub-package with separate files per domain
+    items:
+      - Handlers are in a rest/handler sub-package
+      - Auth handlers are in rest/handler/auth.go
+      - Channel handlers are in rest/handler/channel.go
+      - Member handlers are in rest/handler/member.go
+      - Message handlers are in rest/handler/message.go
+      - User handlers are in rest/handler/user.go
+    passing: false
+
   - category: messages
     description: Message endpoints
     items:
