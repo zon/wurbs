@@ -12,6 +12,7 @@ import (
 	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/stretchr/testify/require"
 	"github.com/zon/chat/core/config"
+	"github.com/zon/chat/core/user"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -20,7 +21,7 @@ func setupTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
-	require.NoError(t, db.AutoMigrate(&User{}))
+	require.NoError(t, db.AutoMigrate(&user.User{}))
 	return db
 }
 
@@ -76,4 +77,3 @@ func setupTestConfig(t *testing.T, issuerURL, clientPublicKey string) {
 	ta := TestAdmin{PublicKey: clientPublicKey}
 	require.NoError(t, ta.Write(tree.TestAdmin))
 }
-

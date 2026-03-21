@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/zon/chat/core/auth"
 	"github.com/zon/chat/core/channel"
+	"github.com/zon/chat/core/user"
 )
 
 type MemberHandler struct {
@@ -24,11 +25,11 @@ type addMemberRequest struct {
 }
 
 func (h *MemberHandler) AddMember(c *gin.Context) {
-	user, ok := currentUser(c)
+	currentUser, ok := currentUser(c)
 	if !ok {
 		return
 	}
-	if !user.IsAdmin {
+	if !currentUser.IsAdmin {
 		c.JSON(http.StatusForbidden, gin.H{"error": "admin required"})
 		return
 	}
@@ -53,9 +54,9 @@ func (h *MemberHandler) AddMember(c *gin.Context) {
 	var err error
 
 	if req.UserID != nil {
-		target, err = auth.GetUserByID(h.deps.DB, fmt.Sprintf("%d", *req.UserID))
+		target, err = user.GetUserByID(h.deps.DB, fmt.Sprintf("%d", *req.UserID))
 		if err != nil {
-			if errors.Is(err, auth.ErrUserNotFound) {
+			if errors.Is(err, user.ErrUserNotFound) {
 				c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
 				return
 			}
@@ -70,7 +71,7 @@ func (h *MemberHandler) AddMember(c *gin.Context) {
 		}
 	}
 
-	err = channel.AddMemberAsAdmin(h.deps.DB, channelID, user, target)
+	err = channel.AddMemberAsAdmin(h.deps.DB, channelID, currentUser, target)
 	if err != nil {
 		if errors.Is(err, channel.ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "channel not found"})
@@ -107,11 +108,11 @@ func (h *MemberHandler) AddMember(c *gin.Context) {
 }
 
 func (h *MemberHandler) RemoveMember(c *gin.Context) {
-	user, ok := currentUser(c)
+	currentUser, ok := currentUser(c)
 	if !ok {
 		return
 	}
-	if !user.IsAdmin {
+	if !currentUser.IsAdmin {
 		c.JSON(http.StatusForbidden, gin.H{"error": "admin required"})
 		return
 	}
@@ -126,7 +127,7 @@ func (h *MemberHandler) RemoveMember(c *gin.Context) {
 		return
 	}
 
-	err := channel.RemoveMemberAsAdmin(h.deps.DB, channelID, userID, user)
+	err := channel.RemoveMemberAsAdmin(h.deps.DB, channelID, userID, currentUser)
 	if err != nil {
 		if errors.Is(err, channel.ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "member not found"})

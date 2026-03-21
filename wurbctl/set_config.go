@@ -8,6 +8,7 @@ import (
 	"github.com/zon/chat/core/config"
 	"github.com/zon/chat/core/k8s"
 	"github.com/zon/chat/core/pg"
+	"github.com/zon/chat/core/user"
 	"gorm.io/gorm"
 )
 
@@ -179,7 +180,7 @@ func (c *SetConfigCmd) runMigrations(db *gorm.DB) error {
 }
 
 func (c *SetConfigCmd) ensureTestAdmin(db *gorm.DB, tree *config.ConfigTree) error {
-	user, err := auth.EnsureTestAdminUser(db, testAdminEmail)
+	u, err := user.EnsureTestAdminUser(db, testAdminEmail)
 	if err != nil {
 		return fmt.Errorf("failed to ensure test admin user: %w", err)
 	}
@@ -189,7 +190,7 @@ func (c *SetConfigCmd) ensureTestAdmin(db *gorm.DB, tree *config.ConfigTree) err
 		return fmt.Errorf("failed to generate test admin client credential keys: %w", err)
 	}
 
-	if err := c.writeTestAdmin(tree, user.Email, privateKey, publicKey); err != nil {
+	if err := c.writeTestAdmin(tree, u.Email, privateKey, publicKey); err != nil {
 		return err
 	}
 

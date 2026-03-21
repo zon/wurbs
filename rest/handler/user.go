@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/zon/chat/core/auth"
+	"github.com/zon/chat/core/user"
 )
 
 type UserHandler struct {
@@ -27,9 +27,9 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 		return
 	}
 
-	user, err := auth.GetUserByID(h.deps.DB, userID)
+	u, err := user.GetUserByID(h.deps.DB, userID)
 	if err != nil {
-		if errors.Is(err, auth.ErrUserNotFound) {
+		if errors.Is(err, user.ErrUserNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
 			return
 		}
@@ -37,7 +37,7 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, userToResponse(user))
+	c.JSON(http.StatusOK, userToResponse(u))
 }
 
 type updateUserRequest struct {
@@ -59,9 +59,9 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	targetUser, err := auth.GetUserByID(h.deps.DB, userID)
+	targetUser, err := user.GetUserByID(h.deps.DB, userID)
 	if err != nil {
-		if errors.Is(err, auth.ErrUserNotFound) {
+		if errors.Is(err, user.ErrUserNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
 			return
 		}
@@ -86,7 +86,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	input := auth.UpdateUserInput{
+	input := user.UpdateUserInput{
 		Username: req.Username,
 		Email:    req.Email,
 	}
@@ -101,13 +101,13 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 
 	var updateErr error
 	if isSelf {
-		updateErr = auth.UpdateUser(h.deps.DB, targetUser, input, currentUser.IsAdmin)
+		updateErr = user.UpdateUser(h.deps.DB, targetUser, input, currentUser.IsAdmin)
 	} else {
-		updateErr = auth.UpdateUserAsAdmin(h.deps.DB, currentUser, targetUser, input)
+		updateErr = user.UpdateUserAsAdmin(h.deps.DB, currentUser, targetUser, input)
 	}
 
 	if updateErr != nil {
-		if errors.Is(updateErr, auth.ErrTestAdminModifyRealUser) || errors.Is(updateErr, auth.ErrRealAdminModifyTestUser) {
+		if errors.Is(updateErr, user.ErrTestAdminModifyRealUser) || errors.Is(updateErr, user.ErrRealAdminModifyTestUser) {
 			c.JSON(http.StatusForbidden, gin.H{"error": updateErr.Error()})
 			return
 		}
@@ -115,6 +115,6 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	updatedUser, _ := auth.GetUserByID(h.deps.DB, userID)
+	updatedUser, _ := user.GetUserByID(h.deps.DB, userID)
 	c.JSON(http.StatusOK, userToResponse(updatedUser))
 }

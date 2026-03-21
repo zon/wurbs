@@ -75,7 +75,7 @@ requirements:
     items:
       - The User model and all user management logic (find, create, update) lives in a core/user package
       - core/auth depends on core/user rather than defining user types itself
-    passing: false
+    passing: true
 
   - category: end-to-end tests
     description: REST server tests use only public HTTP interfaces and do not connect directly to the database or NATS

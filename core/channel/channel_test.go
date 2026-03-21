@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/zon/chat/core/auth"
+	"github.com/zon/chat/core/user"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -14,13 +14,13 @@ func setupTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
-	require.NoError(t, db.AutoMigrate(&auth.User{}, &Channel{}, &Membership{}))
+	require.NoError(t, db.AutoMigrate(&user.User{}, &Channel{}, &Membership{}))
 	return db
 }
 
-func createUser(t *testing.T, db *gorm.DB, email, subject string, isAdmin, isTest bool) *auth.User {
+func createUser(t *testing.T, db *gorm.DB, email, subject string, isAdmin, isTest bool) *user.User {
 	t.Helper()
-	u := &auth.User{Email: email, Subject: subject, IsAdmin: isAdmin, IsTest: isTest}
+	u := &user.User{Email: email, Subject: subject, IsAdmin: isAdmin, IsTest: isTest}
 	require.NoError(t, db.Create(u).Error)
 	return u
 }
@@ -138,14 +138,14 @@ func TestAddMember_RealUserToRealChannel(t *testing.T) {
 	ch, err := Create(db, "real-channel", true, false)
 	require.NoError(t, err)
 
-	user := createUser(t, db, "real@example.com", "sub-real", false, false)
-	err = AddMember(db, ch.ID, user)
+	u := createUser(t, db, "real@example.com", "sub-real", false, false)
+	err = AddMember(db, ch.ID, u)
 	require.NoError(t, err)
 
 	members, err := Members(db, ch.ID)
 	require.NoError(t, err)
 	assert.Len(t, members, 1)
-	assert.Equal(t, user.ID, members[0].ID)
+	assert.Equal(t, u.ID, members[0].ID)
 }
 
 func TestAddMember_TestUserToRealChannel_Rejected(t *testing.T) {
