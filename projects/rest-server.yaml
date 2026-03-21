@@ -64,6 +64,12 @@ requirements:
       - User handlers are in rest/handler/user.go
     passing: true
 
+  - category: models
+    description: Database model base fields
+    items:
+      - Database models include id, created_at, and updated_at fields but not deleted_at (no soft deletes)
+    passing: false
+
   - category: messages
     description: Message endpoints
     items:
