@@ -20,18 +20,17 @@ func (t *TestAdmin) ReadK8s(name, namespace, context string) error {
 	if err != nil {
 		return err
 	}
-	t.Email = data["email"]
-	t.PublicKey = data["publicKey"]
-	t.PrivateKey = data["privateKey"]
-	return nil
+	return yaml.Unmarshal([]byte(data["test-admin.yaml"]), t)
 }
 
 // WriteK8s applies the TestAdmin as a Kubernetes secret.
 func (t *TestAdmin) WriteK8s(name, namespace, context string) error {
+	data, err := yaml.Marshal(t)
+	if err != nil {
+		return err
+	}
 	return k8s.ApplySecret(name, namespace, context, map[string]string{
-		"email":      t.Email,
-		"publicKey":  t.PublicKey,
-		"privateKey": t.PrivateKey,
+		"test-admin.yaml": string(data),
 	})
 }
 
