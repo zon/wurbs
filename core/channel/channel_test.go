@@ -167,11 +167,7 @@ func TestAddMember_RealUserToTestChannel(t *testing.T) {
 
 	user := createUser(t, db, "real@example.com", "sub-real", false, false)
 	err = AddMember(db, ch.ID, user)
-	require.NoError(t, err)
-
-	members, err := Members(db, ch.ID)
-	require.NoError(t, err)
-	assert.Len(t, members, 1)
+	require.ErrorIs(t, err, ErrRealUserInTest)
 }
 
 func TestAddMember_TestUserToTestChannel(t *testing.T) {
@@ -212,7 +208,7 @@ func TestAddMember_AdminUserToTestChannel(t *testing.T) {
 
 	admin := createUser(t, db, "admin@example.com", "sub-admin", true, false)
 	err = AddMember(db, ch.ID, admin)
-	require.NoError(t, err)
+	require.ErrorIs(t, err, ErrRealUserInTest)
 }
 
 func TestAddMember_NonexistentChannel(t *testing.T) {
@@ -246,15 +242,13 @@ func TestAddMember_TestChannelMixedUsers(t *testing.T) {
 	ch, err := Create(db, "test-mixed", true, true)
 	require.NoError(t, err)
 
-	realUser := createUser(t, db, "real@example.com", "sub-real", false, false)
 	testUser := createUser(t, db, "test@example.com", "sub-test", false, true)
 
-	require.NoError(t, AddMember(db, ch.ID, realUser))
 	require.NoError(t, AddMember(db, ch.ID, testUser))
 
 	members, err := Members(db, ch.ID)
 	require.NoError(t, err)
-	assert.Len(t, members, 2)
+	assert.Len(t, members, 1)
 }
 
 // --- RemoveMember tests ---

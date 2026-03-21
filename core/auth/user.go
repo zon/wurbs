@@ -19,10 +19,12 @@ type User struct {
 }
 
 var (
-	ErrNoUser        = errors.New("auth: no authenticated user in context")
-	ErrUnauthorized  = errors.New("auth: unauthorized")
-	ErrUserNotFound  = errors.New("auth: user not found")
-	ErrTestUserAdmin = errors.New("auth: test users cannot become real admins")
+	ErrNoUser                  = errors.New("auth: no authenticated user in context")
+	ErrUnauthorized            = errors.New("auth: unauthorized")
+	ErrUserNotFound            = errors.New("auth: user not found")
+	ErrTestUserAdmin           = errors.New("auth: test users cannot become real admins")
+	ErrRealAdminModifyTestUser = errors.New("auth: real admins cannot modify test users")
+	ErrTestAdminModifyRealUser = errors.New("auth: test admins cannot modify real users")
 )
 
 type contextKey int
@@ -136,6 +138,16 @@ func UpdateUser(db *gorm.DB, user *User, input UpdateUserInput, isAdmin bool) er
 	}
 
 	return nil
+}
+
+func UpdateUserAsAdmin(db *gorm.DB, admin, target *User, input UpdateUserInput) error {
+	if admin.IsTest && !target.IsTest {
+		return ErrTestAdminModifyRealUser
+	}
+	if !admin.IsTest && target.IsTest {
+		return ErrRealAdminModifyTestUser
+	}
+	return UpdateUser(db, target, input, true)
 }
 
 type UpdateUserInput struct {

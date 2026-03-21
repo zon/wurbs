@@ -44,7 +44,7 @@ requirements:
       - Admin users can manage channels and invite users
       - Real admins (IsAdmin=true, IsTest=false) can only alter real channels and users
       - Test admins (IsAdmin=true, IsTest=true) can only alter test channels and users
-    passing: false
+    passing: true
 
   - category: nats
     description: NATS subject naming conventions

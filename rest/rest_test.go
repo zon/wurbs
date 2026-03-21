@@ -160,6 +160,19 @@ func TestCreateChannel_TestChannel(t *testing.T) {
 		"is_test": true,
 	})
 
+	assert.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestCreateChannel_TestChannel_ByTestAdmin(t *testing.T) {
+	db := setupTestDB(t)
+	testAdmin := createTestUser(t, db, "test-admin@test.com", "sub-test-admin", true, true)
+	engine := newTestEngine(t, db, testAdmin)
+
+	w := doJSON(t, engine, "POST", "/channels", map[string]any{
+		"name":    "test-chan",
+		"is_test": true,
+	})
+
 	assert.Equal(t, http.StatusCreated, w.Code)
 	body := parseJSON(t, w)
 	assert.Equal(t, true, body["IsTest"])
@@ -402,14 +415,14 @@ func TestAddMember_TestUserToRealChannelRejected(t *testing.T) {
 	w = doJSON(t, engine, "POST", "/channels/"+channelID+"/members", map[string]any{
 		"user_id": testUser.ID,
 	})
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, http.StatusForbidden, w.Code)
 }
 
 func TestAddMember_TestUserToTestChannelAllowed(t *testing.T) {
 	db := setupTestDB(t)
-	admin := createTestUser(t, db, "admin@test.com", "sub-admin", true, false)
+	testAdmin := createTestUser(t, db, "test-admin@test.com", "sub-test-admin", true, true)
 	testUser := createTestUser(t, db, "test@test.com", "sub-test", false, true)
-	engine := newTestEngine(t, db, admin)
+	engine := newTestEngine(t, db, testAdmin)
 
 	w := doJSON(t, engine, "POST", "/channels", map[string]any{"name": "test-chan", "is_test": true})
 	created := parseJSON(t, w)
@@ -423,9 +436,9 @@ func TestAddMember_TestUserToTestChannelAllowed(t *testing.T) {
 
 func TestAddMember_RealUserToTestChannelRejected(t *testing.T) {
 	db := setupTestDB(t)
-	admin := createTestUser(t, db, "admin@test.com", "sub-admin", true, false)
+	testAdmin := createTestUser(t, db, "test-admin@test.com", "sub-test-admin", true, true)
 	realUser := createTestUser(t, db, "real@test.com", "sub-real", false, false)
-	engine := newTestEngine(t, db, admin)
+	engine := newTestEngine(t, db, testAdmin)
 
 	w := doJSON(t, engine, "POST", "/channels", map[string]any{"name": "test-chan", "is_test": true})
 	created := parseJSON(t, w)
@@ -434,7 +447,7 @@ func TestAddMember_RealUserToTestChannelRejected(t *testing.T) {
 	w = doJSON(t, engine, "POST", "/channels/"+channelID+"/members", map[string]any{
 		"user_id": realUser.ID,
 	})
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, http.StatusForbidden, w.Code)
 }
 
 func TestAddMember_NonAdminRejected(t *testing.T) {
@@ -962,10 +975,10 @@ func TestAuthMiddleware_NoUserInContext(t *testing.T) {
 // --- Test flag related tests ---
 
 func TestCreateChannel_TestFlag(t *testing.T) {
-	// Verify that an admin can create test channels (used when --test flag is enabled).
+	// Verify that a test admin can create test channels (used when --test flag is enabled).
 	db := setupTestDB(t)
-	admin := createTestUser(t, db, "admin@test.com", "sub-admin", true, false)
-	engine := newTestEngine(t, db, admin)
+	testAdmin := createTestUser(t, db, "test-admin@test.com", "sub-test-admin", true, true)
+	engine := newTestEngine(t, db, testAdmin)
 
 	w := doJSON(t, engine, "POST", "/channels", map[string]any{
 		"name":    "test-channel",
@@ -1295,4 +1308,188 @@ func TestUpdateUser_NotFound(t *testing.T) {
 		"username": "nonexistent",
 	})
 	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestCreateChannel_RealAdminCannotCreateTestChannel(t *testing.T) {
+	db := setupTestDB(t)
+	realAdmin := createTestUser(t, db, "real-admin@test.com", "sub-real-admin", true, false)
+	engine := newTestEngine(t, db, realAdmin)
+
+	w := doJSON(t, engine, "POST", "/channels", map[string]any{
+		"name":    "test-chan",
+		"is_test": true,
+	})
+	assert.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestCreateChannel_TestAdminCannotCreateRealChannel(t *testing.T) {
+	db := setupTestDB(t)
+	testAdmin := createTestUser(t, db, "test-admin@test.com", "sub-test-admin", true, true)
+	engine := newTestEngine(t, db, testAdmin)
+
+	w := doJSON(t, engine, "POST", "/channels", map[string]any{
+		"name":    "real-chan",
+		"is_test": false,
+	})
+	assert.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestUpdateChannel_RealAdminCannotUpdateTestChannel(t *testing.T) {
+	db := setupTestDB(t)
+	realAdmin := createTestUser(t, db, "real-admin@test.com", "sub-real-admin", true, false)
+	testAdmin := createTestUser(t, db, "test-admin@test.com", "sub-test-admin", true, true)
+	realEngine := newTestEngine(t, db, realAdmin)
+	testEngine := newTestEngine(t, db, testAdmin)
+
+	w := doJSON(t, testEngine, "POST", "/channels", map[string]any{"name": "test-chan", "is_test": true})
+	created := parseJSON(t, w)
+	channelID := fmt.Sprintf("%.0f", created["ID"])
+
+	w = doJSON(t, realEngine, "PATCH", "/channels/"+channelID, map[string]any{
+		"name": "should-fail",
+	})
+	assert.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestUpdateChannel_TestAdminCannotUpdateRealChannel(t *testing.T) {
+	db := setupTestDB(t)
+	realAdmin := createTestUser(t, db, "real-admin@test.com", "sub-real-admin", true, false)
+	testAdmin := createTestUser(t, db, "test-admin@test.com", "sub-test-admin", true, true)
+	realEngine := newTestEngine(t, db, realAdmin)
+	testEngine := newTestEngine(t, db, testAdmin)
+
+	w := doJSON(t, realEngine, "POST", "/channels", map[string]any{"name": "real-chan", "is_test": false})
+	created := parseJSON(t, w)
+	channelID := fmt.Sprintf("%.0f", created["ID"])
+
+	w = doJSON(t, testEngine, "PATCH", "/channels/"+channelID, map[string]any{
+		"name": "should-fail",
+	})
+	assert.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestDeleteChannel_RealAdminCannotDeleteTestChannel(t *testing.T) {
+	db := setupTestDB(t)
+	realAdmin := createTestUser(t, db, "real-admin@test.com", "sub-real-admin", true, false)
+	testAdmin := createTestUser(t, db, "test-admin@test.com", "sub-test-admin", true, true)
+	realEngine := newTestEngine(t, db, realAdmin)
+	testEngine := newTestEngine(t, db, testAdmin)
+
+	w := doJSON(t, testEngine, "POST", "/channels", map[string]any{"name": "test-chan", "is_test": true})
+	created := parseJSON(t, w)
+	channelID := fmt.Sprintf("%.0f", created["ID"])
+
+	w = doJSON(t, realEngine, "DELETE", "/channels/"+channelID, nil)
+	assert.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestDeleteChannel_TestAdminCannotDeleteRealChannel(t *testing.T) {
+	db := setupTestDB(t)
+	realAdmin := createTestUser(t, db, "real-admin@test.com", "sub-real-admin", true, false)
+	testAdmin := createTestUser(t, db, "test-admin@test.com", "sub-test-admin", true, true)
+	realEngine := newTestEngine(t, db, realAdmin)
+	testEngine := newTestEngine(t, db, testAdmin)
+
+	w := doJSON(t, realEngine, "POST", "/channels", map[string]any{"name": "real-chan", "is_test": false})
+	created := parseJSON(t, w)
+	channelID := fmt.Sprintf("%.0f", created["ID"])
+
+	w = doJSON(t, testEngine, "DELETE", "/channels/"+channelID, nil)
+	assert.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestAddMember_RealAdminCannotAddTestUserToRealChannel(t *testing.T) {
+	db := setupTestDB(t)
+	realAdmin := createTestUser(t, db, "real-admin@test.com", "sub-real-admin", true, false)
+	testUser := createTestUser(t, db, "test@test.com", "sub-test", false, true)
+	engine := newTestEngine(t, db, realAdmin)
+
+	w := doJSON(t, engine, "POST", "/channels", map[string]any{"name": "real-chan", "is_test": false})
+	created := parseJSON(t, w)
+	channelID := fmt.Sprintf("%.0f", created["ID"])
+
+	w = doJSON(t, engine, "POST", "/channels/"+channelID+"/members", map[string]any{
+		"user_id": testUser.ID,
+	})
+	assert.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestAddMember_TestAdminCannotAddRealUserToTestChannel(t *testing.T) {
+	db := setupTestDB(t)
+	testAdmin := createTestUser(t, db, "test-admin@test.com", "sub-test-admin", true, true)
+	realUser := createTestUser(t, db, "real@test.com", "sub-real", false, false)
+	engine := newTestEngine(t, db, testAdmin)
+
+	w := doJSON(t, engine, "POST", "/channels", map[string]any{"name": "test-chan", "is_test": true})
+	created := parseJSON(t, w)
+	channelID := fmt.Sprintf("%.0f", created["ID"])
+
+	w = doJSON(t, engine, "POST", "/channels/"+channelID+"/members", map[string]any{
+		"user_id": realUser.ID,
+	})
+	assert.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestRemoveMember_RealAdminCannotRemoveTestUserFromRealChannel(t *testing.T) {
+	db := setupTestDB(t)
+	realAdmin := createTestUser(t, db, "real-admin@test.com", "sub-real-admin", true, false)
+	testUser := createTestUser(t, db, "test@test.com", "sub-test", false, true)
+	engine := newTestEngine(t, db, realAdmin)
+
+	w := doJSON(t, engine, "POST", "/channels", map[string]any{"name": "real-chan", "is_test": false})
+	created := parseJSON(t, w)
+	channelID := fmt.Sprintf("%.0f", created["ID"])
+
+	w = doJSON(t, engine, "POST", "/channels/"+channelID+"/members", map[string]any{
+		"user_id": testUser.ID,
+	})
+	if w.Code != http.StatusForbidden {
+		testUserIDStr := fmt.Sprintf("%d", testUser.ID)
+		w = doJSON(t, engine, "DELETE", "/channels/"+channelID+"/members/"+testUserIDStr, nil)
+		assert.Equal(t, http.StatusForbidden, w.Code)
+	}
+}
+
+func TestRemoveMember_TestAdminCannotRemoveRealUserFromTestChannel(t *testing.T) {
+	db := setupTestDB(t)
+	testAdmin := createTestUser(t, db, "test-admin@test.com", "sub-test-admin", true, true)
+	realUser := createTestUser(t, db, "real@test.com", "sub-real", false, false)
+	engine := newTestEngine(t, db, testAdmin)
+
+	w := doJSON(t, engine, "POST", "/channels", map[string]any{"name": "test-chan", "is_test": true})
+	created := parseJSON(t, w)
+	channelID := fmt.Sprintf("%.0f", created["ID"])
+
+	w = doJSON(t, engine, "POST", "/channels/"+channelID+"/members", map[string]any{
+		"user_id": realUser.ID,
+	})
+	if w.Code != http.StatusForbidden {
+		realUserIDStr := fmt.Sprintf("%d", realUser.ID)
+		w = doJSON(t, engine, "DELETE", "/channels/"+channelID+"/members/"+realUserIDStr, nil)
+		assert.Equal(t, http.StatusForbidden, w.Code)
+	}
+}
+
+func TestUpdateUser_RealAdminCannotModifyTestUser(t *testing.T) {
+	db := setupTestDB(t)
+	realAdmin := createTestUser(t, db, "real-admin@test.com", "sub-real-admin", true, false)
+	testUser := createTestUser(t, db, "test@test.com", "sub-test", false, true)
+	engine := newTestEngine(t, db, realAdmin)
+
+	w := doJSON(t, engine, "PATCH", fmt.Sprintf("/users/%d", testUser.ID), map[string]any{
+		"username": "should-fail",
+	})
+	assert.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestUpdateUser_TestAdminCannotModifyRealUser(t *testing.T) {
+	db := setupTestDB(t)
+	testAdmin := createTestUser(t, db, "test-admin@test.com", "sub-test-admin", true, true)
+	realUser := createTestUser(t, db, "real@test.com", "sub-real", false, false)
+	engine := newTestEngine(t, db, testAdmin)
+
+	w := doJSON(t, engine, "PATCH", fmt.Sprintf("/users/%d", realUser.ID), map[string]any{
+		"username": "should-fail",
+	})
+	assert.Equal(t, http.StatusForbidden, w.Code)
 }

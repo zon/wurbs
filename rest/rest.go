@@ -144,8 +144,12 @@ func (h *handler) createChannel(c *gin.Context) {
 		return
 	}
 
-	ch, err := channel.Create(h.deps.DB, req.Name, req.IsPublic, req.IsTest)
+	ch, err := channel.CreateAsAdmin(h.deps.DB, user, req.Name, req.IsPublic, req.IsTest)
 	if err != nil {
+		if errors.Is(err, channel.ErrTestAdminInReal) || errors.Is(err, channel.ErrRealAdminInTest) {
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -243,7 +247,11 @@ func (h *handler) updateChannel(c *gin.Context) {
 		input.IsActive = &isActive
 	}
 
-	if err := channel.Update(h.deps.DB, ch, input); err != nil {
+	if err := channel.UpdateAsAdmin(h.deps.DB, ch, user, input); err != nil {
+		if errors.Is(err, channel.ErrTestAdminInReal) || errors.Is(err, channel.ErrRealAdminInTest) {
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -267,10 +275,14 @@ func (h *handler) deleteChannel(c *gin.Context) {
 		return
 	}
 
-	err := channel.Delete(h.deps.DB, id)
+	err := channel.DeleteAsAdmin(h.deps.DB, id, user)
 	if err != nil {
 		if errors.Is(err, channel.ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "channel not found"})
+			return
+		}
+		if errors.Is(err, channel.ErrTestAdminInReal) || errors.Is(err, channel.ErrRealAdminInTest) {
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -339,7 +351,7 @@ func (h *handler) addMember(c *gin.Context) {
 		}
 	}
 
-	err = channel.AddMember(h.deps.DB, channelID, target)
+	err = channel.AddMemberAsAdmin(h.deps.DB, channelID, user, target)
 	if err != nil {
 		if errors.Is(err, channel.ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "channel not found"})
@@ -351,6 +363,14 @@ func (h *handler) addMember(c *gin.Context) {
 		}
 		if errors.Is(err, channel.ErrRealUserInTest) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		if errors.Is(err, channel.ErrTestAdminInReal) || errors.Is(err, channel.ErrRealAdminInTest) {
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			return
+		}
+		if errors.Is(err, channel.ErrRealAdminModifyTestUser) || errors.Is(err, channel.ErrTestAdminModifyRealUser) {
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -388,10 +408,18 @@ func (h *handler) removeMember(c *gin.Context) {
 		return
 	}
 
-	err := channel.RemoveMember(h.deps.DB, channelID, userID)
+	err := channel.RemoveMemberAsAdmin(h.deps.DB, channelID, userID, user)
 	if err != nil {
 		if errors.Is(err, channel.ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "member not found"})
+			return
+		}
+		if errors.Is(err, channel.ErrTestAdminInReal) || errors.Is(err, channel.ErrRealAdminInTest) {
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			return
+		}
+		if errors.Is(err, channel.ErrRealAdminModifyTestUser) || errors.Is(err, channel.ErrTestAdminModifyRealUser) {
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -702,8 +730,19 @@ func (h *handler) updateUser(c *gin.Context) {
 		return
 	}
 
-	if err := auth.UpdateUser(h.deps.DB, targetUser, input, currentUser.IsAdmin); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	var updateErr error
+	if isSelf {
+		updateErr = auth.UpdateUser(h.deps.DB, targetUser, input, currentUser.IsAdmin)
+	} else {
+		updateErr = auth.UpdateUserAsAdmin(h.deps.DB, currentUser, targetUser, input)
+	}
+
+	if updateErr != nil {
+		if errors.Is(updateErr, auth.ErrTestAdminModifyRealUser) || errors.Is(updateErr, auth.ErrRealAdminModifyTestUser) {
+			c.JSON(http.StatusForbidden, gin.H{"error": updateErr.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": updateErr.Error()})
 		return
 	}
 
