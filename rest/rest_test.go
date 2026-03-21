@@ -1170,7 +1170,30 @@ func TestNATS_SkippedWhenNil(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, w.Code)
 }
 
-// --- User endpoint tests ---
+func TestUpdateUser_EmailCannotBeUpdated(t *testing.T) {
+	db := setupTestDB(t)
+	user := createTestUser(t, db, "user@test.com", "sub-user", false, false)
+	engine := newTestEngine(t, db, user)
+
+	email := "new-email@test.com"
+	w := doJSON(t, engine, "PATCH", fmt.Sprintf("/users/%d", user.ID), map[string]any{
+		"email": email,
+	})
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestGetUser_EmailNotIncluded(t *testing.T) {
+	db := setupTestDB(t)
+	user := createTestUser(t, db, "user@test.com", "sub-user", false, false)
+	engine := newTestEngine(t, db, user)
+
+	w := doJSON(t, engine, "GET", fmt.Sprintf("/users/%d", user.ID), nil)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	body := parseJSON(t, w)
+	_, ok := body["email"]
+	assert.False(t, ok)
+}
 
 func TestGetUser_Success(t *testing.T) {
 	db := setupTestDB(t)
@@ -1183,7 +1206,6 @@ func TestGetUser_Success(t *testing.T) {
 
 	body := parseJSON(t, w)
 	assert.Equal(t, fmt.Sprintf("%d", user.ID), body["id"])
-	assert.Equal(t, "user@test.com", body["email"])
 	assert.Equal(t, false, body["admin"])
 	assert.Equal(t, false, body["inactive"])
 }

@@ -75,6 +75,11 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		return
 	}
 
+	if req.Email != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "email may not be edited"})
+		return
+	}
+
 	isSelf := currentUser.ID == targetUser.ID
 	if !isSelf && !currentUser.IsAdmin {
 		c.JSON(http.StatusForbidden, gin.H{"error": "cannot edit other users"})

@@ -42,7 +42,6 @@ func currentUser(c *gin.Context) (*auth.User, bool) {
 
 type userResponse struct {
 	ID        string  `json:"id"`
-	Email     string  `json:"email"`
 	Username  *string `json:"username"`
 	Admin     bool    `json:"admin"`
 	Inactive  bool    `json:"inactive"`
@@ -52,7 +51,6 @@ type userResponse struct {
 func userToResponse(u *auth.User) userResponse {
 	return userResponse{
 		ID:        fmt.Sprintf("%d", u.ID),
-		Email:     u.Email,
 		Username:  u.Username,
 		Admin:     u.IsAdmin,
 		Inactive:  !u.IsActive,

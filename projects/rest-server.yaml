@@ -20,7 +20,7 @@ requirements:
       - GET /users/{userId} returns a User by UUID
       - PATCH /users/{userId} updates a user; users may edit themselves, only admins may set admin or inactive fields; email may not be edited
       - User responses do not include email
-    passing: false
+    passing: true
 
   - category: channels
     description: Channel management endpoints matching the spec
