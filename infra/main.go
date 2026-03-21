@@ -36,6 +36,30 @@ func main() {
 			return err
 		}
 
+		_, err = corev1.NewService(ctx, "postgres-nodeport", &corev1.ServiceArgs{
+			Metadata: &metav1.ObjectMetaArgs{
+				Name:      pulumi.String("wurbs-postgres-nodeport"),
+				Namespace: wurbsNs.Metadata.Name(),
+			},
+			Spec: &corev1.ServiceSpecArgs{
+				Type: pulumi.String("NodePort"),
+				Selector: pulumi.StringMap{
+					"cnpg.io/cluster": pulumi.String("wurbs-postgres"),
+					"role":            pulumi.String("primary"),
+				},
+				Ports: corev1.ServicePortArray{
+					&corev1.ServicePortArgs{
+						Port:       pulumi.Int(5432),
+						TargetPort: pulumi.Any(5432),
+						NodePort:   pulumi.Int(32432),
+					},
+				},
+			},
+		}, pulumi.Provider(k8s), pulumi.Parent(wurbsNs))
+		if err != nil {
+			return err
+		}
+
 		_, err = apiextensions.NewCustomResource(ctx, "postgres-cluster", &apiextensions.CustomResourceArgs{
 			ApiVersion: pulumi.String("postgresql.cnpg.io/v1"),
 			Kind:       pulumi.String("Cluster"),
