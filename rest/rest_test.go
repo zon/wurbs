@@ -774,6 +774,149 @@ func TestListMessages_Pagination(t *testing.T) {
 	assert.Len(t, msgs, 2)
 }
 
+// --- Message edit/delete tests ---
+
+func TestUpdateMessage_Success(t *testing.T) {
+	db := setupTestDB(t)
+	admin := createTestUser(t, db, "admin@test.com", "sub-admin", true, false)
+	user := createTestUser(t, db, "user@test.com", "sub-user", false, false)
+	engine := newTestEngine(t, db, admin)
+
+	w := doJSON(t, engine, "POST", "/channels", map[string]any{"name": "chat"})
+	created := parseJSON(t, w)
+	channelID := fmt.Sprintf("%.0f", created["ID"])
+
+	userEngine := newTestEngine(t, db, user)
+	w = doJSON(t, userEngine, "POST", "/channels/"+channelID+"/messages", map[string]any{
+		"content": "original",
+	})
+	msgCreated := parseJSON(t, w)
+	msgID := fmt.Sprintf("%.0f", msgCreated["ID"])
+
+	w = doJSON(t, userEngine, "PATCH", "/messages/"+msgID, map[string]any{
+		"content": "edited",
+	})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	body := parseJSON(t, w)
+	assert.Equal(t, "edited", body["Content"])
+}
+
+func TestUpdateMessage_NotOwner(t *testing.T) {
+	db := setupTestDB(t)
+	admin := createTestUser(t, db, "admin@test.com", "sub-admin", true, false)
+	owner := createTestUser(t, db, "owner@test.com", "sub-owner", false, false)
+	other := createTestUser(t, db, "other@test.com", "sub-other", false, false)
+	engine := newTestEngine(t, db, admin)
+
+	w := doJSON(t, engine, "POST", "/channels", map[string]any{"name": "chat"})
+	created := parseJSON(t, w)
+	channelID := fmt.Sprintf("%.0f", created["ID"])
+
+	ownerEngine := newTestEngine(t, db, owner)
+	w = doJSON(t, ownerEngine, "POST", "/channels/"+channelID+"/messages", map[string]any{
+		"content": "original",
+	})
+	msgCreated := parseJSON(t, w)
+	msgID := fmt.Sprintf("%.0f", msgCreated["ID"])
+
+	otherEngine := newTestEngine(t, db, other)
+	w = doJSON(t, otherEngine, "PATCH", "/messages/"+msgID, map[string]any{
+		"content": "hacked",
+	})
+	assert.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestUpdateMessage_NotFound(t *testing.T) {
+	db := setupTestDB(t)
+	user := createTestUser(t, db, "user@test.com", "sub-user", false, false)
+	engine := newTestEngine(t, db, user)
+
+	w := doJSON(t, engine, "PATCH", "/messages/999", map[string]any{
+		"content": "nope",
+	})
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestDeleteMessage_Owner(t *testing.T) {
+	db := setupTestDB(t)
+	admin := createTestUser(t, db, "admin@test.com", "sub-admin", true, false)
+	user := createTestUser(t, db, "user@test.com", "sub-user", false, false)
+	engine := newTestEngine(t, db, admin)
+
+	w := doJSON(t, engine, "POST", "/channels", map[string]any{"name": "chat"})
+	created := parseJSON(t, w)
+	channelID := fmt.Sprintf("%.0f", created["ID"])
+
+	userEngine := newTestEngine(t, db, user)
+	w = doJSON(t, userEngine, "POST", "/channels/"+channelID+"/messages", map[string]any{
+		"content": "to delete",
+	})
+	msgCreated := parseJSON(t, w)
+	msgID := fmt.Sprintf("%.0f", msgCreated["ID"])
+
+	w = doJSON(t, userEngine, "DELETE", "/messages/"+msgID, nil)
+	assert.Equal(t, http.StatusNoContent, w.Code)
+
+	w = doJSON(t, userEngine, "GET", "/channels/"+channelID+"/messages", nil)
+	body := parseJSON(t, w)
+	msgs := body["Messages"].([]any)
+	assert.Len(t, msgs, 0)
+}
+
+func TestDeleteMessage_Admin(t *testing.T) {
+	db := setupTestDB(t)
+	admin := createTestUser(t, db, "admin@test.com", "sub-admin", true, false)
+	owner := createTestUser(t, db, "owner@test.com", "sub-owner", false, false)
+	engine := newTestEngine(t, db, admin)
+
+	w := doJSON(t, engine, "POST", "/channels", map[string]any{"name": "chat"})
+	created := parseJSON(t, w)
+	channelID := fmt.Sprintf("%.0f", created["ID"])
+
+	ownerEngine := newTestEngine(t, db, owner)
+	w = doJSON(t, ownerEngine, "POST", "/channels/"+channelID+"/messages", map[string]any{
+		"content": "admin delete",
+	})
+	msgCreated := parseJSON(t, w)
+	msgID := fmt.Sprintf("%.0f", msgCreated["ID"])
+
+	w = doJSON(t, engine, "DELETE", "/messages/"+msgID, nil)
+	assert.Equal(t, http.StatusNoContent, w.Code)
+}
+
+func TestDeleteMessage_NonOwnerNonAdmin(t *testing.T) {
+	db := setupTestDB(t)
+	admin := createTestUser(t, db, "admin@test.com", "sub-admin", true, false)
+	owner := createTestUser(t, db, "owner@test.com", "sub-owner", false, false)
+	other := createTestUser(t, db, "other@test.com", "sub-other", false, false)
+	engine := newTestEngine(t, db, admin)
+
+	w := doJSON(t, engine, "POST", "/channels", map[string]any{"name": "chat"})
+	created := parseJSON(t, w)
+	channelID := fmt.Sprintf("%.0f", created["ID"])
+
+	ownerEngine := newTestEngine(t, db, owner)
+	w = doJSON(t, ownerEngine, "POST", "/channels/"+channelID+"/messages", map[string]any{
+		"content": "not yours",
+	})
+	msgCreated := parseJSON(t, w)
+	msgID := fmt.Sprintf("%.0f", msgCreated["ID"])
+
+	otherEngine := newTestEngine(t, db, other)
+	w = doJSON(t, otherEngine, "DELETE", "/messages/"+msgID, nil)
+	assert.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestDeleteMessage_NotFound(t *testing.T) {
+	db := setupTestDB(t)
+	user := createTestUser(t, db, "user@test.com", "sub-user", false, false)
+	engine := newTestEngine(t, db, user)
+
+	w := doJSON(t, engine, "DELETE", "/messages/999", nil)
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
 // --- Auth middleware integration tests ---
 
 func TestAuthMiddleware_Rejected(t *testing.T) {

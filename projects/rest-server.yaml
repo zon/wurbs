@@ -40,4 +40,4 @@ requirements:
       - POST /channels/{channelId}/messages posts a message to a channel and returns the created Message
       - PATCH /messages/{messageId} edits a message (owner only) and returns the updated Message
       - DELETE /messages/{messageId} deletes a message (owner or admin) and returns 204
-    passing: false
+    passing: true

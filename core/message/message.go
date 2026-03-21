@@ -3,6 +3,7 @@ package message
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/zon/chat/core/auth"
 	"gorm.io/gorm"
@@ -61,19 +62,27 @@ func Create(db *gorm.DB, nc NATSPublisher, channelID, userID uint, content strin
 }
 
 // List returns a page of messages for a channel, ordered newest first.
-// Pass cursor=0 to start from the most recent messages. Subsequent pages
+// The before and after parameters are timestamps to filter messages.
+// If both are provided, after takes precedence.
+// Use cursor=0 to start from the most recent messages. Subsequent pages
 // use the NextCursor from the previous Page.
-func List(db *gorm.DB, channelID uint, cursor uint, limit int) (*Page, error) {
+func List(db *gorm.DB, channelID uint, cursor uint, limit int, before, after *time.Time) (*Page, error) {
 	if limit <= 0 {
 		limit = 50
 	}
 
 	q := db.Where("channel_id = ?", channelID).
 		Order("id DESC").
-		Limit(limit + 1) // fetch one extra to detect next page
+		Limit(limit + 1)
 
 	if cursor > 0 {
 		q = q.Where("id < ?", cursor)
+	}
+
+	if after != nil {
+		q = q.Where("created_at > ?", after)
+	} else if before != nil {
+		q = q.Where("created_at < ?", before)
 	}
 
 	var messages []Message
@@ -83,7 +92,6 @@ func List(db *gorm.DB, channelID uint, cursor uint, limit int) (*Page, error) {
 
 	page := &Page{}
 	if len(messages) > limit {
-		// There are more messages; trim to requested limit and set cursor.
 		messages = messages[:limit]
 		page.NextCursor = messages[limit-1].ID
 	}
@@ -102,4 +110,28 @@ func Get(db *gorm.DB, id uint) (*Message, error) {
 		return nil, fmt.Errorf("message: failed to get: %w", err)
 	}
 	return &m, nil
+}
+
+// Update modifies an existing message's content.
+func Update(db *gorm.DB, id uint, content string) (*Message, error) {
+	result := db.Model(&Message{}).Where("id = ?", id).Update("content", content)
+	if result.Error != nil {
+		return nil, fmt.Errorf("message: failed to update: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return nil, ErrNotFound
+	}
+	return Get(db, id)
+}
+
+// Delete removes a message by ID.
+func Delete(db *gorm.DB, id uint) error {
+	result := db.Delete(&Message{}, id)
+	if result.Error != nil {
+		return fmt.Errorf("message: failed to delete: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return ErrNotFound
+	}
+	return nil
 }
