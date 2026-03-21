@@ -6,6 +6,8 @@ Before writing or planning code, read: https://raw.githubusercontent.com/zon/cod
 
 Before writing or planning tests, read: ./docs/testing.md
 
-API spec: ./asyncapi.yaml
+API specs:
+* ./specs/rest.yaml is an OpenAPI spec for the REST server
+* ./specs/socket.yaml is an AsyncAPI spec for the socket server
 
 After writing or editing an AsyncAPI file, validate it with: `asyncapi validate <file>`
