@@ -70,6 +70,13 @@ requirements:
       - Database models include id, created_at, and updated_at fields but not deleted_at (no soft deletes)
     passing: false
 
+  - category: core/user
+    description: User domain logic is separated into a core/user package
+    items:
+      - The User model and all user management logic (find, create, update) lives in a core/user package
+      - core/auth depends on core/user rather than defining user types itself
+    passing: false
+
   - category: messages
     description: Message endpoints
     items:
