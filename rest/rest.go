@@ -283,7 +283,8 @@ func (h *handler) deleteChannel(c *gin.Context) {
 // --- Member handlers ---
 
 type addMemberRequest struct {
-	UserID uint `json:"user_id" binding:"required"`
+	UserID *uint  `json:"user_id"`
+	Email  string `json:"email"`
 }
 
 func (h *handler) addMember(c *gin.Context) {
@@ -307,18 +308,33 @@ func (h *handler) addMember(c *gin.Context) {
 		return
 	}
 
-	// Look up the target user.
-	var target auth.User
-	if err := h.deps.DB.First(&target, req.UserID).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if req.UserID == nil && req.Email == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "user_id or email required"})
 		return
 	}
 
-	err := channel.AddMember(h.deps.DB, channelID, &target)
+	var target *auth.User
+	var err error
+
+	if req.UserID != nil {
+		target, err = auth.GetUserByID(h.deps.DB, fmt.Sprintf("%d", *req.UserID))
+		if err != nil {
+			if errors.Is(err, auth.ErrUserNotFound) {
+				c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	} else {
+		target, err = auth.FindOrCreateUserByEmail(h.deps.DB, req.Email, "")
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
+	err = channel.AddMember(h.deps.DB, channelID, target)
 	if err != nil {
 		if errors.Is(err, channel.ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "channel not found"})
@@ -336,7 +352,7 @@ func (h *handler) addMember(c *gin.Context) {
 	if h.deps.NATS != nil {
 		_ = h.deps.NATS.Publish(fmt.Sprintf("channel.%d.members.added", channelID), gin.H{
 			"channel_id": channelID,
-			"user_id":    req.UserID,
+			"user_id":    target.ID,
 		})
 	}
 

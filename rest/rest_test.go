@@ -465,6 +465,72 @@ func TestAddMember_ChannelNotFound(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, w.Code)
 }
 
+func TestAddMember_ByEmail_Success(t *testing.T) {
+	db := setupTestDB(t)
+	admin := createTestUser(t, db, "admin@test.com", "sub-admin", true, false)
+	member := createTestUser(t, db, "member@test.com", "sub-member", false, false)
+	engine := newTestEngine(t, db, admin)
+
+	w := doJSON(t, engine, "POST", "/channels", map[string]any{"name": "team"})
+	created := parseJSON(t, w)
+	channelID := fmt.Sprintf("%.0f", created["ID"])
+
+	w = doJSON(t, engine, "POST", "/channels/"+channelID+"/members", map[string]any{
+		"email": member.Email,
+	})
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestAddMember_ByEmail_CreateNewUser(t *testing.T) {
+	db := setupTestDB(t)
+	admin := createTestUser(t, db, "admin@test.com", "sub-admin", true, false)
+	engine := newTestEngine(t, db, admin)
+
+	w := doJSON(t, engine, "POST", "/channels", map[string]any{"name": "team"})
+	created := parseJSON(t, w)
+	channelID := fmt.Sprintf("%.0f", created["ID"])
+
+	w = doJSON(t, engine, "POST", "/channels/"+channelID+"/members", map[string]any{
+		"email": "newuser@example.com",
+	})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var newUser auth.User
+	result := db.Where("email = ?", "newuser@example.com").First(&newUser)
+	require.NoError(t, result.Error)
+	assert.NotZero(t, newUser.ID)
+}
+
+func TestAddMember_ByEmail_NonAdminRejected(t *testing.T) {
+	db := setupTestDB(t)
+	admin := createTestUser(t, db, "admin@test.com", "sub-admin", true, false)
+	user := createTestUser(t, db, "user@test.com", "sub-user", false, false)
+
+	adminEngine := newTestEngine(t, db, admin)
+	w := doJSON(t, adminEngine, "POST", "/channels", map[string]any{"name": "team"})
+	created := parseJSON(t, w)
+	channelID := fmt.Sprintf("%.0f", created["ID"])
+
+	userEngine := newTestEngine(t, db, user)
+	w = doJSON(t, userEngine, "POST", "/channels/"+channelID+"/members", map[string]any{
+		"email": "invite@example.com",
+	})
+	assert.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestAddMember_NoUserIDOrEmail(t *testing.T) {
+	db := setupTestDB(t)
+	admin := createTestUser(t, db, "admin@test.com", "sub-admin", true, false)
+	engine := newTestEngine(t, db, admin)
+
+	w := doJSON(t, engine, "POST", "/channels", map[string]any{"name": "team"})
+	created := parseJSON(t, w)
+	channelID := fmt.Sprintf("%.0f", created["ID"])
+
+	w = doJSON(t, engine, "POST", "/channels/"+channelID+"/members", map[string]any{})
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
 func TestRemoveMember_Success(t *testing.T) {
 	db := setupTestDB(t)
 	admin := createTestUser(t, db, "admin@test.com", "sub-admin", true, false)

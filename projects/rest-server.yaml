@@ -31,7 +31,7 @@ requirements:
     items:
       - POST /channels/{channelId}/members invites a user by userId or email (admin only)
       - If no user account exists with the given email, a new user is created before the invite
-    passing: false
+    passing: true
 
   - category: messages
     description: Message endpoints

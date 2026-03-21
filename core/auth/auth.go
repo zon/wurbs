@@ -284,7 +284,7 @@ func FindOrCreateUserByEmail(db *gorm.DB, email, subject string) (*User, error) 
 	result := db.Where("email = ?", email).First(&user)
 
 	if result.Error == nil {
-		if user.Subject == "" {
+		if user.Subject == "" && subject != "" {
 			user.Subject = subject
 			db.Save(&user)
 		}
@@ -296,8 +296,9 @@ func FindOrCreateUserByEmail(db *gorm.DB, email, subject string) (*User, error) 
 	}
 
 	user = User{
-		Email:   email,
-		Subject: subject,
+		Email:    email,
+		Subject:  subject,
+		IsActive: true,
 	}
 	if err := db.Create(&user).Error; err != nil {
 		return nil, err
