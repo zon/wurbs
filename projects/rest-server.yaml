@@ -24,7 +24,7 @@ requirements:
       - POST /channels creates a channel (admin only) and returns the created Channel
       - GET /channels/{channelId} returns a Channel by UUID
       - PATCH /channels/{channelId} updates a channel (admin only); channels may be inactive but not deleted
-    passing: false
+    passing: true
 
   - category: members
     description: Channel membership endpoints

@@ -302,6 +302,75 @@ func TestDeleteChannel_NonAdminRejected(t *testing.T) {
 	assert.Equal(t, http.StatusForbidden, w.Code)
 }
 
+func TestUpdateChannel_Success(t *testing.T) {
+	db := setupTestDB(t)
+	admin := createTestUser(t, db, "admin@test.com", "sub-admin", true, false)
+	engine := newTestEngine(t, db, admin)
+
+	w := doJSON(t, engine, "POST", "/channels", map[string]any{"name": "old-name", "public": true})
+	created := parseJSON(t, w)
+	id := fmt.Sprintf("%.0f", created["ID"])
+
+	w = doJSON(t, engine, "PATCH", "/channels/"+id, map[string]any{
+		"name":        "new-name",
+		"description": "A description",
+		"public":      false,
+	})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	body := parseJSON(t, w)
+	assert.Equal(t, "new-name", body["Name"])
+	assert.Equal(t, "A description", body["Description"])
+	assert.Equal(t, false, body["IsPublic"])
+}
+
+func TestUpdateChannel_SetInactive(t *testing.T) {
+	db := setupTestDB(t)
+	admin := createTestUser(t, db, "admin@test.com", "sub-admin", true, false)
+	engine := newTestEngine(t, db, admin)
+
+	w := doJSON(t, engine, "POST", "/channels", map[string]any{"name": "active-chan"})
+	created := parseJSON(t, w)
+	id := fmt.Sprintf("%.0f", created["ID"])
+
+	w = doJSON(t, engine, "PATCH", "/channels/"+id, map[string]any{
+		"inactive": true,
+	})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	ch, err := channel.Get(db, 1)
+	require.NoError(t, err)
+	assert.Equal(t, false, ch.IsActive)
+}
+
+func TestUpdateChannel_NonAdminRejected(t *testing.T) {
+	db := setupTestDB(t)
+	admin := createTestUser(t, db, "admin@test.com", "sub-admin", true, false)
+	user := createTestUser(t, db, "user@test.com", "sub-user", false, false)
+
+	adminEngine := newTestEngine(t, db, admin)
+	w := doJSON(t, adminEngine, "POST", "/channels", map[string]any{"name": "update-test"})
+	created := parseJSON(t, w)
+	id := fmt.Sprintf("%.0f", created["ID"])
+
+	userEngine := newTestEngine(t, db, user)
+	w = doJSON(t, userEngine, "PATCH", "/channels/"+id, map[string]any{
+		"name": "should-fail",
+	})
+	assert.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestUpdateChannel_NotFound(t *testing.T) {
+	db := setupTestDB(t)
+	admin := createTestUser(t, db, "admin@test.com", "sub-admin", true, false)
+	engine := newTestEngine(t, db, admin)
+
+	w := doJSON(t, engine, "PATCH", "/channels/999", map[string]any{
+		"name": "doesnt-exist",
+	})
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
 // --- Member endpoint tests ---
 
 func TestAddMember_Success(t *testing.T) {

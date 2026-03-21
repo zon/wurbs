@@ -10,10 +10,12 @@ import (
 
 type Channel struct {
 	gorm.Model
-	Name     string `gorm:"uniqueIndex"`
-	IsPublic bool
-	IsTest   bool
-	Members  []auth.User `gorm:"many2many:memberships;"`
+	Name        string `gorm:"uniqueIndex"`
+	Description string
+	IsPublic    bool
+	IsActive    bool `gorm:"default:true"`
+	IsTest      bool
+	Members     []auth.User `gorm:"many2many:memberships;"`
 }
 
 type Membership struct {
@@ -47,6 +49,33 @@ func Get(db *gorm.DB, id uint) (*Channel, error) {
 		return nil, fmt.Errorf("channel: failed to get: %w", err)
 	}
 	return &ch, nil
+}
+
+type UpdateInput struct {
+	Name        *string `json:"name"`
+	Description *string `json:"description"`
+	IsPublic    *bool   `json:"is_public"`
+	IsActive    *bool   `json:"is_active"`
+}
+
+func Update(db *gorm.DB, ch *Channel, input UpdateInput) error {
+	if input.Name != nil {
+		ch.Name = *input.Name
+	}
+	if input.Description != nil {
+		ch.Description = *input.Description
+	}
+	if input.IsPublic != nil {
+		ch.IsPublic = *input.IsPublic
+	}
+	if input.IsActive != nil {
+		ch.IsActive = *input.IsActive
+	}
+
+	if err := db.Session(&gorm.Session{FullSaveAssociations: true}).Save(ch).Error; err != nil {
+		return fmt.Errorf("channel: failed to update: %w", err)
+	}
+	return nil
 }
 
 func List(db *gorm.DB) ([]Channel, error) {

@@ -47,6 +47,7 @@ func New(deps Deps, authMiddleware func(http.Handler) http.Handler) *gin.Engine 
 	api.POST("/channels", h.createChannel)
 	api.GET("/channels", h.listChannels)
 	api.GET("/channels/:id", h.getChannel)
+	api.PATCH("/channels/:id", h.updateChannel)
 	api.DELETE("/channels/:id", h.deleteChannel)
 
 	api.POST("/channels/:id/members", h.addMember)
@@ -187,6 +188,63 @@ func (h *handler) getChannel(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, ch)
+}
+
+type updateChannelRequest struct {
+	Name        *string `json:"name"`
+	Description *string `json:"description"`
+	IsPublic    *bool   `json:"public"`
+	IsActive    *bool   `json:"inactive"`
+}
+
+func (h *handler) updateChannel(c *gin.Context) {
+	user, ok := currentUser(c)
+	if !ok {
+		return
+	}
+	if !user.IsAdmin {
+		c.JSON(http.StatusForbidden, gin.H{"error": "admin required"})
+		return
+	}
+
+	id, ok := parseID(c, "id")
+	if !ok {
+		return
+	}
+
+	ch, err := channel.Get(h.deps.DB, id)
+	if err != nil {
+		if errors.Is(err, channel.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "channel not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	var req updateChannelRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	input := channel.UpdateInput{
+		Name:        req.Name,
+		Description: req.Description,
+		IsPublic:    req.IsPublic,
+	}
+	if req.IsActive != nil {
+		isActive := !*req.IsActive
+		input.IsActive = &isActive
+	}
+
+	if err := channel.Update(h.deps.DB, ch, input); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	updated, _ := channel.Get(h.deps.DB, id)
+	c.JSON(http.StatusOK, updated)
 }
 
 func (h *handler) deleteChannel(c *gin.Context) {
