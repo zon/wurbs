@@ -46,6 +46,12 @@ requirements:
       - Test admins (IsAdmin=true, IsTest=true) can only alter test channels and users
     passing: false
 
+  - category: nats
+    description: NATS subject naming conventions
+    items:
+      - All NATS subjects are prefixed with "wurbs." to avoid conflicts with other apps
+    passing: false
+
   - category: messages
     description: Message endpoints
     items:
