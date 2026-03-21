@@ -77,10 +77,10 @@ requirements:
       - core/auth depends on core/user rather than defining user types itself
     passing: false
 
-  - category: postgres tests
-    description: REST server tests use the postgres database with only test users and test orgs
+  - category: end-to-end tests
+    description: REST server tests use only public HTTP interfaces and do not connect directly to the database or NATS
     items:
-      - Tests use a real postgres database, not SQLite or mocks
+      - Tests interact with the server only through HTTP endpoints, not by connecting directly to the database or NATS
       - Tests only create and use test users (IsTest=true) and test channels
     passing: false
 
