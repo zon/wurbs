@@ -3,13 +3,16 @@ description: Implement the REST server following specs/rest.yaml
 
 requirements:
   - category: auth
-    description: OIDC authentication endpoints
+    description: OIDC and client credential authentication endpoints
     items:
       - GET /auth/login redirects to the OIDC provider authorization endpoint
       - GET /auth/callback exchanges the authorization code for tokens, matches the identity provider email to a user record and stores the subject ID, then returns a TokenSet
       - POST /auth/logout revokes the refresh token and redirects to the OIDC end-session endpoint
       - POST /auth/refresh exchanges a refresh token for a new access token and returns a TokenSet
-    passing: true
+      - Clients can authenticate using the client credentials flow
+      - Real users (including real admins) can only authenticate with OIDC
+      - Test users (including test admins) can only authenticate with client credentials
+    passing: false
 
   - category: users
     description: User management endpoints
@@ -24,7 +27,9 @@ requirements:
       - POST /channels creates a channel (admin only) and returns the created Channel
       - GET /channels/{channelId} returns a Channel by UUID
       - PATCH /channels/{channelId} updates a channel (admin only); channels may be inactive but not deleted
-    passing: true
+      - Real channels can only contain real users
+      - Test channels can only contain test users
+    passing: false
 
   - category: members
     description: Channel membership endpoints
@@ -32,6 +37,14 @@ requirements:
       - POST /channels/{channelId}/members invites a user by userId or email (admin only)
       - If no user account exists with the given email, a new user is created before the invite
     passing: true
+
+  - category: admin users
+    description: Admin capabilities for managing channels and users
+    items:
+      - Admin users can manage channels and invite users
+      - Real admins (IsAdmin=true, IsTest=false) can only alter real channels and users
+      - Test admins (IsAdmin=true, IsTest=true) can only alter test channels and users
+    passing: false
 
   - category: messages
     description: Message endpoints
