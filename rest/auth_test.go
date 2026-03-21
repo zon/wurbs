@@ -25,7 +25,7 @@ func setupTestOIDC(t *testing.T) {
 		Issuer:        "https://auth.example.com",
 		ClientID:      "test-client",
 		ClientSecret:  "test-secret",
-		RedirectURL:   "http://localhost:8080/auth/callback",
+		RESTPort:      8080,
 		SkipJWKSFetch: true,
 	})
 	require.NoError(t, err)

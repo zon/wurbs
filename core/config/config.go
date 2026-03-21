@@ -13,7 +13,6 @@ type Config struct {
 	OIDCIssuer      string `yaml:"oidc_issuer"`
 	OIDCClientID    string `yaml:"oidc_client_id"`
 	OIDCClientSec   string `yaml:"oidc_client_secret"`
-	OIDCRedirectURL string `yaml:"oidc_redirect_url"`
 	NATSURL         string `yaml:"nats_url"`
 	NATSDevToken    string `yaml:"nats_dev_token"`
 	TestAdmin       string `yaml:"test_admin"`
@@ -37,7 +36,6 @@ func Load() (*Config, error) {
 	cfg.OIDCIssuer = cm.OIDCIssuer
 	cfg.OIDCClientID = cm.OIDCClientID
 	cfg.OIDCClientSec = cm.OIDCClientSecret
-	cfg.OIDCRedirectURL = cm.OIDCRedirectURL
 	cfg.NATSURL = cm.NATSURL
 
 	if data, err := os.ReadFile(tree.NATSDevToken); err == nil {

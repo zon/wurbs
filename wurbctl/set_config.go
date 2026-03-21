@@ -29,8 +29,10 @@ const (
 
 // SetConfigCmd implements `wurbctl set config`.
 type SetConfigCmd struct {
-	Context    string `help:"Kubernetes context to use." name:"context"`
-	OIDCIssuer string `help:"OIDC issuer URL." name:"oidc-issuer"`
+	Context          string `help:"Kubernetes context to use." name:"context"`
+	OIDCIssuer       string `help:"OIDC issuer URL." name:"oidc-issuer"`
+	OIDCClientID     string `help:"OIDC client ID." name:"oidc-client-id"`
+	OIDCClientSecret string `help:"OIDC client secret." name:"oidc-client-secret"`
 }
 
 func (c *SetConfigCmd) Run(ctx *Context) error {
@@ -79,6 +81,18 @@ func (c *SetConfigCmd) writeConfig(tree *config.ConfigTree) error {
 	}
 	if cm.OIDCIssuer == "" {
 		return fmt.Errorf("--oidc-issuer is required when not already set in config")
+	}
+	if c.OIDCClientID != "" {
+		cm.OIDCClientID = c.OIDCClientID
+	}
+	if cm.OIDCClientID == "" {
+		return fmt.Errorf("--oidc-client-id is required when not already set in config")
+	}
+	if c.OIDCClientSecret != "" {
+		cm.OIDCClientSecret = c.OIDCClientSecret
+	}
+	if cm.OIDCClientSecret == "" {
+		return fmt.Errorf("--oidc-client-secret is required when not already set in config")
 	}
 	if cm.RESTPort == 0 {
 		cm.RESTPort = 8080

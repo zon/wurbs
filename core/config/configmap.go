@@ -20,7 +20,6 @@ type ConfigMap struct {
 	OIDCIssuer       string `yaml:"oidcIssuer"`
 	OIDCClientID     string `yaml:"oidcClientID"`
 	OIDCClientSecret string `yaml:"oidcClientSecret"`
-	OIDCRedirectURL  string `yaml:"oidcRedirectURL"`
 	NATSURL          string `yaml:"natsURL"`
 }
 

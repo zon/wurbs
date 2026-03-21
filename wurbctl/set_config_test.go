@@ -28,6 +28,25 @@ func TestSetConfigCmd_ConfigmapWithOIDCIssuer(t *testing.T) {
 	assert.Contains(t, yaml, "oidc-issuer: \"https://issuer.example.com\"")
 }
 
+func TestSetConfigCmd_ConfigmapWithOIDCClientCredentials(t *testing.T) {
+	cmd := &SetConfigCmd{
+		OIDCIssuer:       "https://issuer.example.com",
+		OIDCClientID:     "my-client-id",
+		OIDCClientSecret: "my-client-secret",
+		Context:          "test-context",
+	}
+
+	data := map[string]string{
+		"oidc-client-id":     cmd.OIDCClientID,
+		"oidc-client-secret": cmd.OIDCClientSecret,
+	}
+
+	yaml := k8s.BuildConfigmapYAML("wurbs-config", ralphWorkflowNamespace, data)
+
+	assert.Contains(t, yaml, "oidc-client-id: \"my-client-id\"")
+	assert.Contains(t, yaml, "oidc-client-secret: \"my-client-secret\"")
+}
+
 func TestSetConfigCmd_Constants(t *testing.T) {
 	assert.Equal(t, "ralph-wurbs", ralphWorkflowNamespace)
 	assert.Equal(t, "wurbs", wurbsNamespace)

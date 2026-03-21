@@ -34,7 +34,7 @@ type OIDCConfig struct {
 	Issuer        string
 	ClientID      string
 	ClientSecret  string
-	RedirectURL   string
+	RESTPort      int
 	SkipJWKSFetch bool
 }
 
@@ -46,7 +46,7 @@ func InitOIDC(cfg *OIDCConfig) error {
 	oauth2Config = &oauth2.Config{
 		ClientID:     cfg.ClientID,
 		ClientSecret: cfg.ClientSecret,
-		RedirectURL:  cfg.RedirectURL,
+		RedirectURL:  fmt.Sprintf("http://localhost:%d/auth/callback", cfg.RESTPort),
 		Endpoint: oauth2.Endpoint{
 			AuthURL:  cfg.Issuer + "/authorize",
 			TokenURL: cfg.Issuer + "/oauth/token",
