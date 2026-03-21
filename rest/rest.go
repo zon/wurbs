@@ -152,7 +152,7 @@ func (h *handler) createChannel(c *gin.Context) {
 
 	// Publish channel creation to NATS.
 	if h.deps.NATS != nil {
-		_ = h.deps.NATS.Publish(fmt.Sprintf("channel.%d.created", ch.ID), ch)
+		_ = h.deps.NATS.Publish(fmt.Sprintf("wurbs.channel.%d.created", ch.ID), ch)
 	}
 
 	c.JSON(http.StatusCreated, ch)
@@ -279,7 +279,7 @@ func (h *handler) deleteChannel(c *gin.Context) {
 
 	// Publish channel deletion to NATS.
 	if h.deps.NATS != nil {
-		_ = h.deps.NATS.Publish(fmt.Sprintf("channel.%d.deleted", id), gin.H{"id": id})
+		_ = h.deps.NATS.Publish(fmt.Sprintf("wurbs.channel.%d.deleted", id), gin.H{"id": id})
 	}
 
 	c.JSON(http.StatusOK, gin.H{"deleted": true})
@@ -355,7 +355,7 @@ func (h *handler) addMember(c *gin.Context) {
 
 	// Publish membership change to NATS.
 	if h.deps.NATS != nil {
-		_ = h.deps.NATS.Publish(fmt.Sprintf("channel.%d.members.added", channelID), gin.H{
+		_ = h.deps.NATS.Publish(fmt.Sprintf("wurbs.channel.%d.members.added", channelID), gin.H{
 			"channel_id": channelID,
 			"user_id":    target.ID,
 		})
@@ -396,7 +396,7 @@ func (h *handler) removeMember(c *gin.Context) {
 
 	// Publish membership change to NATS.
 	if h.deps.NATS != nil {
-		_ = h.deps.NATS.Publish(fmt.Sprintf("channel.%d.members.removed", channelID), gin.H{
+		_ = h.deps.NATS.Publish(fmt.Sprintf("wurbs.channel.%d.members.removed", channelID), gin.H{
 			"channel_id": channelID,
 			"user_id":    userID,
 		})

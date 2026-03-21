@@ -103,7 +103,7 @@ func TestWebSocket_ConnectToChannel(t *testing.T) {
 	fake.mu.Lock()
 	defer fake.mu.Unlock()
 	require.Len(t, fake.subjects, 1)
-	assert.Equal(t, "channel.42.messages", fake.subjects[0])
+	assert.Equal(t, "wurbs.channel.42.messages", fake.subjects[0])
 }
 
 func TestWebSocket_RelayNATSMessage(t *testing.T) {
@@ -158,8 +158,8 @@ func TestWebSocket_ChannelIsolation(t *testing.T) {
 	subjects := append([]string{}, fake.subjects...)
 	fake.mu.Unlock()
 	require.Len(t, subjects, 2)
-	assert.Contains(t, subjects, "channel.10.messages")
-	assert.Contains(t, subjects, "channel.20.messages")
+	assert.Contains(t, subjects, "wurbs.channel.10.messages")
+	assert.Contains(t, subjects, "wurbs.channel.20.messages")
 }
 
 func TestWebSocket_InvalidChannelID(t *testing.T) {

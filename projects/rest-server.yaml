@@ -50,7 +50,7 @@ requirements:
     description: NATS subject naming conventions
     items:
       - All NATS subjects are prefixed with "wurbs." to avoid conflicts with other apps
-    passing: false
+    passing: true
 
   - category: messages
     description: Message endpoints

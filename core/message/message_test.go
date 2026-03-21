@@ -287,8 +287,8 @@ func TestList_IsolatesChannels(t *testing.T) {
 // --- NATS subject tests ---
 
 func TestNatsSubject(t *testing.T) {
-	assert.Equal(t, "channel.1.messages", natsSubject(1))
-	assert.Equal(t, "channel.42.messages", natsSubject(42))
+	assert.Equal(t, "wurbs.channel.1.messages", natsSubject(1))
+	assert.Equal(t, "wurbs.channel.42.messages", natsSubject(42))
 }
 
 // --- Message model field persistence ---

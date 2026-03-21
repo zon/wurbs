@@ -1062,7 +1062,7 @@ func TestNATS_PublishesOnChannelCreated(t *testing.T) {
 
 	assert.Equal(t, http.StatusCreated, w.Code)
 	assert.Len(t, mn.published, 1)
-	assert.Contains(t, mn.published[0].subject, "channel.")
+	assert.Contains(t, mn.published[0].subject, "wurbs.channel.")
 	assert.Contains(t, mn.published[0].subject, ".created")
 }
 
@@ -1080,7 +1080,7 @@ func TestNATS_PublishesOnChannelDeleted(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	assert.Len(t, mn.published, 2)
-	assert.Contains(t, mn.published[1].subject, "channel.")
+	assert.Contains(t, mn.published[1].subject, "wurbs.channel.")
 	assert.Contains(t, mn.published[1].subject, ".deleted")
 }
 
@@ -1101,7 +1101,7 @@ func TestNATS_PublishesOnMemberAdded(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	assert.Len(t, mn.published, 2)
-	assert.Contains(t, mn.published[1].subject, "channel.")
+	assert.Contains(t, mn.published[1].subject, "wurbs.channel.")
 	assert.Contains(t, mn.published[1].subject, ".members.added")
 }
 
@@ -1125,7 +1125,7 @@ func TestNATS_PublishesOnMemberRemoved(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	assert.Len(t, mn.published, 3)
-	assert.Contains(t, mn.published[2].subject, "channel.")
+	assert.Contains(t, mn.published[2].subject, "wurbs.channel.")
 	assert.Contains(t, mn.published[2].subject, ".members.removed")
 }
 

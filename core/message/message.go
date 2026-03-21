@@ -37,7 +37,7 @@ var (
 
 // natsSubject returns the NATS subject for a channel's messages.
 func natsSubject(channelID uint) string {
-	return fmt.Sprintf("channel.%d.messages", channelID)
+	return fmt.Sprintf("wurbs.channel.%d.messages", channelID)
 }
 
 // Create persists a new message and publishes it to NATS. The nc parameter

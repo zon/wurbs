@@ -94,7 +94,7 @@ func serveChannel(sub subscriber, w http.ResponseWriter, r *http.Request) {
 }
 
 func channelSubject(id uint) string {
-	return fmt.Sprintf("channel.%d.messages", id)
+	return fmt.Sprintf("wurbs.channel.%d.messages", id)
 }
 
 func parseChannelID(path string) (uint, error) {
