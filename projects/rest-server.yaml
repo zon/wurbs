@@ -61,7 +61,7 @@ requirements:
       - Member handlers are in rest/handler/member.go
       - Message handlers are in rest/handler/message.go
       - User handlers are in rest/handler/user.go
-    passing: false
+    passing: true
 
   - category: messages
     description: Message endpoints
