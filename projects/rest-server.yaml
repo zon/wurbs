@@ -1,0 +1,43 @@
+name: rest-server
+description: Implement the REST server following specs/rest.yaml
+
+requirements:
+  - category: auth
+    description: OIDC authentication endpoints
+    items:
+      - GET /auth/login redirects to the OIDC provider authorization endpoint
+      - GET /auth/callback exchanges the authorization code for tokens, matches the identity provider email to a user record and stores the subject ID, then returns a TokenSet
+      - POST /auth/logout revokes the refresh token and redirects to the OIDC end-session endpoint
+      - POST /auth/refresh exchanges a refresh token for a new access token and returns a TokenSet
+    passing: false
+
+  - category: users
+    description: User management endpoints
+    items:
+      - GET /users/{userId} returns a User by UUID
+      - PATCH /users/{userId} updates a user; users may edit themselves, only admins may set admin or inactive fields
+    passing: false
+
+  - category: channels
+    description: Channel management endpoints matching the spec
+    items:
+      - POST /channels creates a channel (admin only) and returns the created Channel
+      - GET /channels/{channelId} returns a Channel by UUID
+      - PATCH /channels/{channelId} updates a channel (admin only); channels may be inactive but not deleted
+    passing: false
+
+  - category: members
+    description: Channel membership endpoints
+    items:
+      - POST /channels/{channelId}/members invites a user by userId or email (admin only)
+      - If no user account exists with the given email, a new user is created before the invite
+    passing: false
+
+  - category: messages
+    description: Message endpoints
+    items:
+      - GET /channels/{channelId}/messages lists messages paged by time using before/after query params and returns a MessagePage
+      - POST /channels/{channelId}/messages posts a message to a channel and returns the created Message
+      - PATCH /messages/{messageId} edits a message (owner only) and returns the updated Message
+      - DELETE /messages/{messageId} deletes a message (owner or admin) and returns 204
+    passing: false
