@@ -77,6 +77,13 @@ requirements:
       - core/auth depends on core/user rather than defining user types itself
     passing: false
 
+  - category: postgres tests
+    description: REST server tests use the postgres database with only test users and test orgs
+    items:
+      - Tests use a real postgres database, not SQLite or mocks
+      - Tests only create and use test users (IsTest=true) and test channels
+    passing: false
+
   - category: messages
     description: Message endpoints
     items:
