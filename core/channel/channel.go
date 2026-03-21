@@ -3,13 +3,16 @@ package channel
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/zon/chat/core/auth"
 	"gorm.io/gorm"
 )
 
 type Channel struct {
-	gorm.Model
+	ID          uint `gorm:"primarykey"`
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 	Name        string `gorm:"uniqueIndex"`
 	Description string
 	IsPublic    bool

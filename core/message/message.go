@@ -16,7 +16,9 @@ type NATSPublisher interface {
 
 // Message is the chat message model. The message module owns this type.
 type Message struct {
-	gorm.Model
+	ID        uint `gorm:"primarykey"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
 	ChannelID uint
 	UserID    uint
 	User      auth.User `gorm:"foreignKey:UserID"`

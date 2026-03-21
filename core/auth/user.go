@@ -4,18 +4,21 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"gorm.io/gorm"
 )
 
 type User struct {
-	gorm.Model
-	Email    string  `gorm:"uniqueIndex"`
-	Subject  string  `gorm:"uniqueIndex"`
-	Username *string `json:"username"`
-	IsAdmin  bool
-	IsActive bool `gorm:"default:true"`
-	IsTest   bool
+	ID        uint `gorm:"primarykey"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	Email     string  `gorm:"uniqueIndex"`
+	Subject   string  `gorm:"uniqueIndex"`
+	Username  *string `json:"username"`
+	IsAdmin   bool
+	IsActive  bool `gorm:"default:true"`
+	IsTest    bool
 }
 
 var (
