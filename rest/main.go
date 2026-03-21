@@ -10,6 +10,7 @@ import (
 	"github.com/zon/chat/core/config"
 	corenats "github.com/zon/chat/core/nats"
 	"github.com/zon/chat/core/pg"
+	"gorm.io/gorm"
 )
 
 var cli struct {
@@ -41,6 +42,8 @@ func Main() {
 		slog.Warn("NATS connection failed, running without NATS", "error", err)
 	}
 
+	initClientPublicKey(db)
+
 	authMW, err := auth.ClientMiddleware(db)
 	if err != nil {
 		slog.Warn("client auth middleware unavailable, using passthrough", "error", err)
@@ -61,4 +64,22 @@ func Main() {
 
 func main() {
 	Main()
+}
+
+func initClientPublicKey(db *gorm.DB) {
+	tree, err := config.Dir()
+	if err != nil {
+		slog.Warn("failed to get config directory", "error", err)
+		return
+	}
+
+	var ta auth.TestAdmin
+	if err := ta.Read(tree.TestAdmin); err != nil {
+		slog.Warn("failed to load test admin credentials", "error", err)
+		return
+	}
+
+	if ta.PublicKey != "" {
+		auth.SetClientPublicKey(ta.PublicKey)
+	}
 }

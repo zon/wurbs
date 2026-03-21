@@ -24,6 +24,13 @@ type RefreshInput struct {
 	RefreshToken string `json:"refreshToken"`
 }
 
+type ClientTokenInput struct {
+	GrantType           string `json:"grantType"`
+	ClientID            string `json:"clientId"`
+	ClientAssertion     string `json:"clientAssertion"`
+	ClientAssertionType string `json:"clientAssertionType"`
+}
+
 var (
 	oauth2Config *oauth2.Config
 	issuerURL    string
@@ -189,6 +196,80 @@ func Refresh(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(tokenSet)
+}
+
+var clientPublicKey []byte
+
+func SetClientPublicKey(pem string) {
+	clientPublicKey = []byte(pem)
+}
+
+func ClientToken(db *gorm.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if len(clientPublicKey) == 0 {
+			http.Error(w, "client credentials not configured", http.StatusInternalServerError)
+			return
+		}
+
+		var input ClientTokenInput
+		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+			http.Error(w, "invalid request body", http.StatusBadRequest)
+			return
+		}
+
+		if input.GrantType != "client_credentials" {
+			http.Error(w, "unsupported grant type", http.StatusBadRequest)
+			return
+		}
+
+		if input.ClientID == "" {
+			http.Error(w, "client_id required", http.StatusBadRequest)
+			return
+		}
+
+		if input.ClientAssertion == "" {
+			http.Error(w, "client_assertion required", http.StatusBadRequest)
+			return
+		}
+
+		pubKey, err := parseRSAPublicKey(string(clientPublicKey))
+		if err != nil {
+			http.Error(w, "failed to parse client public key", http.StatusInternalServerError)
+			return
+		}
+
+		claims, err := validateClientToken(input.ClientAssertion, pubKey)
+		if err != nil {
+			http.Error(w, "invalid client assertion", http.StatusUnauthorized)
+			return
+		}
+
+		user, err := resolveClientUser(db, claims)
+		if err != nil {
+			http.Error(w, "user not found", http.StatusUnauthorized)
+			return
+		}
+
+		if !user.IsTest && !user.IsAdmin {
+			http.Error(w, "real users must authenticate via OIDC", http.StatusForbidden)
+			return
+		}
+
+		accessToken := generateAccessToken(user)
+
+		tokenSet := TokenSet{
+			AccessToken: accessToken,
+			TokenType:   "Bearer",
+			ExpiresIn:   3600,
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(tokenSet)
+	}
+}
+
+func generateAccessToken(user *User) string {
+	return fmt.Sprintf("client_%d_%s", user.ID, user.Email)
 }
 
 func getRefreshTokenFromSession(r *http.Request) string {

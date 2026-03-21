@@ -120,3 +120,51 @@ func resolveClientUser(db *gorm.DB, claims *clientClaims) (*User, error) {
 
 	return nil, fmt.Errorf("auth: user not found for client credentials")
 }
+
+func parseRSAPrivateKey(pemStr string) (*rsa.PrivateKey, error) {
+	block, _ := pem.Decode([]byte(pemStr))
+	if block == nil {
+		return nil, fmt.Errorf("auth: no PEM block found in private key")
+	}
+	priv, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("auth: failed to parse private key: %w", err)
+	}
+	return priv, nil
+}
+
+type clientClaimsJSON struct {
+	Email string `json:"email,omitempty"`
+}
+
+func SignClientToken(privateKeyPEM, email, subject string) (string, error) {
+	privKey, err := parseRSAPrivateKey(privateKeyPEM)
+	if err != nil {
+		return "", err
+	}
+
+	stdClaims := jwt.Claims{
+		Subject:  subject,
+		IssuedAt: jwt.NewNumericDate(time.Now()),
+		Expiry:   jwt.NewNumericDate(time.Now().Add(1 * time.Hour)),
+	}
+
+	signer, err := jose.NewSigner(
+		jose.SigningKey{Algorithm: jose.RS256, Key: privKey},
+		(&jose.SignerOptions{}).WithType("JWT"),
+	)
+	if err != nil {
+		return "", fmt.Errorf("auth: failed to create signer: %w", err)
+	}
+
+	builder := jwt.Signed(signer).Claims(stdClaims)
+	if email != "" {
+		builder = builder.Claims(clientClaimsJSON{Email: email})
+	}
+	token, err := builder.Serialize()
+	if err != nil {
+		return "", fmt.Errorf("auth: failed to sign token: %w", err)
+	}
+
+	return token, nil
+}

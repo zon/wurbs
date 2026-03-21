@@ -219,3 +219,116 @@ func TestRefreshInput_JSONSerialization(t *testing.T) {
 
 	assert.Equal(t, input.RefreshToken, decoded.RefreshToken)
 }
+
+func TestClientToken_MissingBody(t *testing.T) {
+	privateKey, publicKey, err := auth.GenerateRSAKeyPair()
+	require.NoError(t, err)
+	auth.SetClientPublicKey(publicKey)
+	_ = privateKey
+
+	r := gin.New()
+	r.POST("/auth/token", func(c *gin.Context) {
+		auth.ClientToken(nil)(c.Writer, c.Request)
+	})
+
+	w := doAuthJSON(t, r, "POST", "/auth/token", nil)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestClientToken_MissingGrantType(t *testing.T) {
+	privateKey, publicKey, err := auth.GenerateRSAKeyPair()
+	require.NoError(t, err)
+	auth.SetClientPublicKey(publicKey)
+	_ = privateKey
+
+	r := gin.New()
+	r.POST("/auth/token", func(c *gin.Context) {
+		auth.ClientToken(nil)(c.Writer, c.Request)
+	})
+
+	w := doAuthJSON(t, r, "POST", "/auth/token", map[string]string{
+		"clientId": "test@example.com",
+	})
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "unsupported grant type")
+}
+
+func TestClientToken_NotConfigured(t *testing.T) {
+	auth.SetClientPublicKey("")
+
+	r := gin.New()
+	r.POST("/auth/token", func(c *gin.Context) {
+		auth.ClientToken(nil)(c.Writer, c.Request)
+	})
+
+	w := doAuthJSON(t, r, "POST", "/auth/token", map[string]string{
+		"grantType": "client_credentials",
+	})
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+func TestClientToken_InvalidClientAssertion(t *testing.T) {
+	privateKey, publicKey, err := auth.GenerateRSAKeyPair()
+	require.NoError(t, err)
+
+	auth.SetClientPublicKey(publicKey)
+
+	r := gin.New()
+	r.POST("/auth/token", func(c *gin.Context) {
+		auth.ClientToken(nil)(c.Writer, c.Request)
+	})
+
+	token, err := auth.SignClientToken(privateKey, "test@example.com", "test-subject")
+	require.NoError(t, err)
+
+	w := doAuthJSON(t, r, "POST", "/auth/token", map[string]string{
+		"grantType":       "client_credentials",
+		"clientId":        "test@example.com",
+		"clientAssertion": token + "invalid",
+	})
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestClientToken_MissingClientID(t *testing.T) {
+	privateKey, publicKey, err := auth.GenerateRSAKeyPair()
+	require.NoError(t, err)
+
+	auth.SetClientPublicKey(publicKey)
+
+	r := gin.New()
+	r.POST("/auth/token", func(c *gin.Context) {
+		auth.ClientToken(nil)(c.Writer, c.Request)
+	})
+
+	token, err := auth.SignClientToken(privateKey, "test@example.com", "test-subject")
+	require.NoError(t, err)
+
+	w := doAuthJSON(t, r, "POST", "/auth/token", map[string]string{
+		"grantType":       "client_credentials",
+		"clientAssertion": token,
+	})
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "client_id required")
+}
+
+func TestClientToken_MissingClientAssertion(t *testing.T) {
+	privateKey, publicKey, err := auth.GenerateRSAKeyPair()
+	require.NoError(t, err)
+	auth.SetClientPublicKey(publicKey)
+	_ = privateKey
+
+	r := gin.New()
+	r.POST("/auth/token", func(c *gin.Context) {
+		auth.ClientToken(nil)(c.Writer, c.Request)
+	})
+
+	w := doAuthJSON(t, r, "POST", "/auth/token", map[string]string{
+		"grantType": "client_credentials",
+		"clientId":  "test@example.com",
+	})
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "client_assertion required")
+}

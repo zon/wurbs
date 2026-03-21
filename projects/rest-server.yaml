@@ -12,7 +12,7 @@ requirements:
       - Clients can authenticate using the client credentials flow
       - Real users (including real admins) can only authenticate with OIDC
       - Test users (including test admins) can only authenticate with client credentials
-    passing: false
+    passing: true
 
   - category: users
     description: User management endpoints

@@ -39,6 +39,7 @@ func New(deps Deps, authMiddleware func(http.Handler) http.Handler) *gin.Engine 
 	r.GET("/auth/callback", authHandler.callback)
 	r.POST("/auth/logout", authHandler.logout)
 	r.POST("/auth/refresh", authHandler.refresh)
+	r.POST("/auth/token", authHandler.token)
 
 	api := r.Group("")
 	api.Use(wrapMiddleware(authMiddleware))
@@ -724,4 +725,8 @@ func (h *authHandler) logout(c *gin.Context) {
 
 func (h *authHandler) refresh(c *gin.Context) {
 	auth.Refresh(c.Writer, c.Request)
+}
+
+func (h *authHandler) token(c *gin.Context) {
+	auth.ClientToken(h.deps.DB)(c.Writer, c.Request)
 }
