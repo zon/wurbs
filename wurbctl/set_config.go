@@ -138,7 +138,7 @@ func (c *SetConfigCmd) writeNATSDevToken(tree *config.ConfigTree) error {
 	}
 	fmt.Printf("wrote %s\n", tree.NATSDevToken)
 
-	if err := k8s.ApplySecret(natsWriteSecret, ralphWorkflowNamespace, c.Context, map[string]string{natsReadTokenKey: token}); err != nil {
+	if err := k8s.ApplySecret(natsWriteSecret, ralphWorkflowNamespace, c.Context, map[string]string{natsWriteSecret: token}); err != nil {
 		return fmt.Errorf("failed to apply NATS secret to %s: %w", ralphWorkflowNamespace, err)
 	}
 	fmt.Printf("applied secret %s to %s namespace\n", natsWriteSecret, ralphWorkflowNamespace)
