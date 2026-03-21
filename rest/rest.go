@@ -33,6 +33,12 @@ func New(deps Deps, authMiddleware func(http.Handler) http.Handler) *gin.Engine 
 
 	r.GET("/health", health)
 
+	authHandler := &authHandler{deps: deps}
+	r.GET("/auth/login", authHandler.login)
+	r.GET("/auth/callback", authHandler.callback)
+	r.POST("/auth/logout", authHandler.logout)
+	r.POST("/auth/refresh", authHandler.refresh)
+
 	api := r.Group("")
 	api.Use(wrapMiddleware(authMiddleware))
 
@@ -413,4 +419,24 @@ func (h *handler) listMessages(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, page)
+}
+
+type authHandler struct {
+	deps Deps
+}
+
+func (h *authHandler) login(c *gin.Context) {
+	auth.Login(c.Writer, c.Request)
+}
+
+func (h *authHandler) callback(c *gin.Context) {
+	auth.Callback(h.deps.DB)(c.Writer, c.Request)
+}
+
+func (h *authHandler) logout(c *gin.Context) {
+	auth.Logout(c.Writer, c.Request)
+}
+
+func (h *authHandler) refresh(c *gin.Context) {
+	auth.Refresh(c.Writer, c.Request)
 }

@@ -9,7 +9,7 @@ requirements:
       - GET /auth/callback exchanges the authorization code for tokens, matches the identity provider email to a user record and stores the subject ID, then returns a TokenSet
       - POST /auth/logout revokes the refresh token and redirects to the OIDC end-session endpoint
       - POST /auth/refresh exchanges a refresh token for a new access token and returns a TokenSet
-    passing: false
+    passing: true
 
   - category: users
     description: User management endpoints
