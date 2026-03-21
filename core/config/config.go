@@ -73,10 +73,10 @@ func Write(cfg *Config) error {
 	return saveYAML(tree.Config, cfg)
 }
 
-func ReadAt(path string, cfg *Config) error {
-	return loadYAML(path, cfg)
+func ReadAt(path string, v any) error {
+	return loadYAML(path, v)
 }
 
-func WriteAt(path string, cfg *Config) error {
-	return saveYAML(path, cfg)
+func WriteAt(path string, v any) error {
+	return saveYAML(path, v)
 }

@@ -20,6 +20,8 @@ const (
 	natsReadTokenKey       = "dev-token"
 	natsWriteSecret        = "nats-dev-token"
 	localPostgresPort      = "32432"
+	localNATSPort          = "32422"
+	natsInternalURL        = "nats://nats.nats.svc.cluster.local:4222"
 	testAdminEmail         = "test-admin@example.com"
 	testAdminSecretName    = "test-admin"
 	configMapName          = "wurbs"
@@ -70,20 +72,34 @@ func (c *SetConfigCmd) writeConfig(tree *config.ConfigTree) error {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
-	var cfg config.Config
-	config.ReadAt(tree.Config, &cfg) // ignore error — file may not exist yet
+	var cm config.ConfigMap
+	config.ReadAt(tree.Config, &cm) // ignore error — file may not exist yet
 	if c.OIDCIssuer != "" {
-		cfg.OIDCIssuer = c.OIDCIssuer
+		cm.OIDCIssuer = c.OIDCIssuer
 	}
-	if cfg.OIDCIssuer == "" {
+	if cm.OIDCIssuer == "" {
 		return fmt.Errorf("--oidc-issuer is required when not already set in config")
 	}
-	if err := config.WriteAt(tree.Config, &cfg); err != nil {
+	if cm.RESTPort == 0 {
+		cm.RESTPort = 8080
+	}
+	if cm.SocketPort == 0 {
+		cm.SocketPort = 8081
+	}
+
+	nodeIP, err := k8s.GetNodeIP(c.Context)
+	if err != nil {
+		return fmt.Errorf("failed to get node IP: %w", err)
+	}
+	cm.NATSURL = "nats://" + nodeIP + ":" + localNATSPort
+	if err := config.WriteAt(tree.Config, &cm); err != nil {
 		return fmt.Errorf("failed to write config: %w", err)
 	}
 	fmt.Printf("wrote %s\n", tree.Config)
 
-	configmapData, err := cfg.MarshalConfigMap()
+	remoteCM := cm
+	remoteCM.NATSURL = natsInternalURL
+	configmapData, err := remoteCM.MarshalConfigMap()
 	if err != nil {
 		return fmt.Errorf("failed to marshal config map: %w", err)
 	}
