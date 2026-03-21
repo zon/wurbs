@@ -8,16 +8,16 @@ import (
 	"gorm.io/gorm"
 )
 
-// User is the application user model. The auth module owns this type.
 type User struct {
 	gorm.Model
-	Email   string `gorm:"uniqueIndex"`
-	Subject string `gorm:"uniqueIndex"`
-	IsAdmin bool
-	IsTest  bool
+	Email    string  `gorm:"uniqueIndex"`
+	Subject  string  `gorm:"uniqueIndex"`
+	Username *string `json:"username"`
+	IsAdmin  bool
+	IsActive bool `gorm:"default:true"`
+	IsTest   bool
 }
 
-// Errors returned by the auth module.
 var (
 	ErrNoUser        = errors.New("auth: no authenticated user in context")
 	ErrUnauthorized  = errors.New("auth: unauthorized")
@@ -29,8 +29,6 @@ type contextKey int
 
 const userContextKey contextKey = iota
 
-// UserFromContext extracts the authenticated user from the context.
-// Returns ErrNoUser if no user has been set by auth middleware.
 func UserFromContext(ctx context.Context) (*User, error) {
 	u, ok := ctx.Value(userContextKey).(*User)
 	if !ok || u == nil {
@@ -39,15 +37,10 @@ func UserFromContext(ctx context.Context) (*User, error) {
 	return u, nil
 }
 
-// ContextWithUser returns a new context with the authenticated user set.
-// This is used by auth middleware internally and may be used in tests
-// to inject a user into the request context.
 func ContextWithUser(ctx context.Context, u *User) context.Context {
 	return context.WithValue(ctx, userContextKey, u)
 }
 
-// EnsureAdminUser promotes an existing user to admin. It requires the user
-// to already exist in the database and rejects promotion of test users.
 func EnsureAdminUser(db *gorm.DB, email string) (*User, error) {
 	user := &User{}
 
@@ -73,8 +66,6 @@ func EnsureAdminUser(db *gorm.DB, email string) (*User, error) {
 	return user, nil
 }
 
-// EnsureTestAdminUser creates or updates a test admin user with the given email,
-// ensuring IsAdmin and IsTest are both true.
 func EnsureTestAdminUser(db *gorm.DB, email string) (*User, error) {
 	user := &User{}
 
@@ -103,4 +94,53 @@ func EnsureTestAdminUser(db *gorm.DB, email string) (*User, error) {
 	}
 
 	return user, nil
+}
+
+func GetUserByID(db *gorm.DB, id string) (*User, error) {
+	var user User
+	if err := db.First(&user, id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrUserNotFound
+		}
+		return nil, fmt.Errorf("auth: failed to get user: %w", err)
+	}
+	return &user, nil
+}
+
+func UpdateUser(db *gorm.DB, user *User, input UpdateUserInput, isAdmin bool) error {
+	updates := make(map[string]any)
+
+	if input.Username != nil {
+		updates["username"] = *input.Username
+	}
+
+	if input.Email != nil && *input.Email != "" {
+		updates["email"] = *input.Email
+	}
+
+	if isAdmin {
+		if input.Admin != nil {
+			updates["is_admin"] = *input.Admin
+		}
+		if input.Inactive != nil {
+			updates["is_active"] = !*input.Inactive
+		}
+	}
+
+	if len(updates) == 0 {
+		return nil
+	}
+
+	if err := db.Model(user).Updates(updates).Error; err != nil {
+		return fmt.Errorf("auth: failed to update user: %w", err)
+	}
+
+	return nil
+}
+
+type UpdateUserInput struct {
+	Username *string `json:"username"`
+	Email    *string `json:"email"`
+	Admin    *bool   `json:"admin"`
+	Inactive *bool   `json:"inactive"`
 }

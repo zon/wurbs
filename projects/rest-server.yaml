@@ -16,7 +16,7 @@ requirements:
     items:
       - GET /users/{userId} returns a User by UUID
       - PATCH /users/{userId} updates a user; users may edit themselves, only admins may set admin or inactive fields
-    passing: false
+    passing: true
 
   - category: channels
     description: Channel management endpoints matching the spec

@@ -56,6 +56,9 @@ func New(deps Deps, authMiddleware func(http.Handler) http.Handler) *gin.Engine 
 	api.POST("/channels/:id/messages", h.createMessage)
 	api.GET("/channels/:id/messages", h.listMessages)
 
+	api.GET("/users/:id", h.getUser)
+	api.PATCH("/users/:id", h.updateUser)
+
 	return r
 }
 
@@ -419,6 +422,113 @@ func (h *handler) listMessages(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, page)
+}
+
+type userResponse struct {
+	ID        string  `json:"id"`
+	Email     string  `json:"email"`
+	Username  *string `json:"username"`
+	Admin     bool    `json:"admin"`
+	Inactive  bool    `json:"inactive"`
+	CreatedAt string  `json:"createdAt"`
+}
+
+func userToResponse(u *auth.User) userResponse {
+	return userResponse{
+		ID:        fmt.Sprintf("%d", u.ID),
+		Email:     u.Email,
+		Username:  u.Username,
+		Admin:     u.IsAdmin,
+		Inactive:  !u.IsActive,
+		CreatedAt: u.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+	}
+}
+
+func (h *handler) getUser(c *gin.Context) {
+	if _, ok := currentUser(c); !ok {
+		return
+	}
+
+	userID := c.Param("id")
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		return
+	}
+
+	user, err := auth.GetUserByID(h.deps.DB, userID)
+	if err != nil {
+		if errors.Is(err, auth.ErrUserNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, userToResponse(user))
+}
+
+type updateUserRequest struct {
+	Username *string `json:"username"`
+	Email    *string `json:"email"`
+	Admin    *bool   `json:"admin"`
+	Inactive *bool   `json:"inactive"`
+}
+
+func (h *handler) updateUser(c *gin.Context) {
+	currentUser, ok := currentUser(c)
+	if !ok {
+		return
+	}
+
+	userID := c.Param("id")
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		return
+	}
+
+	targetUser, err := auth.GetUserByID(h.deps.DB, userID)
+	if err != nil {
+		if errors.Is(err, auth.ErrUserNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	var req updateUserRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	isSelf := currentUser.ID == targetUser.ID
+	if !isSelf && !currentUser.IsAdmin {
+		c.JSON(http.StatusForbidden, gin.H{"error": "cannot edit other users"})
+		return
+	}
+
+	input := auth.UpdateUserInput{
+		Username: req.Username,
+		Email:    req.Email,
+	}
+
+	if currentUser.IsAdmin {
+		input.Admin = req.Admin
+		input.Inactive = req.Inactive
+	} else if req.Admin != nil || req.Inactive != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "admin field requires admin privileges"})
+		return
+	}
+
+	if err := auth.UpdateUser(h.deps.DB, targetUser, input, currentUser.IsAdmin); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	updatedUser, _ := auth.GetUserByID(h.deps.DB, userID)
+	c.JSON(http.StatusOK, userToResponse(updatedUser))
 }
 
 type authHandler struct {

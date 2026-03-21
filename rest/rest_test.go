@@ -862,3 +862,143 @@ func TestNATS_SkippedWhenNil(t *testing.T) {
 
 	assert.Equal(t, http.StatusCreated, w.Code)
 }
+
+// --- User endpoint tests ---
+
+func TestGetUser_Success(t *testing.T) {
+	db := setupTestDB(t)
+	admin := createTestUser(t, db, "admin@test.com", "sub-admin", true, false)
+	user := createTestUser(t, db, "user@test.com", "sub-user", false, false)
+	engine := newTestEngine(t, db, admin)
+
+	w := doJSON(t, engine, "GET", fmt.Sprintf("/users/%d", user.ID), nil)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	body := parseJSON(t, w)
+	assert.Equal(t, fmt.Sprintf("%d", user.ID), body["id"])
+	assert.Equal(t, "user@test.com", body["email"])
+	assert.Equal(t, false, body["admin"])
+	assert.Equal(t, false, body["inactive"])
+}
+
+func TestGetUser_NotFound(t *testing.T) {
+	db := setupTestDB(t)
+	admin := createTestUser(t, db, "admin@test.com", "sub-admin", true, false)
+	engine := newTestEngine(t, db, admin)
+
+	w := doJSON(t, engine, "GET", "/users/999", nil)
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestGetUser_NoAuth(t *testing.T) {
+	db := setupTestDB(t)
+	deps := Deps{DB: db, NATS: nil}
+	engine := New(deps, fakeAuthReject())
+
+	w := doJSON(t, engine, "GET", "/users/1", nil)
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestUpdateUser_SelfUpdate(t *testing.T) {
+	db := setupTestDB(t)
+	user := createTestUser(t, db, "user@test.com", "sub-user", false, false)
+	engine := newTestEngine(t, db, user)
+
+	w := doJSON(t, engine, "PATCH", fmt.Sprintf("/users/%d", user.ID), map[string]any{
+		"username": "newname",
+	})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	body := parseJSON(t, w)
+	assert.Equal(t, "newname", body["username"])
+}
+
+func TestUpdateUser_OtherUserRejected(t *testing.T) {
+	db := setupTestDB(t)
+	user := createTestUser(t, db, "user@test.com", "sub-user", false, false)
+	otherUser := createTestUser(t, db, "other@test.com", "sub-other", false, false)
+	engine := newTestEngine(t, db, user)
+
+	w := doJSON(t, engine, "PATCH", fmt.Sprintf("/users/%d", otherUser.ID), map[string]any{
+		"username": "hacked",
+	})
+	assert.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestUpdateUser_AdminCanUpdateOther(t *testing.T) {
+	db := setupTestDB(t)
+	admin := createTestUser(t, db, "admin@test.com", "sub-admin", true, false)
+	user := createTestUser(t, db, "user@test.com", "sub-user", false, false)
+	engine := newTestEngine(t, db, admin)
+
+	w := doJSON(t, engine, "PATCH", fmt.Sprintf("/users/%d", user.ID), map[string]any{
+		"username": "adminupdated",
+	})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	body := parseJSON(t, w)
+	assert.Equal(t, "adminupdated", body["username"])
+}
+
+func TestUpdateUser_AdminCanSetAdmin(t *testing.T) {
+	db := setupTestDB(t)
+	admin := createTestUser(t, db, "admin@test.com", "sub-admin", true, false)
+	user := createTestUser(t, db, "user@test.com", "sub-user", false, false)
+	engine := newTestEngine(t, db, admin)
+
+	w := doJSON(t, engine, "PATCH", fmt.Sprintf("/users/%d", user.ID), map[string]any{
+		"admin": true,
+	})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	body := parseJSON(t, w)
+	assert.Equal(t, true, body["admin"])
+}
+
+func TestUpdateUser_NonAdminCannotSetAdmin(t *testing.T) {
+	db := setupTestDB(t)
+	user := createTestUser(t, db, "user@test.com", "sub-user", false, false)
+	engine := newTestEngine(t, db, user)
+
+	w := doJSON(t, engine, "PATCH", fmt.Sprintf("/users/%d", user.ID), map[string]any{
+		"admin": true,
+	})
+	assert.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestUpdateUser_AdminCanSetInactive(t *testing.T) {
+	db := setupTestDB(t)
+	admin := createTestUser(t, db, "admin@test.com", "sub-admin", true, false)
+	user := createTestUser(t, db, "user@test.com", "sub-user", false, false)
+	engine := newTestEngine(t, db, admin)
+
+	w := doJSON(t, engine, "PATCH", fmt.Sprintf("/users/%d", user.ID), map[string]any{
+		"inactive": true,
+	})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	body := parseJSON(t, w)
+	assert.Equal(t, true, body["inactive"])
+}
+
+func TestUpdateUser_NonAdminCannotSetInactive(t *testing.T) {
+	db := setupTestDB(t)
+	user := createTestUser(t, db, "user@test.com", "sub-user", false, false)
+	engine := newTestEngine(t, db, user)
+
+	w := doJSON(t, engine, "PATCH", fmt.Sprintf("/users/%d", user.ID), map[string]any{
+		"inactive": true,
+	})
+	assert.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestUpdateUser_NotFound(t *testing.T) {
+	db := setupTestDB(t)
+	admin := createTestUser(t, db, "admin@test.com", "sub-admin", true, false)
+	engine := newTestEngine(t, db, admin)
+
+	w := doJSON(t, engine, "PATCH", "/users/999", map[string]any{
+		"username": "nonexistent",
+	})
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
