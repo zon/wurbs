@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/zon/chat/core/config"
 	"github.com/zon/chat/core/pg"
 	"gorm.io/gorm"
 )
@@ -18,7 +19,12 @@ func (c *Context) DB() (*gorm.DB, error) {
 		return c.db, nil
 	}
 
-	db, err := pg.Open()
+	tree, err := config.RepoDir()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get config directory: %w", err)
+	}
+
+	db, err := pg.OpenAt(tree.Postgres)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}

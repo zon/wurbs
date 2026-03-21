@@ -8,13 +8,13 @@ import (
 )
 
 type Config struct {
-	RESTPort     int
-	SocketPort   int
-	OIDCIssuer   string
-	NATSURL      string
-	NATSDevToken string
-	TestAdmin    string
-	Postgres     string
+	RESTPort     int    `yaml:"rest_port"`
+	SocketPort   int    `yaml:"socket_port"`
+	OIDCIssuer   string `yaml:"oidc_issuer"`
+	NATSURL      string `yaml:"nats_url"`
+	NATSDevToken string `yaml:"nats_dev_token"`
+	TestAdmin    string `yaml:"test_admin"`
+	Postgres     string `yaml:"postgres"`
 }
 
 func Load() (*Config, error) {

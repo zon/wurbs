@@ -132,8 +132,13 @@ func Open() (*gorm.DB, error) {
 		return nil, err
 	}
 
+	return OpenAt(tree.Postgres)
+}
+
+// OpenAt reads postgres.json from path and returns a connected *gorm.DB handle.
+func OpenAt(path string) (*gorm.DB, error) {
 	var s Secret
-	if err := s.read(tree.Postgres); err != nil {
+	if err := s.read(path); err != nil {
 		return nil, err
 	}
 
