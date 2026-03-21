@@ -421,6 +421,22 @@ func TestAddMember_TestUserToTestChannelAllowed(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 }
 
+func TestAddMember_RealUserToTestChannelRejected(t *testing.T) {
+	db := setupTestDB(t)
+	admin := createTestUser(t, db, "admin@test.com", "sub-admin", true, false)
+	realUser := createTestUser(t, db, "real@test.com", "sub-real", false, false)
+	engine := newTestEngine(t, db, admin)
+
+	w := doJSON(t, engine, "POST", "/channels", map[string]any{"name": "test-chan", "is_test": true})
+	created := parseJSON(t, w)
+	channelID := fmt.Sprintf("%.0f", created["ID"])
+
+	w = doJSON(t, engine, "POST", "/channels/"+channelID+"/members", map[string]any{
+		"user_id": realUser.ID,
+	})
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
 func TestAddMember_NonAdminRejected(t *testing.T) {
 	db := setupTestDB(t)
 	admin := createTestUser(t, db, "admin@test.com", "sub-admin", true, false)

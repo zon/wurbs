@@ -29,7 +29,7 @@ requirements:
       - PATCH /channels/{channelId} updates a channel (admin only); channels may be inactive but not deleted
       - Real channels can only contain real users
       - Test channels can only contain test users
-    passing: false
+    passing: true
 
   - category: members
     description: Channel membership endpoints

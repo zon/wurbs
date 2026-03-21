@@ -26,6 +26,7 @@ type Membership struct {
 var (
 	ErrNotFound       = errors.New("channel: not found")
 	ErrTestUserInReal = errors.New("channel: test users cannot join real channels")
+	ErrRealUserInTest = errors.New("channel: real users cannot join test channels")
 )
 
 func Create(db *gorm.DB, name string, isPublic, isTest bool) (*Channel, error) {
@@ -105,6 +106,9 @@ func AddMember(db *gorm.DB, channelID uint, user *auth.User) error {
 
 	if !ch.IsTest && user.IsTest {
 		return ErrTestUserInReal
+	}
+	if ch.IsTest && !user.IsTest {
+		return ErrRealUserInTest
 	}
 
 	membership := Membership{ChannelID: channelID, UserID: user.ID}
