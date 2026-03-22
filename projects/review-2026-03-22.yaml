@@ -6,12 +6,7 @@ requirements:
     description: Fix Go MixedCaps naming convention issues
     items:
       - Rename JWKSURI to JwksURI in core/auth/oidc.go (struct field uses uppercase acronyms, should use MixedCaps like JwksURI)
-      - Rename auth.User to auth.AuthenticatedUser in core/auth/auth.go to avoid confusion with core/user.User
-      - Rename auth.User to auth.AuthenticatedUser in core/message/message.go to avoid confusion with core/user.User
       - Rename user.User to user.UserModel in core/channel/channel.go for clarity
-      - Rename user.User to user.UserModel in core/auth/auth.go for clarity
-      - Rename user.User to user.UserModel in rest/handler/user.go for clarity
-      - Rename user.User to user.UserModel in rest/handler/member.go for clarity
       - Rename AuthHandler, UserHandler, ChannelHandler, MessageHandler, MemberHandler in rest/handler/ to Auth, User, Channel, Message, Member to avoid redundant package name prefix (e.g., handler.AuthHandler -> handler.Auth)
       - Rename ConfigMap in core/config/configmap.go to Map to avoid redundant "Config" prefix (e.g., config.ConfigMap -> config.Map)
     passing: false
