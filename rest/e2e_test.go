@@ -10,18 +10,42 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/zon/chat/core/config"
+	"github.com/zon/chat/core/pg"
 )
 
 func startTestServer(t *testing.T) *httptest.Server {
 	t.Helper()
-	t.Skip("skipping test that requires database")
-	return nil
+	t.Setenv("WURB_CONFIG", "/workspace/repo/config")
+	config.ResetCache()
+	config.SetTestMode(true)
+	db, err := pg.Open()
+	require.NoError(t, err)
+
+	// Minimal auth middleware for testing
+	authMW := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// In test mode, we might need a way to mock the user
+			// For now, assume some test user is injected or handled by logic
+			next.ServeHTTP(w, r)
+		})
+	}
+
+	// Use TestAdmin to setup the client public key as main does
+	// initClientPublicKey(db)
+
+	engine := New(Deps{DB: db, NATS: nil}, authMW)
+	return httptest.NewServer(engine)
 }
 
 func TestE2E_Health(t *testing.T) {
-	t.Skip("skipping test that requires database")
+	// t.Skip("skipping test that requires database")
 	server := startTestServer(t)
+	if server == nil {
+		return
+	}
 	defer server.Close()
+	// ...
 
 	resp, err := http.Get(server.URL + "/health")
 	require.NoError(t, err)
