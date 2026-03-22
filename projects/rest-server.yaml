@@ -84,7 +84,7 @@ requirements:
       - Tests only create and use test users (IsTest=true) and test channels
       - End-to-end tests are not written for authentication endpoints (/auth/login, /auth/callback, /auth/logout, /auth/refresh)
       - Every non-authentication endpoint in the REST spec has at least one end-to-end test
-    passing: false
+    passing: true
 
   - category: messages
     description: Message endpoints
