@@ -117,3 +117,16 @@ requirements:
       - Change parseID in rest/handler/common.go to return (uint, error) instead of (uint, bool)
       - Change currentUser in rest/handler/common.go to return (*auth.User, error) instead of (*auth.User, bool)
     passing: false
+
+  - category: backend
+    description: Use named result parameters for clarity and shorter code
+    items:
+      - Add named result parameters to parseID in rest/handler/common.go (value, ok) to serve as documentation
+      - Add named result parameters to currentUser in rest/handler/common.go (user, ok) to serve as documentation
+      - Add named result parameters to findRepoRoot in core/config/dir.go (dir, err) for consistency with other functions
+      - Add named result parameters to findRepoConfigDir in core/config/dir.go (dir, err) for consistency
+      - Add named result parameters to parseChannelID in socket/socket.go (id, err) for clarity
+      - Add named result parameters to GetNodeIP in core/k8s/k8s.go (ip, err) to match existing pattern in codebase
+      - Add named result parameters to GetClusterIP in core/k8s/k8s.go (host, err) to match existing pattern
+      - Add named result parameters to GetSecret in core/k8s/k8s.go (data, err) to match existing pattern
+    passing: false
