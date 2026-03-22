@@ -4,13 +4,12 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/zon/chat/core/message"
 	"github.com/zon/chat/rest/handler"
 	"gorm.io/gorm"
 )
 
-type NATSPublisher interface {
-	Publish(subject string, data any) error
-}
+type NATSPublisher = message.NATSPublisher
 
 type Deps struct {
 	DB   *gorm.DB

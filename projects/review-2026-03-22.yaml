@@ -32,7 +32,7 @@ requirements:
     items:
       - Remove duplicate NATSPublisher interface from rest/rest.go (already defined in core/message/message.go)
       - Update rest/rest.go to import Publisher interface from core/message package
-    passing: false
+    passing: true
 
   - category: backend
     description: Review blank identifier usage in function call returns
