@@ -80,6 +80,18 @@ requirements:
     passing: true
 
   - category: backend
+    description: Review Go map patterns (composite literals, indexing, comma ok idiom, sets)
+    items:
+      - "Reviewed files: all Go files in the project"
+      - "Map composite literals properly used: map[string]string{}, map[string]any{}, map[uint]bool{}"
+      - "Map indexing follows correct syntax: timeZone[\"EST\"], data[\"postgres.json\"]"
+      - "Comma ok idiom properly implemented in core/pg/pg.go:62 for missing entry detection"
+      - "Set implemented with bool map in core/message/message_test.go:200-202"
+      - "No delete() calls found - maps don't require dynamic deletion in this codebase"
+      - "No issues found - code follows Go map best practices from review content"
+    passing: true
+
+  - category: backend
     description: Review Go short declaration redeclaration and reassignment (:=) patterns
     items:
       - Verify := redeclaration follows Go spec (same scope, assignable value, at least one new variable)
