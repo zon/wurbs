@@ -1,3 +1,7 @@
+/wurbctl/wurbctl
+/wurbctl/wurbctl_bin
+/rest/rest
+/socket/socket
 *_templ.go
 *_templ.txt
 *.db
@@ -7,3 +11,9 @@
 /server/token.json
 
 /tmp
+/docs/spec
+.config
+/config
+.pulumi
+rest.test
+socket.test

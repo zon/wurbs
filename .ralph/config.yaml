@@ -1,0 +1,29 @@
+model: minimax/MiniMax-M2.5
+before:
+  - name: build rest
+    command: go
+    args: [build, -o, ./tmp/rest, ./rest]
+  - name: build socket
+    command: go
+    args: [build, -o, ./tmp/socket, ./socket]
+services:
+  - name: rest
+    command: make
+    args: [rest]
+  - name: socket
+    command: make
+    args: [socket]
+workflow:
+  namespace: ralph-wurbs
+  configMaps:
+    - name: wurbs
+      destFile: /etc/wurbs/config.yaml
+  secrets:
+    - name: nats-dev-token
+      destFile: /etc/wurbs/nats-dev-token
+    - name: wurbs-postgres-app
+      destFile: /etc/wurbs/postgres.json
+    - name: test-admin
+      destFile: /etc/wurbs/test-admin.yaml
+  env:
+    WURB_CONFIG: /etc/wurbs

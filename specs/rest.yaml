@@ -1,0 +1,477 @@
+openapi: 3.1.0
+
+info:
+  title: Wurbs REST API
+  version: 1.0.0
+  description: |
+    Chat application REST API.
+
+    Endpoints accept `application/json` or `application/yaml` request and response bodies.
+    Most endpoints require an OAuth2 bearer token. OIDC endpoints are unauthenticated.
+
+    **Authorization rules:**
+    - Admins can create and edit users; only admins can set `admin` or `inactive` on a user
+    - Users can edit their own profile
+    - Admins can create, edit, and disable channels; admins are implicit members of every channel
+    - Admins can invite users to private channels
+    - Message bodies are Markdown
+    - Message owners can edit their own messages
+    - Message owners and admins can delete messages
+
+servers:
+  - url: http://localhost:8080
+    description: REST API server
+
+security:
+  - oidc: []
+
+paths:
+  /auth/login:
+    get:
+      operationId: login
+      summary: Initiate OIDC login. Redirects to the identity provider authorization endpoint.
+      tags: [Auth]
+      security: []
+      responses:
+        '302':
+          description: Redirect to identity provider
+
+  /auth/callback:
+    get:
+      operationId: callback
+      summary: OIDC callback. Exchanges the authorization code for tokens, matches the identity provider email to a user record and stores the subject ID, then returns an access token.
+      tags: [Auth]
+      security: []
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Token response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenSet'
+
+  /auth/logout:
+    post:
+      operationId: logout
+      summary: End the session. Revokes the refresh token and redirects to the OIDC end-session endpoint.
+      tags: [Auth]
+      responses:
+        '302':
+          description: Redirect to OIDC end-session endpoint
+
+  /auth/refresh:
+    post:
+      operationId: refresh
+      summary: Exchange a refresh token for a new access token.
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshInput'
+      responses:
+        '200':
+          description: Token response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenSet'
+
+  /users/{userId}:
+    parameters:
+      - $ref: '#/components/parameters/userId'
+    get:
+      operationId: getUser
+      summary: Get a user by ID
+      tags: [Users]
+      responses:
+        '200':
+          description: User
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+    patch:
+      operationId: updateUser
+      summary: Update a user. Users may edit themselves; only admins may set `admin` or `inactive`.
+      tags: [Users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserInput'
+      responses:
+        '200':
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  /channels:
+    post:
+      operationId: createChannel
+      summary: Create a channel (admin only)
+      tags: [Channels]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateChannelInput'
+      responses:
+        '201':
+          description: Created channel
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Channel'
+
+  /channels/{channelId}:
+    parameters:
+      - $ref: '#/components/parameters/channelId'
+    get:
+      operationId: getChannel
+      summary: Get a channel by ID
+      tags: [Channels]
+      responses:
+        '200':
+          description: Channel
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Channel'
+    patch:
+      operationId: updateChannel
+      summary: Update a channel (admin only). Channels may be inactive but not deleted.
+      tags: [Channels]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateChannelInput'
+      responses:
+        '200':
+          description: Updated channel
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Channel'
+
+  /channels/{channelId}/members:
+    parameters:
+      - $ref: '#/components/parameters/channelId'
+    post:
+      operationId: inviteMember
+      summary: Invite a user to a channel by email (admin only). Creates the user if no account with that email exists.
+      tags: [Channels]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InviteMemberInput'
+      responses:
+        '201':
+          description: Member
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'
+
+  /channels/{channelId}/messages:
+    parameters:
+      - $ref: '#/components/parameters/channelId'
+    get:
+      operationId: listMessages
+      summary: List messages in a channel, paged by time
+      tags: [Messages]
+      parameters:
+        - name: before
+          in: query
+          description: Fetch messages before this timestamp
+          schema:
+            type: string
+            format: date-time
+        - name: after
+          in: query
+          description: Fetch messages after this timestamp
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Message page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessagePage'
+    post:
+      operationId: createMessage
+      summary: Post a message to a channel
+      tags: [Messages]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageInput'
+      responses:
+        '201':
+          description: Created message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+
+  /messages/{messageId}:
+    parameters:
+      - $ref: '#/components/parameters/messageId'
+    patch:
+      operationId: updateMessage
+      summary: Edit a message (owner only)
+      tags: [Messages]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageInput'
+      responses:
+        '200':
+          description: Updated message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+    delete:
+      operationId: deleteMessage
+      summary: Delete a message (owner or admin)
+      tags: [Messages]
+      responses:
+        '204':
+          description: Message deleted
+
+components:
+  securitySchemes:
+    oidc:
+      type: openIdConnect
+      openIdConnectUrl: https://auth.example.com/.well-known/openid-configuration
+
+  parameters:
+    userId:
+      name: userId
+      in: path
+      required: true
+      description: User identifier
+      schema:
+        type: string
+        format: uuid
+    channelId:
+      name: channelId
+      in: path
+      required: true
+      description: Channel identifier
+      schema:
+        type: string
+        format: uuid
+    messageId:
+      name: messageId
+      in: path
+      required: true
+      description: Message identifier
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    RefreshInput:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+
+    TokenSet:
+      type: object
+      required: [accessToken, tokenType, expiresIn]
+      properties:
+        accessToken:
+          type: string
+        tokenType:
+          type: string
+          enum: [Bearer]
+        expiresIn:
+          type: integer
+          description: Seconds until the access token expires
+        refreshToken:
+          type: string
+        idToken:
+          type: string
+          description: OIDC ID token (JWT)
+
+    User:
+      type: object
+      required: [id, admin, inactive, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+          description: Null until the user completes onboarding after first login
+          nullable: true
+        admin:
+          type: boolean
+        inactive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    UpdateUserInput:
+      type: object
+      properties:
+        username:
+          type: string
+        admin:
+          type: boolean
+          description: Admin only.
+        inactive:
+          type: boolean
+          description: Admin only.
+
+    Channel:
+      type: object
+      required: [id, name, public, inactive, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        public:
+          type: boolean
+        inactive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateChannelInput:
+      type: object
+      required: [name, public]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        public:
+          type: boolean
+
+    UpdateChannelInput:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        public:
+          type: boolean
+        inactive:
+          type: boolean
+
+    Member:
+      type: object
+      required: [channelId, userId, joinedAt]
+      properties:
+        channelId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        joinedAt:
+          type: string
+          format: date-time
+
+    InviteMemberInput:
+      oneOf:
+        - type: object
+          required: [userId]
+          properties:
+            userId:
+              type: string
+              format: uuid
+        - type: object
+          required: [email]
+          description: Creates a new user with this email if no account exists, then invites them.
+          properties:
+            email:
+              type: string
+              format: email
+
+    Message:
+      type: object
+      required: [id, channelId, userId, body, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        channelId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        body:
+          type: string
+          description: Markdown body
+        createdAt:
+          type: string
+          format: date-time
+        editedAt:
+          type: string
+          format: date-time
+          description: Present if the message has been edited
+
+    MessagePage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+        before:
+          type: string
+          format: date-time
+          description: Pass as query param to fetch messages before this timestamp
+        after:
+          type: string
+          format: date-time
+          description: Pass as query param to fetch messages after this timestamp
+
+    MessageInput:
+      type: object
+      required: [body]
+      properties:
+        body:
+          type: string
+          description: Markdown body

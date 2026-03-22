@@ -1,0 +1,5 @@
+[build]
+  cmd = "go build -o ./tmp/rest ./rest"
+  bin = "./tmp/rest"
+  include_dir = ["rest", "core"]
+  exclude_dir = ["tmp"]
