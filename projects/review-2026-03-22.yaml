@@ -119,6 +119,16 @@ requirements:
     passing: false
 
   - category: backend
+    description: Review blank identifier for ignoring return values (not errors)
+    items:
+      - "Review: Blank identifier properly used to discard unused return values while handling errors"
+      - "Verify no cases of fi, _ := os.Stat(path) pattern that discards error to ignore it"
+      - "Allowed: if _, err := os.Stat(path); err != nil { ... } - error properly handled"
+      - "Allowed: info, _ := os.Listen(listenAddr) when info value not needed (error still checked)"
+      - No issues found - code properly uses blank identifier for unused values while handling errors appropriately
+    passing: true
+
+  - category: backend
     description: Review Go switch statement patterns
     items:
       - Verify switch statements follow idiomatic Go (use switch true for boolean conditions, use comma-separated cases, proper break/label usage)
