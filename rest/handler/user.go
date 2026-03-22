@@ -31,14 +31,14 @@ func (h *User) GetUser(c *gin.Context) {
 
 	userID := c.Param("id")
 	if userID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "user: invalid user id"})
 		return
 	}
 
 	u, err := user.GetUserByID(h.deps.DB, userID)
 	if err != nil {
 		if errors.Is(err, user.ErrUserNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "user: user not found"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -64,14 +64,14 @@ func (h *User) UpdateUser(c *gin.Context) {
 
 	userID := c.Param("id")
 	if userID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "user: invalid user id"})
 		return
 	}
 
 	targetUser, err := user.GetUserByID(h.deps.DB, userID)
 	if err != nil {
 		if errors.Is(err, user.ErrUserNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "user: user not found"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

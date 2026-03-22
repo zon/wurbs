@@ -24,7 +24,7 @@ func parseID(c *gin.Context, param string) (uint, error) {
 	raw := c.Param(param)
 	id, err := strconv.ParseUint(raw, 10, 64)
 	if err != nil || id == 0 {
-		return 0, fmt.Errorf("invalid %s", param)
+		return 0, fmt.Errorf("common: invalid %s", param)
 	}
 	return uint(id), nil
 }
@@ -32,7 +32,7 @@ func parseID(c *gin.Context, param string) (uint, error) {
 func currentUser(c *gin.Context) (*auth.User, error) {
 	u, err := auth.UserFromContext(c.Request.Context())
 	if err != nil {
-		return nil, fmt.Errorf("unauthorized")
+		return nil, fmt.Errorf("common: unauthorized")
 	}
 	return u, nil
 }

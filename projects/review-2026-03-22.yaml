@@ -122,7 +122,7 @@ requirements:
       - Add prefix "channel:" to error strings in rest/handler/channel.go (lines 86, 121, 175)
       - Add prefix "user:" to error strings in rest/handler/user.go (lines 40, 72)
       - Add prefix to error strings in rest/handler/common.go (line 28 "invalid "+param, line 37 "unauthorized")
-    passing: false
+    passing: true
 
   - category: backend
     description: Fix Go error handling - wrap errors with context in core packages

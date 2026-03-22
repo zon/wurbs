@@ -87,7 +87,7 @@ func (h *Channel) GetChannel(c *gin.Context) {
 	ch, err := channel.Get(h.deps.DB, id)
 	if err != nil {
 		if errors.Is(err, channel.ErrNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "channel not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "channel: channel not found"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -124,7 +124,7 @@ func (h *Channel) UpdateChannel(c *gin.Context) {
 	ch, err := channel.Get(h.deps.DB, id)
 	if err != nil {
 		if errors.Is(err, channel.ErrNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "channel not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "channel: channel not found"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -180,7 +180,7 @@ func (h *Channel) DeleteChannel(c *gin.Context) {
 	err = channel.DeleteAsAdmin(h.deps.DB, id, user)
 	if err != nil {
 		if errors.Is(err, channel.ErrNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "channel not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "channel: channel not found"})
 			return
 		}
 		if errors.Is(err, channel.ErrTestAdminInReal) || errors.Is(err, channel.ErrRealAdminInTest) {

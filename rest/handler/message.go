@@ -69,7 +69,7 @@ func (h *Message) ListMessages(c *gin.Context) {
 	if raw := c.Query("cursor"); raw != "" {
 		v, err := parseCursor(raw)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid cursor"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "message: invalid cursor"})
 			return
 		}
 		cursor = v
@@ -79,7 +79,7 @@ func (h *Message) ListMessages(c *gin.Context) {
 	if raw := c.Query("limit"); raw != "" {
 		v, err := parseLimit(raw)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid limit"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "message: invalid limit"})
 			return
 		}
 		limit = v
@@ -89,7 +89,7 @@ func (h *Message) ListMessages(c *gin.Context) {
 	if raw := c.Query("before"); raw != "" {
 		t, err := time.Parse(time.RFC3339, raw)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid before timestamp"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "message: invalid before timestamp"})
 			return
 		}
 		before = &t
@@ -97,7 +97,7 @@ func (h *Message) ListMessages(c *gin.Context) {
 	if raw := c.Query("after"); raw != "" {
 		t, err := time.Parse(time.RFC3339, raw)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid after timestamp"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "message: invalid after timestamp"})
 			return
 		}
 		after = &t
@@ -123,7 +123,7 @@ func parseCursor(raw string) (uint, error) {
 func parseLimit(raw string) (int, error) {
 	v, err := strconv.Atoi(raw)
 	if err != nil || v <= 0 {
-		return 0, errors.New("invalid limit")
+		return 0, errors.New("message: invalid limit")
 	}
 	return v, nil
 }
@@ -144,7 +144,7 @@ func (h *Message) UpdateMessage(c *gin.Context) {
 	msg, err := message.Get(h.deps.DB, messageID)
 	if err != nil {
 		if errors.Is(err, message.ErrNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "message not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "message: message not found"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -190,7 +190,7 @@ func (h *Message) DeleteMessage(c *gin.Context) {
 	msg, err := message.Get(h.deps.DB, messageID)
 	if err != nil {
 		if errors.Is(err, message.ErrNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "message not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "message: message not found"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -207,7 +207,7 @@ func (h *Message) DeleteMessage(c *gin.Context) {
 	} = h.deps.NATS
 	if err := message.Delete(h.deps.DB, nc, messageID); err != nil {
 		if errors.Is(err, message.ErrNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "message not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "message: message not found"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
