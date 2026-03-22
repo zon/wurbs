@@ -383,6 +383,15 @@ requirements:
     passing: false
 
   - category: backend
+    description: Review panic usage patterns (prefer error returns over panic)
+    items:
+      - Verify no panic calls exist in codebase (library functions should avoid panic)
+      - "Reviewed files: all Go files in the project"
+      - "No panic() calls found - code properly uses error returns for error handling"
+      - "No issues found - code follows Go best practice of avoiding panic in library functions"
+    passing: true
+
+  - category: backend
     description: Fix Go error handling - wrap errors with context in core packages
     items:
       - Wrap errors in core/config/yaml.go loadYAML function (return err without context at lines 30-32)
