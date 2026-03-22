@@ -268,6 +268,16 @@ requirements:
     passing: true
 
   - category: backend
+    description: Review Go type assertion patterns
+    items:
+      - "Review: Use comma, ok idiom for safe type assertions"
+      - "Fix unsafe type assertions in rest/e2e_test.go:83 - ch[\"id\"].(string) should use comma, ok"
+      - "Fix unsafe type assertions in rest/e2e_test.go:236 - msg[\"id\"].(string) should use comma, ok"
+      - "Fix unsafe type assertions in rest/e2e_test.go:391 - ch[\"id\"].(string) should use comma, ok"
+      - "Fix ignoring ok value in core/auth/auth.go:187 - newToken.Extra(\"id_token\").(string) should handle missing id_token gracefully"
+    passing: false
+
+  - category: backend
     description: Fix inefficient string operations in String() methods
     items:
       - "Review: Example Sequence.String() uses string concatenation in loop (str +=) - O(N²) complexity, should use strings.Builder"
