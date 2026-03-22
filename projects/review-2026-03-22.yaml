@@ -40,12 +40,6 @@ requirements:
     passing: false
 
   - category: backend
-    description: Fix Go getter naming convention (avoid Get prefix for getters)
-    items:
-      - Ensure getters follow Go convention (Owner not GetOwner)
-    passing: true
-
-  - category: backend
     description: Fix formatting issues identified by gofmt
     items:
       - Fix extra trailing newline in core/auth/test_admin.go
@@ -70,79 +64,13 @@ requirements:
     passing: false
 
   - category: backend
-    description: Verify Go semicolon insertion rules are followed (opening brace must be on same line as control statement)
-    items:
-      - Ensure no if/for/switch/select statements have opening brace on new line (would cause unwanted semicolon insertion)
-    passing: true
-
-  - category: backend
-    description: Verify Go if statement style (omit unnecessary else when if body ends with return/break/continue/goto)
-    items:
-      - Verify if statements follow style (all else statements reviewed - rest/handler/user.go:112, rest/handler/member.go:81, core/user/user.go:94 - all appropriate as if bodies don't end with return)
-    passing: true
-
-  - category: backend
-    description: Review Go map patterns (composite literals, indexing, comma ok idiom, sets)
-    items:
-      - "Reviewed files: all Go files in the project"
-      - "Map composite literals properly used: map[string]string{}, map[string]any{}, map[uint]bool{}"
-      - "Map indexing follows correct syntax: timeZone[\"EST\"], data[\"postgres.json\"]"
-      - "Comma ok idiom properly implemented in core/pg/pg.go:62 for missing entry detection"
-      - "Set implemented with bool map in core/message/message_test.go:200-202"
-      - "No delete() calls found - maps don't require dynamic deletion in this codebase"
-      - "No issues found - code follows Go map best practices from review content"
-    passing: true
-
-  - category: backend
-    description: Review Go short declaration redeclaration and reassignment (:=) patterns
-    items:
-      - Verify := redeclaration follows Go spec (same scope, assignable value, at least one new variable)
-      - "Reviewed files: core/auth/auth.go, core/config/config.go, core/k8s/k8s.go, core/nats/nats.go, core/message/message.go, core/channel/channel.go, rest/handler/*.go, socket/socket.go"
-      - "No issues found - code follows idiomatic Go patterns for error handling with proper scoping"
-    passing: true
-
-  - category: backend
-    description: Review Go for loop patterns (C-style, infinite, range)
-    items:
-      - Verify for loop follows Go spec (no while, proper range usage, blank identifier for unused values)
-      - "Reviewed files: core/**/*.go, rest/**/*.go, socket/**/*.go, wurbctl/**/*.go"
-      - "No issues found - code uses idiomatic Go for patterns: C-style for loops (i := 0; i < n; i++), infinite for { } with proper exit conditions, range with blank identifier _ for unused indices"
-    passing: true
-
-  - category: backend
     description: Review blank identifier usage in function call returns
     items:
-      - Review NATS.Publish error handling in rest/handler/user.go:134, rest/handler/member.go:127,193, rest/handler/channel.go:53,187 - errors silently ignored with _ = 
-      - Review token refresh error handling in core/auth/auth.go:153 - both token and error ignored with _, _ = 
+      - Review NATS.Publish error handling in rest/handler/user.go:134, rest/handler/member.go:127,193, rest/handler/channel.go:53,187 - errors silently ignored with _ =
+      - Review token refresh error handling in core/auth/auth.go:153 - both token and error ignored with _, _ =
       - Consider logging NATS publish errors rather than silently ignoring
       - Consider logging token refresh errors during logout rather than silently ignoring
     passing: false
-
-  - category: backend
-    description: Review blank identifier for ignoring return values (not errors)
-    items:
-      - "Review: Blank identifier properly used to discard unused return values while handling errors"
-      - "Verify no cases of fi, _ := os.Stat(path) pattern that discards error to ignore it"
-      - "Allowed: if _, err := os.Stat(path); err != nil { ... } - error properly handled"
-      - "Allowed: info, _ := os.Listen(listenAddr) when info value not needed (error still checked)"
-      - No issues found - code properly uses blank identifier for unused values while handling errors appropriately
-    passing: true
-
-  - category: backend
-    description: Review Go switch statement patterns
-    items:
-      - Verify switch statements follow idiomatic Go (use switch true for boolean conditions, use comma-separated cases, proper break/label usage)
-      - "Reviewed files: core/**/*.go, rest/**/*.go, socket/**/*.go, wurbctl/**/*.go"
-      - "No switch statements found in codebase - no issues to review"
-    passing: true
-
-  - category: backend
-    description: Review Go type switch patterns
-    items:
-      - Verify type switches follow idiomatic Go (use type keyword in parentheses, declare variable with proper type in each case)
-      - "Reviewed files: core/**/*.go, rest/**/*.go, socket/**/*.go, wurbctl/**/*.go"
-      - "No type switches found in codebase - no issues to review"
-    passing: true
 
   - category: backend
     description: Fix Go multiple return values (error handling idiom)
@@ -165,73 +93,10 @@ requirements:
     passing: false
 
   - category: backend
-    description: Review Go defer statement usage patterns
-    items:
-      - "Reviewed files: core/**/*.go, rest/**/*.go, socket/**/*.go, wurbctl/**/*.go"
-      - "HTTP response bodies properly closed with defer in core/auth/oidc.go:101,123"
-      - "Mutex locks properly paired with defer unlock in socket/socket.go:84,97,111"
-      - "GORM database connections use connection pool - no explicit close needed"
-      - "No defer-related issues found - code follows idiomatic Go defer patterns"
-    passing: true
-
-  - category: backend
-    description: Review Go allocation with new vs make patterns
-    items:
-      - Verify proper usage of new vs make for slices/maps/channels
-      - "Reviewed files: core/**/*.go, rest/**/*.go, socket/**/*.go, wurbctl/**/*.go"
-      - "No new() calls found - code uses struct literals which is idiomatic"
-      - "All make() calls verified correct: make(map[string]any), make(map[string]string), make(chan struct{})"
-      - "sync.Mutex properly zero-initialized: var mu sync.Mutex in socket/socket.go:80"
-      - "Types properly leverage zero-value-is-useful: Page{}, Channel{}, Message{} - all work without explicit initialization"
-      - "No issues found - code follows Go allocation best practices"
-    passing: true
-
-  - category: backend
-    description: Review Go array patterns (use slices instead fixed-size arrays)
-    items:
-      - Verify no fixed-size arrays ([N]int, [N]float64, etc.) exist in codebase
-      - Verify no pointer-to-array patterns (*[N]T) exist (not idiomatic Go)
-      - "Reviewed files: all Go files in the project"
-      - "No fixed-size arrays found - code properly uses slices (e.g., []Message, []Channel)"
-      - "No pointer-to-array patterns found - code follows idiomatic Go recommendation"
-    passing: true
-
-  - category: backend
-    description: Review Go slice patterns (functions modifying slices must return them)
-    items:
-      - Verify functions that modify slices return the slice (not just the underlying array)
-      - Verify Read functions accept slices ([]byte) rather than pointer + count
-      - Verify append results are properly assigned (slice = append(slice, data))
-      - "Reviewed: core/k8s/k8s.go, core/nats/nats.go, core/message/message.go, core/channel/channel.go, core/user/user.go, rest/handler/*.go, socket/socket.go"
-      - "Functions properly return modified slices: k8s functions return new args slice after append"
-      - "os.ReadFile returns []byte slice - proper slice usage for reading"
-      - "append() calls properly assign results: args = append(args, ...) in k8s.go, nats.go"
-      - "No issues found - code follows idiomatic Go slice patterns"
-    passing: true
-
-  - category: backend
-    description: Review Go method receiver patterns (pointers vs. values)
-    items:
-      - Verify methods that modify receiver use pointer receivers (*T) not value receivers (T)
-      - "Reviewed files: all Go files with methods (core/pg/pg.go, core/config/configmap.go, core/auth/test_admin.go, wurbctl/context.go, core/nats/nats.go)"
-      - "All methods that modify receiver properly use pointer receivers: Secret.Patch modifies s.*, Context.DB caches c.db"
-      - "All io.Writer-style methods (Write) use pointer receivers as expected: *Secret, *ConfigMap, *TestAdmin"
-      - "No issues found - code correctly uses pointer receivers for modifiable receivers per Go conventions"
-    passing: true
-
-  - category: backend
     description: Use composite literals instead of zero-value initialization with field assignment
     items:
       - Convert Load() in core/config/config.go to use composite literal with labeled fields instead of &Config{} followed by field-by-field assignment
     passing: false
-
-  - category: backend
-    description: Review two-dimensional slice patterns
-    items:
-      - Verify no incorrect 2D slice allocation patterns (all slices allocated independently or single allocation with proper slicing)
-      - "Reviewed files: all Go files in the project"
-      - "No 2D slices ([][]T) or 2D arrays ([N][M]T) found in codebase - review not applicable"
-    passing: true
 
   - category: backend
     description: Review Go constants and iota enumerator patterns
@@ -240,51 +105,6 @@ requirements:
       - Fix iota usage in core/auth/user.go - use blank identifier to skip iota=0 (use const block with _ = iota, userContextKey contextKey = iota)
       - "No ByteSize pattern found - review not applicable"
     passing: false
-
-  - category: backend
-    description: Review Go formatted printing (fmt.Printf, fmt.Sprintf, fmt.Fprintf) patterns
-    items:
-      - "Reviewed files: all Go files in the project"
-      - "Integer formatting uses %d correctly: fmt.Sprintf(\"%d\", user.ID), fmt.Sprintf(\"%d\", channelID)"
-      - "String formatting uses %s correctly: fmt.Sprintf(\"%s\", name), fmt.Sprintf(\"%s\", email)"
-      - "Quoted string formatting uses %q: fmt.Sprintf(\"  %s: %q\\n\", k, v)"
-      - "Error formatting uses %v (acceptable for errors): fmt.Sprintf(\"failed to exchange code: %v\", err)"
-      - "No String() methods found - no risk of infinite recursion"
-      - "fmt.Printf used appropriately with format strings: fmt.Printf(\"wrote %s\\n\", tree.Config)"
-      - "fmt.Println used when no format verbs needed: fmt.Println(\"database migrations complete\")"
-      - "fmt.Sprintf used for string construction with proper format verbs"
-      - "No issues found - code follows Go printing best practices from review content"
-    passing: true
-
-  - category: backend
-    description: Review Go variable declaration patterns (var with runtime expressions)
-    items:
-      - Verify variables use var declaration for runtime-computed values
-      - "Reviewed files: core/**/*.go, rest/**/*.go, socket/**/*.go, wurbctl/**/*.go"
-      - "Environment variable names properly use const: envConfigDir, envNatsTokenFile (these are string literals, not runtime values)"
-      - "Runtime environment lookups use os.Getenv inside functions, not at package level: dir.go:92, nats.go:73"
-      - "No os.Getenv used in const or var declarations at package level"
-      - "Package-level variables properly declared with var: oauth2Config, issuerURL in auth.go; testMode, cachedTree in dir.go"
-      - "No issues found - code follows Go variable declaration patterns from review content"
-    passing: true
-
-  - category: backend
-    description: Review Go init function patterns
-    items:
-      - Verify init functions are niladic (take no arguments)
-      - "Reviewed files: socket/e2e_test.go:140, rest/e2e_test.go:409"
-      - "Both init functions properly niladic: func init() { ... }"
-      - "Used for test state setup from environment variables (E2E_TEST_TOKEN)"
-      - "No issues found - code follows Go init function best practices from review content"
-    passing: true
-
-  - category: backend
-    description: Review Go interface implementation patterns
-    items:
-      - "Review: Example Sequence type implements sort.Interface correctly (Len, Less, Swap methods)"
-      - "Review: Example Sequence type has custom String() method for formatting"
-      - "No issues found - example code demonstrates proper multi-interface implementation"
-    passing: true
 
   - category: backend
     description: Review Go type assertion patterns
@@ -311,35 +131,6 @@ requirements:
     passing: false
 
   - category: backend
-    description: Review unused imports and variables patterns
-    items:
-      - "Review: Ensure no unused imports exist in codebase (blank identifiers should only be temporary during development)"
-      - "Review: Ensure no unused variables exist in codebase (blank identifier _ can be used to explicitly discard values when truly needed)"
-      - "Verify no var _ = fmt.Printf or var _ io.Reader patterns remain in production code (these should be removed when done debugging)"
-      - "No issues found - code properly removes unused imports and variables per Go spec"
-    passing: true
-
-  - category: backend
-    description: Review Go interface check patterns (compile-time vs runtime)
-    items:
-      - "Review: Runtime interface assertions like token.Extra('id_token').(string) in core/auth/auth.go:111 are appropriate (Extra returns interface{})"
-      - "Review: No types implement json.Marshaler or similar interfaces requiring compile-time verification"
-      - "Review: No need for blank identifier checks (var _ json.Marshaler = (*Type)(nil)) since no custom JSON marshaling is implemented"
-      - "No issues found - code follows Go interface check patterns from review content"
-    passing: true
-
-  - category: backend
-    description: Review Go embedding patterns (interface and struct embedding)
-    items:
-      - "Reviewed all Go files for interface embedding (interfaces that embed other interfaces like io.ReadWriter)"
-      - "Reviewed all Go files for struct embedding (structs with anonymous/embedded fields like bufio.ReadWriter)"
-      - "No interface embedding found - all interfaces define methods explicitly"
-      - "No struct embedding found - all structs use named fields"
-      - "No name conflicts to resolve (embedding rule: field/method X hides X in nested types)"
-      - "No issues found - code does not use Go embedding patterns"
-    passing: true
-
-  - category: backend
     description: Review Go concurrency patterns (goroutines, channels, mutexes, race conditions)
     items:
       - "Fix race condition in core/auth/auth.go:34-38 - oauth2Config, issuerURL, oauth2JWKS global variables accessed without synchronization"
@@ -354,26 +145,6 @@ requirements:
     passing: false
 
   - category: backend
-    description: Review channels of channels pattern (channel as first-class value for RPC-style demultiplexing)
-    items:
-      - "The codebase does not implement the channels of channels pattern described in review content"
-      - "No Request struct with resultChan field exists for RPC-style communication"
-      - "Consider implementing this pattern if RPC-style request/response with per-client reply channels is needed"
-      - "Current NATS-based messaging uses different pattern (publish/subscribe without per-request reply channels)"
-    passing: true
-
-  - category: backend
-    description: Review Go parallelization patterns (using multiple CPU cores)
-    items:
-      - "Verify no use of runtime.NumCPU() or runtime.GOMAXPROCS(0) for CPU-bound parallelization"
-      - "Verify no goroutine-based parallelization patterns (launching pieces across CPU cores)"
-      - "Verify no buffered channels used to signal completion of parallel tasks"
-      - "No parallelization code found in codebase - review not applicable"
-      - "The codebase does not implement parallelization (as distinct from concurrency) - no CPU-bound parallel calculations exist"
-      - "Go is a concurrent language, not parallel - codebase correctly uses goroutines for concurrency, not for parallel execution"
-    passing: true
-
-  - category: backend
     description: Fix Go error handling - error strings must identify their origin
     items:
       - Add prefix "message:" to error strings in rest/handler/message.go (lines 68, 78, 88, 96, 122, 141, 149, 185, 193)
@@ -381,15 +152,6 @@ requirements:
       - Add prefix "user:" to error strings in rest/handler/user.go (lines 40, 72)
       - Add prefix to error strings in rest/handler/common.go (line 28 "invalid "+param, line 37 "unauthorized")
     passing: false
-
-  - category: backend
-    description: Review panic usage patterns (prefer error returns over panic)
-    items:
-      - Verify no panic calls exist in codebase (library functions should avoid panic)
-      - "Reviewed files: all Go files in the project"
-      - "No panic() calls found - code properly uses error returns for error handling"
-      - "No issues found - code follows Go best practice of avoiding panic in library functions"
-    passing: true
 
   - category: backend
     description: Fix Go error handling - wrap errors with context in core packages
