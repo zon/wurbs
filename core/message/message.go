@@ -25,6 +25,11 @@ type Message struct {
 	Content   string
 }
 
+type MessageEvent struct {
+	Type    string  `json:"type"`
+	Message Message `json:"message"`
+}
+
 // Page holds a page of messages and a cursor for fetching the next page.
 type Page struct {
 	Messages []Message
@@ -55,7 +60,8 @@ func Create(db *gorm.DB, nc NATSPublisher, channelID, userID uint, content strin
 	}
 
 	if nc != nil {
-		if err := nc.Publish(natsSubject(channelID), m); err != nil {
+		event := MessageEvent{Type: "created", Message: *m}
+		if err := nc.Publish(natsSubject(channelID), event); err != nil {
 			return nil, fmt.Errorf("message: failed to publish: %w", err)
 		}
 	}
@@ -114,8 +120,8 @@ func Get(db *gorm.DB, id uint) (*Message, error) {
 	return &m, nil
 }
 
-// Update modifies an existing message's content.
-func Update(db *gorm.DB, id uint, content string) (*Message, error) {
+// Update modifies an existing message's content and publishes to NATS.
+func Update(db *gorm.DB, nc NATSPublisher, id uint, content string) (*Message, error) {
 	result := db.Model(&Message{}).Where("id = ?", id).Update("content", content)
 	if result.Error != nil {
 		return nil, fmt.Errorf("message: failed to update: %w", result.Error)
@@ -123,11 +129,28 @@ func Update(db *gorm.DB, id uint, content string) (*Message, error) {
 	if result.RowsAffected == 0 {
 		return nil, ErrNotFound
 	}
-	return Get(db, id)
+	m, err := Get(db, id)
+	if err != nil {
+		return nil, err
+	}
+
+	if nc != nil {
+		event := MessageEvent{Type: "updated", Message: *m}
+		if err := nc.Publish(natsSubject(m.ChannelID), event); err != nil {
+			return nil, fmt.Errorf("message: failed to publish: %w", err)
+		}
+	}
+
+	return m, nil
 }
 
-// Delete removes a message by ID.
-func Delete(db *gorm.DB, id uint) error {
+// Delete removes a message by ID and publishes to NATS.
+func Delete(db *gorm.DB, nc NATSPublisher, id uint) error {
+	m, err := Get(db, id)
+	if err != nil {
+		return err
+	}
+
 	result := db.Delete(&Message{}, id)
 	if result.Error != nil {
 		return fmt.Errorf("message: failed to delete: %w", result.Error)
@@ -135,5 +158,13 @@ func Delete(db *gorm.DB, id uint) error {
 	if result.RowsAffected == 0 {
 		return ErrNotFound
 	}
+
+	if nc != nil {
+		event := MessageEvent{Type: "deleted", Message: *m}
+		if err := nc.Publish(natsSubject(m.ChannelID), event); err != nil {
+			return fmt.Errorf("message: failed to publish: %w", err)
+		}
+	}
+
 	return nil
 }
