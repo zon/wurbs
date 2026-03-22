@@ -94,3 +94,11 @@ requirements:
       - "Reviewed files: core/**/*.go, rest/**/*.go, socket/**/*.go, wurbctl/**/*.go"
       - "No issues found - code uses idiomatic Go for patterns: C-style for loops (i := 0; i < n; i++), infinite for { } with proper exit conditions, range with blank identifier _ for unused indices"
     passing: true
+
+  - category: backend
+    description: Review Go switch statement patterns
+    items:
+      - Verify switch statements follow idiomatic Go (use switch true for boolean conditions, use comma-separated cases, proper break/label usage)
+      - "Reviewed files: core/**/*.go, rest/**/*.go, socket/**/*.go, wurbctl/**/*.go"
+      - "No switch statements found in codebase - no issues to review"
+    passing: true
