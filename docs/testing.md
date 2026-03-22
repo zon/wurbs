@@ -8,7 +8,7 @@ Tests should never directly or indirectly write to the file system or Kubernetes
 
 ## Web Servers
 
-The REST and socket web servers should have end-to-end tests written using only test users and test channels. End-to-end tests must run against a local server executed separately from the test code (not spawned by the test runner), must only use public interfaces (e.g. HTTP endpoints, WebSocket connections), and must not connect directly to the database or NATS. End-to-end tests should not be written for authentication endpoints (e.g. /auth/login, /auth/callback, /auth/logout, /auth/refresh), but every other endpoint in the REST spec must have at least one end-to-end test.
+The REST and socket web servers should have end-to-end tests written using only test users and test channels. End-to-end tests assume the REST and socket servers are already running via `air` in the background. Tests must only use public interfaces (e.g. HTTP endpoints, WebSocket connections), and must not connect directly to the database or NATS. End-to-end tests should not be written for authentication endpoints (e.g. /auth/login, /auth/callback, /auth/logout, /auth/refresh), but every other endpoint in the REST spec must have at least one end-to-end test.
 
 ## wurbctl
 
