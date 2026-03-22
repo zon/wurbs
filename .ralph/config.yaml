@@ -1,18 +1,18 @@
-model: google/gemini-3.1-flash-lite-preview
-# before:
-#   - name: build rest
-#     command: go
-#     args: [build, ./server/rest]
-#   - name: build socket
-#     command: go
-#     args: [build, ./server/socket]
-# services:
-#   - name: rest
-#     command: make
-#     args: [rest]
-#   - name: socket
-#     command: make
-#     args: [socket]
+model: google/gemini-3-flash
+before:
+  - name: build rest
+    command: go
+    args: [build, -o, ./tmp/rest, ./rest]
+  - name: build socket
+    command: go
+    args: [build, -o, ./tmp/socket, ./socket]
+services:
+  - name: rest
+    command: make
+    args: [rest]
+  - name: socket
+    command: make
+    args: [socket]
 workflow:
   namespace: ralph-wurbs
   configMaps:

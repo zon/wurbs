@@ -8,7 +8,7 @@ Tests should never directly or indirectly write to the file system or Kubernetes
 
 ## Web Servers
 
-The REST and socket web servers should have end-to-end tests written using only test users and test channels. End-to-end tests must only use public interfaces (e.g. HTTP endpoints, WebSocket connections) and must not connect directly to the database or NATS.
+The REST and socket web servers should have end-to-end tests written using only test users and test channels. End-to-end tests run against a local dev server, must only use public interfaces (e.g. HTTP endpoints, WebSocket connections), and must not connect directly to the database or NATS.
 
 ## wurbctl
 

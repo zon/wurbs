@@ -10,10 +10,10 @@ infra:
 	cd infra && pulumi up --stack dev --yes
 
 rest:
-	air -build.cmd "go build -o ./tmp/rest ./cmd/rest" -build.bin "./tmp/rest" -build.args_bin "--test" -build.include_dir "core,rest"
+	air -c rest/.air.toml -- --test
 
 socket:
-	air -build.cmd "go build -o ./tmp/socket ./cmd/socket" -build.bin "./tmp/socket" -build.args_bin "--test" -build.include_dir "core,socket"
+	air -c socket/.air.toml -- --test
 
 install:
 	go install ./wurbctl

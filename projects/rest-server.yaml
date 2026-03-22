@@ -78,9 +78,9 @@ requirements:
     passing: true
 
   - category: end-to-end tests
-    description: REST server tests use only public HTTP interfaces and do not connect directly to the database or NATS
+    description: REST server tests run against a local dev server using only public HTTP interfaces and do not connect directly to the database or NATS
     items:
-      - Tests interact with the server only through HTTP endpoints, not by connecting directly to the database or NATS
+      - Tests run against a local dev server and interact with it only through HTTP endpoints, not by connecting directly to the database or NATS
       - Tests only create and use test users (IsTest=true) and test channels
     passing: false
 
