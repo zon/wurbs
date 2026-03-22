@@ -8,15 +8,15 @@ import (
 )
 
 type Config struct {
-	RESTPort        int    `yaml:"rest_port"`
-	SocketPort      int    `yaml:"socket_port"`
-	OIDCIssuer      string `yaml:"oidc_issuer"`
-	OIDCClientID    string `yaml:"oidc_client_id"`
-	OIDCClientSec   string `yaml:"oidc_client_secret"`
-	NATSURL         string `yaml:"nats_url"`
-	NATSDevToken    string `yaml:"nats_dev_token"`
-	TestAdmin       string `yaml:"test_admin"`
-	Postgres        string `yaml:"postgres"`
+	RESTPort      int    `yaml:"rest_port"`
+	SocketPort    int    `yaml:"socket_port"`
+	OIDCIssuer    string `yaml:"oidc_issuer"`
+	OIDCClientID  string `yaml:"oidc_client_id"`
+	OIDCClientSec string `yaml:"oidc_client_secret"`
+	NATSURL       string `yaml:"nats_url"`
+	NATSDevToken  string `yaml:"nats_dev_token"`
+	TestAdmin     string `yaml:"test_admin"`
+	Postgres      string `yaml:"postgres"`
 }
 
 func Load() (*Config, error) {

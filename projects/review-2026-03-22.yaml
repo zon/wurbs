@@ -15,7 +15,7 @@ requirements:
     items:
       - Fix extra trailing newline in core/auth/test_admin.go
       - Fix struct field alignment in core/config/config.go
-    passing: false
+    passing: true
 
   - category: backend
     description: Fix Go interface naming convention issues (single-method interfaces should use -er suffix)

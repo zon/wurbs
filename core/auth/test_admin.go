@@ -51,4 +51,3 @@ func (t *TestAdmin) Read(path string) error {
 	}
 	return yaml.Unmarshal(data, t)
 }
-
