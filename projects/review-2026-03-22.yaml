@@ -86,3 +86,11 @@ requirements:
       - "Reviewed files: core/auth/auth.go, core/config/config.go, core/k8s/k8s.go, core/nats/nats.go, core/message/message.go, core/channel/channel.go, rest/handler/*.go, socket/socket.go"
       - "No issues found - code follows idiomatic Go patterns for error handling with proper scoping"
     passing: true
+
+  - category: backend
+    description: Review Go for loop patterns (C-style, infinite, range)
+    items:
+      - Verify for loop follows Go spec (no while, proper range usage, blank identifier for unused values)
+      - "Reviewed files: core/**/*.go, rest/**/*.go, socket/**/*.go, wurbctl/**/*.go"
+      - "No issues found - code uses idiomatic Go for patterns: C-style for loops (i := 0; i < n; i++), infinite for { } with proper exit conditions, range with blank identifier _ for unused indices"
+    passing: true
