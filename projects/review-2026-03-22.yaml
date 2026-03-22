@@ -66,3 +66,9 @@ requirements:
       - Replace inline NATS publisher interface with named Publisher interface in rest/handler/common.go
       - Replace inline NATS publisher interfaces with named Publisher interface in rest/handler/message.go
     passing: false
+
+  - category: backend
+    description: Verify Go semicolon insertion rules are followed (opening brace must be on same line as control statement)
+    items:
+      - Ensure no if/for/switch/select statements have opening brace on new line (would cause unwanted semicolon insertion)
+    passing: true
