@@ -41,10 +41,7 @@ func (h *Message) CreateMessage(c *gin.Context) {
 		return
 	}
 
-	var nc interface {
-		Publish(subject string, data any) error
-	} = h.deps.NATS
-	msg, err := message.Create(h.deps.DB, nc, channelID, user.ID, req.Content)
+	msg, err := message.Create(h.deps.DB, h.deps.NATS, channelID, user.ID, req.Content)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -162,10 +159,7 @@ func (h *Message) UpdateMessage(c *gin.Context) {
 		return
 	}
 
-	var nc interface {
-		Publish(subject string, data any) error
-	} = h.deps.NATS
-	updated, err := message.Update(h.deps.DB, nc, messageID, req.Content)
+	updated, err := message.Update(h.deps.DB, h.deps.NATS, messageID, req.Content)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -202,10 +196,7 @@ func (h *Message) DeleteMessage(c *gin.Context) {
 		return
 	}
 
-	var nc interface {
-		Publish(subject string, data any) error
-	} = h.deps.NATS
-	if err := message.Delete(h.deps.DB, nc, messageID); err != nil {
+	if err := message.Delete(h.deps.DB, h.deps.NATS, messageID); err != nil {
 		if errors.Is(err, message.ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "message: message not found"})
 			return

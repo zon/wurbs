@@ -6,14 +6,13 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/zon/chat/core/auth"
+	"github.com/zon/chat/core/message"
 	"gorm.io/gorm"
 )
 
 type Deps struct {
 	DB   *gorm.DB
-	NATS interface {
-		Publish(subject string, data any) error
-	}
+	NATS message.Publisher
 }
 
 type handler struct {

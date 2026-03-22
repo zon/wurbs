@@ -21,12 +21,12 @@ var upgrader = websocket.Upgrader{
 }
 
 type subscriber interface {
-	subscribe(subject string, cb func([]byte)) (unsubscribe func(), err error)
+	Subscribe(subject string, cb func([]byte)) (unsubscribe func(), err error)
 }
 
 type natsSubscriber struct{ conn *corenats.Conn }
 
-func (n *natsSubscriber) subscribe(subject string, cb func([]byte)) (func(), error) {
+func (n *natsSubscriber) Subscribe(subject string, cb func([]byte)) (func(), error) {
 	sub, err := n.conn.Subscribe(subject, cb)
 	if err != nil {
 		return nil, err
@@ -79,7 +79,7 @@ func serveChannel(sub subscriber, db *gorm.DB, w http.ResponseWriter, r *http.Re
 
 	var mu sync.Mutex
 
-	msgsUnsub, err := sub.subscribe(messageSubject(id), func(data []byte) {
+	msgsUnsub, err := sub.Subscribe(messageSubject(id), func(data []byte) {
 		mu.Lock()
 		defer mu.Unlock()
 		if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
@@ -92,7 +92,7 @@ func serveChannel(sub subscriber, db *gorm.DB, w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	membersUnsub, err := sub.subscribe(memberSubject(id), func(data []byte) {
+	membersUnsub, err := sub.Subscribe(memberSubject(id), func(data []byte) {
 		mu.Lock()
 		defer mu.Unlock()
 		if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
@@ -106,7 +106,7 @@ func serveChannel(sub subscriber, db *gorm.DB, w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	usersUnsub, err := sub.subscribe(userSubject(id), func(data []byte) {
+	usersUnsub, err := sub.Subscribe(userSubject(id), func(data []byte) {
 		mu.Lock()
 		defer mu.Unlock()
 		if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {

@@ -9,8 +9,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// NATSPublisher defines the interface for publishing to NATS.
-type NATSPublisher interface {
+// Publisher defines the interface for publishing to NATS.
+type Publisher interface {
 	Publish(subject string, data any) error
 }
 
@@ -49,7 +49,7 @@ func natsSubject(channelID uint) string {
 
 // Create persists a new message and publishes it to NATS. The nc parameter
 // may be nil, in which case NATS publishing is skipped.
-func Create(db *gorm.DB, nc NATSPublisher, channelID, userID uint, content string) (*Message, error) {
+func Create(db *gorm.DB, nc Publisher, channelID, userID uint, content string) (*Message, error) {
 	m := &Message{
 		ChannelID: channelID,
 		UserID:    userID,
@@ -121,7 +121,7 @@ func Get(db *gorm.DB, id uint) (*Message, error) {
 }
 
 // Update modifies an existing message's content and publishes to NATS.
-func Update(db *gorm.DB, nc NATSPublisher, id uint, content string) (*Message, error) {
+func Update(db *gorm.DB, nc Publisher, id uint, content string) (*Message, error) {
 	result := db.Model(&Message{}).Where("id = ?", id).Update("content", content)
 	if result.Error != nil {
 		return nil, fmt.Errorf("message: failed to update: %w", result.Error)
@@ -145,7 +145,7 @@ func Update(db *gorm.DB, nc NATSPublisher, id uint, content string) (*Message, e
 }
 
 // Delete removes a message by ID and publishes to NATS.
-func Delete(db *gorm.DB, nc NATSPublisher, id uint) error {
+func Delete(db *gorm.DB, nc Publisher, id uint) error {
 	m, err := Get(db, id)
 	if err != nil {
 		return err

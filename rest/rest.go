@@ -9,11 +9,11 @@ import (
 	"gorm.io/gorm"
 )
 
-type NATSPublisher = message.NATSPublisher
+type Publisher = message.Publisher
 
 type Deps struct {
 	DB   *gorm.DB
-	NATS NATSPublisher
+	NATS Publisher
 }
 
 func New(deps Deps, authMiddleware func(http.Handler) http.Handler) *gin.Engine {

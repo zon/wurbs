@@ -25,7 +25,7 @@ requirements:
       - Rename NATSPublisher to Publisher in rest/rest.go
       - Replace inline NATS publisher interface with named Publisher interface in rest/handler/common.go
       - Replace inline NATS publisher interfaces with named Publisher interface in rest/handler/message.go
-    passing: false
+    passing: true
 
   - category: backend
     description: Remove duplicate interface definitions (DRY principle)
