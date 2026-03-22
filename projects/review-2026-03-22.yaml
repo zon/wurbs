@@ -372,3 +372,26 @@ requirements:
       - "The codebase does not implement parallelization (as distinct from concurrency) - no CPU-bound parallel calculations exist"
       - "Go is a concurrent language, not parallel - codebase correctly uses goroutines for concurrency, not for parallel execution"
     passing: true
+
+  - category: backend
+    description: Fix Go error handling - error strings must identify their origin
+    items:
+      - Add prefix "message:" to error strings in rest/handler/message.go (lines 68, 78, 88, 96, 122, 141, 149, 185, 193)
+      - Add prefix "channel:" to error strings in rest/handler/channel.go (lines 86, 121, 175)
+      - Add prefix "user:" to error strings in rest/handler/user.go (lines 40, 72)
+      - Add prefix to error strings in rest/handler/common.go (line 28 "invalid "+param, line 37 "unauthorized")
+    passing: false
+
+  - category: backend
+    description: Fix Go error handling - wrap errors with context in core packages
+    items:
+      - Wrap errors in core/config/yaml.go loadYAML function (return err without context at lines 30-32)
+      - Wrap errors in core/config/yaml.go saveYAML function (return err without context at lines 37-40)
+      - Wrap errors in core/config/dir.go findRepoRoot function (return err without context at line 56)
+      - Wrap errors in core/config/dir.go findRepoConfigDir function (return err without context at line 113)
+      - Wrap errors in core/auth/auth.go FindUserBySubject function (return result.Error without context at line 358)
+      - Wrap errors in core/auth/auth.go FindUserByEmail function (return result.Error without context at line 394)
+      - Wrap errors in core/auth/auth.go FindOrCreateUserByEmail function (return err without context at lines 376, 385)
+      - Wrap errors in core/pg/pg.go Secret.read method (return err without context at lines 124-126)
+      - Wrap errors in core/pg/pg.go Secret.open method (return err without context at lines 136, 140)
+    passing: false
