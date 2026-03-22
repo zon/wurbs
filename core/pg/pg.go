@@ -58,27 +58,55 @@ func (s *Secret) ReadK8s(name, namespace, context string) error {
 	if err != nil {
 		return err
 	}
-	s.Username = data["username"]
-	s.Password = data["password"]
-	s.DBName = data["dbname"]
-	s.Host = data["host"]
-	s.Port = data["port"]
-	s.URI = data["uri"]
-	s.PGPass = data["pgpass"]
-	s.JDBCURI = data["jdbc-uri"]
-	s.FQDNURI = data["fqdn-uri"]
-	s.FQDNJDBCURI = data["fqdn-jdbc-uri"]
+
+	if jsonStr, ok := data["postgres.json"]; ok {
+		if err := json.Unmarshal([]byte(jsonStr), s); err != nil {
+			return fmt.Errorf("failed to unmarshal postgres.json: %w", err)
+		}
+	}
+
+	if s.Username == "" {
+		s.Username = data["username"]
+	}
+	if s.Password == "" {
+		s.Password = data["password"]
+	}
+	if s.DBName == "" {
+		s.DBName = data["dbname"]
+	}
+	if s.Host == "" {
+		s.Host = data["host"]
+	}
+	if s.Port == "" {
+		s.Port = data["port"]
+	}
+	if s.URI == "" {
+		s.URI = data["uri"]
+	}
+	if s.PGPass == "" {
+		s.PGPass = data["pgpass"]
+	}
+	if s.JDBCURI == "" {
+		s.JDBCURI = data["jdbc-uri"]
+	}
+	if s.FQDNURI == "" {
+		s.FQDNURI = data["fqdn-uri"]
+	}
+	if s.FQDNJDBCURI == "" {
+		s.FQDNJDBCURI = data["fqdn-jdbc-uri"]
+	}
 	return nil
 }
 
 // WriteK8s applies the secret to a Kubernetes namespace.
 func (s *Secret) WriteK8s(name, namespace, context string) error {
-	data, err := json.MarshalIndent(s, "", "  ")
+	jsonBytes, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
 		return err
 	}
+
 	return k8s.ApplySecret(name, namespace, context, map[string]string{
-		"postgres.json": string(data),
+		"postgres.json": string(jsonBytes),
 	})
 }
 

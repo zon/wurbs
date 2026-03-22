@@ -147,15 +147,21 @@ func (c *SetConfigCmd) writeNATSDevToken(tree *config.ConfigTree) error {
 }
 
 func (c *SetConfigCmd) writePostgresSecret(tree *config.ConfigTree) error {
+	var secret pg.Secret
+	if err := secret.ReadK8s(postgresSecret, wurbsNamespace, c.Context); err != nil {
+		return fmt.Errorf("failed to load postgres secret: %w", err)
+	}
+
+	if err := secret.WriteK8s(postgresSecret, ralphWorkflowNamespace, c.Context); err != nil {
+		return fmt.Errorf("failed to apply postgres secret to %s: %w", ralphWorkflowNamespace, err)
+	}
+	fmt.Printf("applied secret %s to %s namespace\n", postgresSecret, ralphWorkflowNamespace)
+
 	clusterIP, err := k8s.GetClusterIP(c.Context)
 	if err != nil {
 		return fmt.Errorf("failed to get cluster IP: %w", err)
 	}
 
-	var secret pg.Secret
-	if err := secret.ReadK8s(postgresSecret, wurbsNamespace, c.Context); err != nil {
-		return fmt.Errorf("failed to load postgres secret: %w", err)
-	}
 	secret.Patch(clusterIP, localPostgresPort)
 
 	if err := secret.Write(tree.Postgres); err != nil {
@@ -163,10 +169,6 @@ func (c *SetConfigCmd) writePostgresSecret(tree *config.ConfigTree) error {
 	}
 	fmt.Printf("wrote %s\n", tree.Postgres)
 
-	if err := secret.WriteK8s(postgresSecret, ralphWorkflowNamespace, c.Context); err != nil {
-		return fmt.Errorf("failed to apply postgres secret to %s: %w", ralphWorkflowNamespace, err)
-	}
-	fmt.Printf("applied secret %s to %s namespace\n", postgresSecret, ralphWorkflowNamespace)
 	return nil
 }
 
