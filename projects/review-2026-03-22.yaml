@@ -351,3 +351,12 @@ requirements:
       - "No goroutine leaks found - all goroutines have proper exit conditions (socket handler goroutine at line 130 exits on conn.ReadMessage error)"
       - "Fix goroutine signaling in socket/socket.go:130 - goroutine should use a channel to signal completion back to the caller (as recommended in review content: 'For that, we need channels')"
     passing: false
+
+  - category: backend
+    description: Review channels of channels pattern (channel as first-class value for RPC-style demultiplexing)
+    items:
+      - "The codebase does not implement the channels of channels pattern described in review content"
+      - "No Request struct with resultChan field exists for RPC-style communication"
+      - "Consider implementing this pattern if RPC-style request/response with per-client reply channels is needed"
+      - "Current NATS-based messaging uses different pattern (publish/subscribe without per-request reply channels)"
+    passing: true
