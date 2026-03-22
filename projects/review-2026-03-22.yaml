@@ -203,6 +203,14 @@ requirements:
     passing: true
 
   - category: backend
+    description: Review Go constants and iota enumerator patterns
+    items:
+      - Fix iota usage in core/user/user.go - use blank identifier to skip iota=0 (use const block with _ = iota, userContextKey contextKey = iota)
+      - Fix iota usage in core/auth/user.go - use blank identifier to skip iota=0 (use const block with _ = iota, userContextKey contextKey = iota)
+      - "No ByteSize pattern found - review not applicable"
+    passing: false
+
+  - category: backend
     description: Review Go formatted printing (fmt.Printf, fmt.Sprintf, fmt.Fprintf) patterns
     items:
       - "Reviewed files: all Go files in the project"
