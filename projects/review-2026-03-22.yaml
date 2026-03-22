@@ -140,3 +140,15 @@ requirements:
       - "GORM database connections use connection pool - no explicit close needed"
       - "No defer-related issues found - code follows idiomatic Go defer patterns"
     passing: true
+
+  - category: backend
+    description: Review Go allocation with new vs make patterns
+    items:
+      - Verify proper usage of new vs make for slices/maps/channels
+      - "Reviewed files: core/**/*.go, rest/**/*.go, socket/**/*.go, wurbctl/**/*.go"
+      - "No new() calls found - code uses struct literals which is idiomatic"
+      - "All make() calls verified correct: make(map[string]any), make(map[string]string), make(chan struct{})"
+      - "sync.Mutex properly zero-initialized: var mu sync.Mutex in socket/socket.go:80"
+      - "Types properly leverage zero-value-is-useful: Page{}, Channel{}, Message{} - all work without explicit initialization"
+      - "No issues found - code follows Go allocation best practices"
+    passing: true
