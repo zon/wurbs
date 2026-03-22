@@ -3,8 +3,9 @@ description: Fix Go naming, documentation, and formatting issues
 
 requirements:
   - category: backend
-    description: Fix Go naming convention issues
+    description: Fix Go MixedCaps naming convention issues
     items:
+      - Rename JWKSURI to JwksURI in core/auth/oidc.go (struct field uses uppercase acronyms, should use MixedCaps like JwksURI)
       - Rename auth.User to auth.AuthenticatedUser in core/auth/auth.go to avoid confusion with core/user.User
       - Rename auth.User to auth.AuthenticatedUser in core/message/message.go to avoid confusion with core/user.User
       - Rename user.User to user.UserModel in core/channel/channel.go for clarity
