@@ -3,6 +3,7 @@ package handler
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -133,7 +134,9 @@ func (h *User) UpdateUser(c *gin.Context) {
 				UserID:   fmt.Sprintf("%d", targetUser.ID),
 				Username: req.Username,
 			}
-			_ = h.deps.NATS.Publish(fmt.Sprintf("wurbs.channel.%d.users", ch.ID), event)
+			if err := h.deps.NATS.Publish(fmt.Sprintf("wurbs.channel.%d.users", ch.ID), event); err != nil {
+				log.Printf("failed to publish user event: %v", err)
+			}
 		}
 	}
 

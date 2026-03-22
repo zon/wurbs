@@ -41,7 +41,7 @@ requirements:
       - Review token refresh error handling in core/auth/auth.go:153 - both token and error ignored with _, _ =
       - Consider logging NATS publish errors rather than silently ignoring
       - Consider logging token refresh errors during logout rather than silently ignoring
-    passing: false
+    passing: true
 
   - category: backend
     description: Fix Go multiple return values (error handling idiom)

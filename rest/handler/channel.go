@@ -3,6 +3,7 @@ package handler
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -51,7 +52,9 @@ func (h *Channel) CreateChannel(c *gin.Context) {
 	}
 
 	if h.deps.NATS != nil {
-		_ = h.deps.NATS.Publish(fmt.Sprintf("wurbs.channel.%d.created", ch.ID), ch)
+		if err := h.deps.NATS.Publish(fmt.Sprintf("wurbs.channel.%d.created", ch.ID), ch); err != nil {
+			log.Printf("failed to publish channel created event: %v", err)
+		}
 	}
 
 	c.JSON(http.StatusCreated, ch)
@@ -192,7 +195,9 @@ func (h *Channel) DeleteChannel(c *gin.Context) {
 	}
 
 	if h.deps.NATS != nil {
-		_ = h.deps.NATS.Publish(fmt.Sprintf("wurbs.channel.%d.deleted", id), gin.H{"id": id})
+		if err := h.deps.NATS.Publish(fmt.Sprintf("wurbs.channel.%d.deleted", id), gin.H{"id": id}); err != nil {
+			log.Printf("failed to publish channel deleted event: %v", err)
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"deleted": true})

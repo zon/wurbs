@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -168,7 +169,9 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 	refreshToken := getRefreshTokenFromSession(r)
 	if refreshToken != "" {
 		tokenSource := cfg.TokenSource(r.Context(), &oauth2.Token{RefreshToken: refreshToken})
-		_, _ = tokenSource.Token()
+		if _, err := tokenSource.Token(); err != nil {
+			log.Printf("failed to refresh token during logout: %v", err)
+		}
 	}
 
 	clearSession(w)

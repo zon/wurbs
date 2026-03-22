@@ -3,6 +3,7 @@ package handler
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -125,7 +126,9 @@ func (h *Member) AddMember(c *gin.Context) {
 				CreatedAt: target.CreatedAt,
 			},
 		}
-		_ = h.deps.NATS.Publish(fmt.Sprintf("wurbs.channel.%d.members", channelID), event)
+		if err := h.deps.NATS.Publish(fmt.Sprintf("wurbs.channel.%d.members", channelID), event); err != nil {
+			log.Printf("failed to publish member event: %v", err)
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"added": true})
@@ -194,7 +197,9 @@ func (h *Member) RemoveMember(c *gin.Context) {
 				CreatedAt: target.CreatedAt,
 			},
 		}
-		_ = h.deps.NATS.Publish(fmt.Sprintf("wurbs.channel.%d.members", channelID), event)
+		if err := h.deps.NATS.Publish(fmt.Sprintf("wurbs.channel.%d.members", channelID), event); err != nil {
+			log.Printf("failed to publish member event: %v", err)
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"removed": true})
