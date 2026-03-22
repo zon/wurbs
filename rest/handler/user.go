@@ -24,7 +24,8 @@ func NewUser(deps Deps) *User {
 }
 
 func (h *User) GetUser(c *gin.Context) {
-	if _, ok := currentUser(c); !ok {
+	if _, err := currentUser(c); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -55,8 +56,9 @@ type updateUserRequest struct {
 }
 
 func (h *User) UpdateUser(c *gin.Context) {
-	currentUser, ok := currentUser(c)
-	if !ok {
+	currentUser, err := currentUser(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 

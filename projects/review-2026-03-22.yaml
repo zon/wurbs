@@ -48,7 +48,7 @@ requirements:
     items:
       - Change parseID in rest/handler/common.go to return (uint, error) instead of (uint, bool)
       - Change currentUser in rest/handler/common.go to return (*auth.User, error) instead of (*auth.User, bool)
-    passing: false
+    passing: true
 
   - category: backend
     description: Use named result parameters for clarity and shorter code

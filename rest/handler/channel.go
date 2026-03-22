@@ -24,8 +24,9 @@ type createChannelRequest struct {
 }
 
 func (h *Channel) CreateChannel(c *gin.Context) {
-	user, ok := currentUser(c)
-	if !ok {
+	user, err := currentUser(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 	if !user.IsAdmin {
@@ -57,7 +58,8 @@ func (h *Channel) CreateChannel(c *gin.Context) {
 }
 
 func (h *Channel) ListChannels(c *gin.Context) {
-	if _, ok := currentUser(c); !ok {
+	if _, err := currentUser(c); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -71,12 +73,14 @@ func (h *Channel) ListChannels(c *gin.Context) {
 }
 
 func (h *Channel) GetChannel(c *gin.Context) {
-	if _, ok := currentUser(c); !ok {
+	if _, err := currentUser(c); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
-	id, ok := parseID(c, "id")
-	if !ok {
+	id, err := parseID(c, "id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -101,8 +105,9 @@ type updateChannelRequest struct {
 }
 
 func (h *Channel) UpdateChannel(c *gin.Context) {
-	user, ok := currentUser(c)
-	if !ok {
+	user, err := currentUser(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 	if !user.IsAdmin {
@@ -110,8 +115,9 @@ func (h *Channel) UpdateChannel(c *gin.Context) {
 		return
 	}
 
-	id, ok := parseID(c, "id")
-	if !ok {
+	id, err := parseID(c, "id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -155,8 +161,9 @@ func (h *Channel) UpdateChannel(c *gin.Context) {
 }
 
 func (h *Channel) DeleteChannel(c *gin.Context) {
-	user, ok := currentUser(c)
-	if !ok {
+	user, err := currentUser(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 	if !user.IsAdmin {
@@ -164,12 +171,13 @@ func (h *Channel) DeleteChannel(c *gin.Context) {
 		return
 	}
 
-	id, ok := parseID(c, "id")
-	if !ok {
+	id, err := parseID(c, "id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	err := channel.DeleteAsAdmin(h.deps.DB, id, user)
+	err = channel.DeleteAsAdmin(h.deps.DB, id, user)
 	if err != nil {
 		if errors.Is(err, channel.ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "channel not found"})

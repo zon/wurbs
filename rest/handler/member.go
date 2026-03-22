@@ -40,8 +40,9 @@ type addMemberRequest struct {
 }
 
 func (h *Member) AddMember(c *gin.Context) {
-	currentUser, ok := currentUser(c)
-	if !ok {
+	currentUser, err := currentUser(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 	if !currentUser.IsAdmin {
@@ -49,8 +50,9 @@ func (h *Member) AddMember(c *gin.Context) {
 		return
 	}
 
-	channelID, ok := parseID(c, "id")
-	if !ok {
+	channelID, err := parseID(c, "id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -66,7 +68,6 @@ func (h *Member) AddMember(c *gin.Context) {
 	}
 
 	var target *auth.User
-	var err error
 
 	if req.UserID != nil {
 		target, err = user.GetUserByID(h.deps.DB, fmt.Sprintf("%d", *req.UserID))
@@ -131,8 +132,9 @@ func (h *Member) AddMember(c *gin.Context) {
 }
 
 func (h *Member) RemoveMember(c *gin.Context) {
-	currentUser, ok := currentUser(c)
-	if !ok {
+	currentUser, err := currentUser(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 	if !currentUser.IsAdmin {
@@ -140,13 +142,15 @@ func (h *Member) RemoveMember(c *gin.Context) {
 		return
 	}
 
-	channelID, ok := parseID(c, "id")
-	if !ok {
+	channelID, err := parseID(c, "id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	userID, ok := parseID(c, "user_id")
-	if !ok {
+	userID, err := parseID(c, "user_id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -197,12 +201,14 @@ func (h *Member) RemoveMember(c *gin.Context) {
 }
 
 func (h *Member) ListMembers(c *gin.Context) {
-	if _, ok := currentUser(c); !ok {
+	if _, err := currentUser(c); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
-	channelID, ok := parseID(c, "id")
-	if !ok {
+	channelID, err := parseID(c, "id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 

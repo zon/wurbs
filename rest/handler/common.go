@@ -2,7 +2,6 @@ package handler
 
 import (
 	"fmt"
-	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -21,23 +20,21 @@ type handler struct {
 	deps Deps
 }
 
-func parseID(c *gin.Context, param string) (uint, bool) {
+func parseID(c *gin.Context, param string) (uint, error) {
 	raw := c.Param(param)
 	id, err := strconv.ParseUint(raw, 10, 64)
 	if err != nil || id == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid " + param})
-		return 0, false
+		return 0, fmt.Errorf("invalid %s", param)
 	}
-	return uint(id), true
+	return uint(id), nil
 }
 
-func currentUser(c *gin.Context) (*auth.User, bool) {
+func currentUser(c *gin.Context) (*auth.User, error) {
 	u, err := auth.UserFromContext(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-		return nil, false
+		return nil, fmt.Errorf("unauthorized")
 	}
-	return u, true
+	return u, nil
 }
 
 type userResponse struct {

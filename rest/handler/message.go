@@ -23,13 +23,15 @@ type createMessageRequest struct {
 }
 
 func (h *Message) CreateMessage(c *gin.Context) {
-	user, ok := currentUser(c)
-	if !ok {
+	user, err := currentUser(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
-	channelID, ok := parseID(c, "id")
-	if !ok {
+	channelID, err := parseID(c, "id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -52,12 +54,14 @@ func (h *Message) CreateMessage(c *gin.Context) {
 }
 
 func (h *Message) ListMessages(c *gin.Context) {
-	if _, ok := currentUser(c); !ok {
+	if _, err := currentUser(c); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
-	channelID, ok := parseID(c, "id")
-	if !ok {
+	channelID, err := parseID(c, "id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -125,13 +129,15 @@ func parseLimit(raw string) (int, error) {
 }
 
 func (h *Message) UpdateMessage(c *gin.Context) {
-	user, ok := currentUser(c)
-	if !ok {
+	user, err := currentUser(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
-	messageID, ok := parseID(c, "id")
-	if !ok {
+	messageID, err := parseID(c, "id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -169,13 +175,15 @@ func (h *Message) UpdateMessage(c *gin.Context) {
 }
 
 func (h *Message) DeleteMessage(c *gin.Context) {
-	user, ok := currentUser(c)
-	if !ok {
+	user, err := currentUser(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
-	messageID, ok := parseID(c, "id")
-	if !ok {
+	messageID, err := parseID(c, "id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
