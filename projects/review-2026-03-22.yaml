@@ -55,3 +55,13 @@ requirements:
       - Fix extra trailing newline in core/auth/test_admin.go
       - Fix struct field alignment in core/config/config.go
     passing: false
+
+  - category: backend
+    description: Fix Go interface naming convention issues (single-method interfaces should use -er suffix)
+    items:
+      - Rename subscriber.Subscribe to subscriber in socket/socket.go (method should be Subscribe to match -er convention)
+      - Rename NATSPublisher to Publisher in core/message/message.go
+      - Rename NATSPublisher to Publisher in rest/rest.go
+      - Replace inline NATS publisher interface with named Publisher interface in rest/handler/common.go
+      - Replace inline NATS publisher interfaces with named Publisher interface in rest/handler/message.go
+    passing: false
