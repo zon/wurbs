@@ -1,7 +1,35 @@
 name: review-2026-03-22
-description: Fix Go formatting issues
+description: Fix Go documentation and formatting issues
 
 requirements:
+  - category: backend
+    description: Add missing package comments for Go packages
+    items:
+      - Add package comment to core/message/message.go (e.g., "// Package message provides chat message functionality.")
+      - Add package comment to core/channel/channel.go (e.g., "// Package channel provides channel management functionality.")
+      - Add package comment to core/config/config.go (e.g., "// Package config provides configuration loading and management.")
+      - Add package comment to core/user/user.go (e.g., "// Package user provides user management functionality.")
+      - Add package comment to core/auth/auth.go (e.g., "// Package auth provides authentication and authorization.")
+      - Add package comment to core/pg/pg.go (e.g., "// Package pg provides PostgreSQL database connectivity.")
+      - Add package comment to core/nats/nats.go (e.g., "// Package nats provides NATS messaging connectivity.")
+      - Add package comment to core/k8s/k8s.go (e.g., "// Package k8s provides Kubernetes integration.")
+      - Add package comment to core/markdown/markdown.go (e.g., "// Package markdown provides markdown processing.")
+    passing: false
+
+  - category: backend
+    description: Add doc comments to exported types and functions
+    items:
+      - Add doc comments to exported types in core/channel/channel.go (Channel struct)
+      - Add doc comments to exported functions in core/channel/channel.go (Create, Get, List, Delete, AddMember, RemoveMember)
+      - Add doc comments to exported types in core/config/config.go (Config struct)
+      - Add doc comments to exported functions in core/config/config.go (Load, Write, ReadAt, WriteAt)
+      - Add doc comments to exported types in core/user/user.go (User, UpdateUserInput structs)
+      - Add doc comments to exported functions in core/user/user.go (UserFromContext, ContextWithUser, EnsureAdminUser, etc.)
+      - Add doc comments to exported functions in core/auth/auth.go (InitOIDC, Login, Callback, Logout, Refresh, ClientToken)
+      - Add doc comments to exported functions in rest/main.go (Main)
+      - Add doc comments to exported functions in socket/main.go (Main)
+    passing: false
+
   - category: backend
     description: Fix formatting issues identified by gofmt
     items:
