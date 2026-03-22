@@ -110,6 +110,15 @@ requirements:
     passing: true
 
   - category: backend
+    description: Review blank identifier usage in function call returns
+    items:
+      - Review NATS.Publish error handling in rest/handler/user.go:134, rest/handler/member.go:127,193, rest/handler/channel.go:53,187 - errors silently ignored with _ = 
+      - Review token refresh error handling in core/auth/auth.go:153 - both token and error ignored with _, _ = 
+      - Consider logging NATS publish errors rather than silently ignoring
+      - Consider logging token refresh errors during logout rather than silently ignoring
+    passing: false
+
+  - category: backend
     description: Review Go switch statement patterns
     items:
       - Verify switch statements follow idiomatic Go (use switch true for boolean conditions, use comma-separated cases, proper break/label usage)
