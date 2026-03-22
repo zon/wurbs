@@ -68,7 +68,7 @@ requirements:
     description: Database model base fields
     items:
       - Database models include id, created_at, and updated_at fields but not deleted_at (no soft deletes)
-    passing: false
+    passing: true
 
   - category: core/user
     description: User domain logic is separated into a core/user package
