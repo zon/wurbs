@@ -1,7 +1,18 @@
 name: review-2026-03-22
-description: Fix Go documentation and formatting issues
+description: Fix Go naming, documentation, and formatting issues
 
 requirements:
+  - category: backend
+    description: Fix Go naming convention issues
+    items:
+      - Rename auth.User to auth.AuthenticatedUser in core/auth/auth.go to avoid confusion with core/user.User
+      - Rename auth.User to auth.AuthenticatedUser in core/message/message.go to avoid confusion with core/user.User
+      - Rename user.User to user.UserModel in core/channel/channel.go for clarity
+      - Rename user.User to user.UserModel in core/auth/auth.go for clarity
+      - Rename user.User to user.UserModel in rest/handler/user.go for clarity
+      - Rename user.User to user.UserModel in rest/handler/member.go for clarity
+    passing: false
+
   - category: backend
     description: Add missing package comments for Go packages
     items:
