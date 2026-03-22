@@ -15,15 +15,15 @@ type UserEvent struct {
 	Username *string `json:"username"`
 }
 
-type UserHandler struct {
+type User struct {
 	deps Deps
 }
 
-func NewUserHandler(deps Deps) *UserHandler {
-	return &UserHandler{deps: deps}
+func NewUser(deps Deps) *User {
+	return &User{deps: deps}
 }
 
-func (h *UserHandler) GetUser(c *gin.Context) {
+func (h *User) GetUser(c *gin.Context) {
 	if _, ok := currentUser(c); !ok {
 		return
 	}
@@ -54,7 +54,7 @@ type updateUserRequest struct {
 	Inactive *bool   `json:"inactive"`
 }
 
-func (h *UserHandler) UpdateUser(c *gin.Context) {
+func (h *User) UpdateUser(c *gin.Context) {
 	currentUser, ok := currentUser(c)
 	if !ok {
 		return

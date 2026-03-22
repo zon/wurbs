@@ -9,12 +9,12 @@ import (
 	"github.com/zon/chat/core/channel"
 )
 
-type ChannelHandler struct {
+type Channel struct {
 	deps Deps
 }
 
-func NewChannelHandler(deps Deps) *ChannelHandler {
-	return &ChannelHandler{deps: deps}
+func NewChannel(deps Deps) *Channel {
+	return &Channel{deps: deps}
 }
 
 type createChannelRequest struct {
@@ -23,7 +23,7 @@ type createChannelRequest struct {
 	IsTest   bool   `json:"is_test"`
 }
 
-func (h *ChannelHandler) CreateChannel(c *gin.Context) {
+func (h *Channel) CreateChannel(c *gin.Context) {
 	user, ok := currentUser(c)
 	if !ok {
 		return
@@ -56,7 +56,7 @@ func (h *ChannelHandler) CreateChannel(c *gin.Context) {
 	c.JSON(http.StatusCreated, ch)
 }
 
-func (h *ChannelHandler) ListChannels(c *gin.Context) {
+func (h *Channel) ListChannels(c *gin.Context) {
 	if _, ok := currentUser(c); !ok {
 		return
 	}
@@ -70,7 +70,7 @@ func (h *ChannelHandler) ListChannels(c *gin.Context) {
 	c.JSON(http.StatusOK, channels)
 }
 
-func (h *ChannelHandler) GetChannel(c *gin.Context) {
+func (h *Channel) GetChannel(c *gin.Context) {
 	if _, ok := currentUser(c); !ok {
 		return
 	}
@@ -100,7 +100,7 @@ type updateChannelRequest struct {
 	IsActive    *bool   `json:"inactive"`
 }
 
-func (h *ChannelHandler) UpdateChannel(c *gin.Context) {
+func (h *Channel) UpdateChannel(c *gin.Context) {
 	user, ok := currentUser(c)
 	if !ok {
 		return
@@ -154,7 +154,7 @@ func (h *ChannelHandler) UpdateChannel(c *gin.Context) {
 	c.JSON(http.StatusOK, updated)
 }
 
-func (h *ChannelHandler) DeleteChannel(c *gin.Context) {
+func (h *Channel) DeleteChannel(c *gin.Context) {
 	user, ok := currentUser(c)
 	if !ok {
 		return

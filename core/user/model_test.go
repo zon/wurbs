@@ -7,7 +7,7 @@ import (
 )
 
 func TestUserModel(t *testing.T) {
-	u := User{}
+	u := UserModel{}
 	val := reflect.TypeOf(u)
 
 	// Check required fields

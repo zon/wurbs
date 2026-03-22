@@ -10,19 +10,19 @@ import (
 	"github.com/zon/chat/core/message"
 )
 
-type MessageHandler struct {
+type Message struct {
 	deps Deps
 }
 
-func NewMessageHandler(deps Deps) *MessageHandler {
-	return &MessageHandler{deps: deps}
+func NewMessage(deps Deps) *Message {
+	return &Message{deps: deps}
 }
 
 type createMessageRequest struct {
 	Content string `json:"content" binding:"required"`
 }
 
-func (h *MessageHandler) CreateMessage(c *gin.Context) {
+func (h *Message) CreateMessage(c *gin.Context) {
 	user, ok := currentUser(c)
 	if !ok {
 		return
@@ -51,7 +51,7 @@ func (h *MessageHandler) CreateMessage(c *gin.Context) {
 	c.JSON(http.StatusCreated, msg)
 }
 
-func (h *MessageHandler) ListMessages(c *gin.Context) {
+func (h *Message) ListMessages(c *gin.Context) {
 	if _, ok := currentUser(c); !ok {
 		return
 	}
@@ -124,7 +124,7 @@ func parseLimit(raw string) (int, error) {
 	return v, nil
 }
 
-func (h *MessageHandler) UpdateMessage(c *gin.Context) {
+func (h *Message) UpdateMessage(c *gin.Context) {
 	user, ok := currentUser(c)
 	if !ok {
 		return
@@ -168,7 +168,7 @@ func (h *MessageHandler) UpdateMessage(c *gin.Context) {
 	c.JSON(http.StatusOK, updated)
 }
 
-func (h *MessageHandler) DeleteMessage(c *gin.Context) {
+func (h *Message) DeleteMessage(c *gin.Context) {
 	user, ok := currentUser(c)
 	if !ok {
 		return

@@ -26,12 +26,12 @@ type MemberUser struct {
 	CreatedAt time.Time `json:"createdAt"`
 }
 
-type MemberHandler struct {
+type Member struct {
 	deps Deps
 }
 
-func NewMemberHandler(deps Deps) *MemberHandler {
-	return &MemberHandler{deps: deps}
+func NewMember(deps Deps) *Member {
+	return &Member{deps: deps}
 }
 
 type addMemberRequest struct {
@@ -39,7 +39,7 @@ type addMemberRequest struct {
 	Email  string `json:"email"`
 }
 
-func (h *MemberHandler) AddMember(c *gin.Context) {
+func (h *Member) AddMember(c *gin.Context) {
 	currentUser, ok := currentUser(c)
 	if !ok {
 		return
@@ -130,7 +130,7 @@ func (h *MemberHandler) AddMember(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"added": true})
 }
 
-func (h *MemberHandler) RemoveMember(c *gin.Context) {
+func (h *Member) RemoveMember(c *gin.Context) {
 	currentUser, ok := currentUser(c)
 	if !ok {
 		return
@@ -196,7 +196,7 @@ func (h *MemberHandler) RemoveMember(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"removed": true})
 }
 
-func (h *MemberHandler) ListMembers(c *gin.Context) {
+func (h *Member) ListMembers(c *gin.Context) {
 	if _, ok := currentUser(c); !ok {
 		return
 	}

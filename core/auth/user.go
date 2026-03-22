@@ -8,7 +8,7 @@ import (
 )
 
 // Re-export User type
-type User = user.User
+type User = user.UserModel
 
 var (
 	ErrNoUser       = errors.New("auth: no authenticated user in context")

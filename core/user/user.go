@@ -9,7 +9,7 @@ import (
 	"gorm.io/gorm"
 )
 
-type User struct {
+type UserModel struct {
 	ID        uint `gorm:"primarykey"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
@@ -40,20 +40,20 @@ type contextKey int
 
 const userContextKey contextKey = iota
 
-func UserFromContext(ctx context.Context) (*User, error) {
-	u, ok := ctx.Value(userContextKey).(*User)
+func UserFromContext(ctx context.Context) (*UserModel, error) {
+	u, ok := ctx.Value(userContextKey).(*UserModel)
 	if !ok || u == nil {
 		return nil, ErrNoUser
 	}
 	return u, nil
 }
 
-func ContextWithUser(ctx context.Context, u *User) context.Context {
+func ContextWithUser(ctx context.Context, u *UserModel) context.Context {
 	return context.WithValue(ctx, userContextKey, u)
 }
 
-func EnsureAdminUser(db *gorm.DB, email string) (*User, error) {
-	user := &User{}
+func EnsureAdminUser(db *gorm.DB, email string) (*UserModel, error) {
+	user := &UserModel{}
 
 	result := db.Where("email = ?", email).First(user)
 	if result.Error != nil {
@@ -77,8 +77,8 @@ func EnsureAdminUser(db *gorm.DB, email string) (*User, error) {
 	return user, nil
 }
 
-func EnsureTestAdminUser(db *gorm.DB, email string) (*User, error) {
-	user := &User{}
+func EnsureTestAdminUser(db *gorm.DB, email string) (*UserModel, error) {
+	user := &UserModel{}
 
 	result := db.Where("email = ?", email).First(user)
 	if result.Error != nil && result.Error != gorm.ErrRecordNotFound {
@@ -86,7 +86,7 @@ func EnsureTestAdminUser(db *gorm.DB, email string) (*User, error) {
 	}
 
 	if result.Error == gorm.ErrRecordNotFound {
-		user = &User{Email: email, IsAdmin: true, IsTest: true}
+		user = &UserModel{Email: email, IsAdmin: true, IsTest: true}
 		if err := db.Create(user).Error; err != nil {
 			return nil, fmt.Errorf("user: failed to create test admin user: %w", err)
 		}
@@ -107,8 +107,8 @@ func EnsureTestAdminUser(db *gorm.DB, email string) (*User, error) {
 	return user, nil
 }
 
-func GetUserByID(db *gorm.DB, id string) (*User, error) {
-	var user User
+func GetUserByID(db *gorm.DB, id string) (*UserModel, error) {
+	var user UserModel
 	if err := db.First(&user, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrUserNotFound
@@ -118,7 +118,7 @@ func GetUserByID(db *gorm.DB, id string) (*User, error) {
 	return &user, nil
 }
 
-func UpdateUser(db *gorm.DB, user *User, input UpdateUserInput, isAdmin bool) error {
+func UpdateUser(db *gorm.DB, user *UserModel, input UpdateUserInput, isAdmin bool) error {
 	updates := make(map[string]any)
 
 	if input.Username != nil {
@@ -149,7 +149,7 @@ func UpdateUser(db *gorm.DB, user *User, input UpdateUserInput, isAdmin bool) er
 	return nil
 }
 
-func UpdateUserAsAdmin(db *gorm.DB, admin, target *User, input UpdateUserInput) error {
+func UpdateUserAsAdmin(db *gorm.DB, admin, target *UserModel, input UpdateUserInput) error {
 	if admin.IsTest && !target.IsTest {
 		return ErrTestAdminModifyRealUser
 	}

@@ -5,30 +5,30 @@ import (
 	"github.com/zon/chat/core/auth"
 )
 
-type AuthHandler struct {
+type Auth struct {
 	deps Deps
 }
 
-func NewAuthHandler(deps Deps) *AuthHandler {
-	return &AuthHandler{deps: deps}
+func NewAuth(deps Deps) *Auth {
+	return &Auth{deps: deps}
 }
 
-func (h *AuthHandler) Login(c *gin.Context) {
+func (h *Auth) Login(c *gin.Context) {
 	auth.Login(c.Writer, c.Request)
 }
 
-func (h *AuthHandler) Callback(c *gin.Context) {
+func (h *Auth) Callback(c *gin.Context) {
 	auth.Callback(h.deps.DB)(c.Writer, c.Request)
 }
 
-func (h *AuthHandler) Logout(c *gin.Context) {
+func (h *Auth) Logout(c *gin.Context) {
 	auth.Logout(c.Writer, c.Request)
 }
 
-func (h *AuthHandler) Refresh(c *gin.Context) {
+func (h *Auth) Refresh(c *gin.Context) {
 	auth.Refresh(c.Writer, c.Request)
 }
 
-func (h *AuthHandler) Token(c *gin.Context) {
+func (h *Auth) Token(c *gin.Context) {
 	auth.ClientToken(h.deps.DB)(c.Writer, c.Request)
 }

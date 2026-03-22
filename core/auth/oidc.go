@@ -105,18 +105,18 @@ func fetchJWKSFromIssuer(issuerURL string) (*jose.JSONWebKeySet, error) {
 	}
 
 	var discovery struct {
-		JWKSURI string `json:"jwks_uri"`
+		JwksURI string `json:"jwks_uri"`
 	}
 	if err := decodeJSON(resp.Body, &discovery); err != nil {
 		return nil, fmt.Errorf("auth: failed to decode OIDC discovery: %w", err)
 	}
 
-	if discovery.JWKSURI == "" {
+	if discovery.JwksURI == "" {
 		return nil, fmt.Errorf("auth: jwks_uri not found in OIDC discovery")
 	}
 
 	// Fetch the JWKS.
-	jwksResp, err := client.Get(discovery.JWKSURI)
+	jwksResp, err := client.Get(discovery.JwksURI)
 	if err != nil {
 		return nil, fmt.Errorf("auth: failed to fetch JWKS: %w", err)
 	}

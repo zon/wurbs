@@ -8,7 +8,7 @@ requirements:
       - Rename JWKSURI to JwksURI in core/auth/oidc.go (struct field uses uppercase acronyms, should use MixedCaps like JwksURI)
       - Rename user.User to user.UserModel in core/channel/channel.go for clarity
       - Rename AuthHandler, UserHandler, ChannelHandler, MessageHandler, MemberHandler in rest/handler/ to Auth, User, Channel, Message, Member to avoid redundant package name prefix (e.g., handler.AuthHandler -> handler.Auth)
-    passing: false
+    passing: true
 
   - category: backend
     description: Fix formatting issues identified by gofmt
