@@ -44,6 +44,12 @@ requirements:
     passing: false
 
   - category: backend
+    description: Fix Go getter naming convention (avoid Get prefix for getters)
+    items:
+      - Ensure getters follow Go convention (Owner not GetOwner)
+    passing: true
+
+  - category: backend
     description: Fix formatting issues identified by gofmt
     items:
       - Fix extra trailing newline in core/auth/test_admin.go
