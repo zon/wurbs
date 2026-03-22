@@ -78,3 +78,11 @@ requirements:
     items:
       - Verify if statements follow style (all else statements reviewed - rest/handler/user.go:112, rest/handler/member.go:81, core/user/user.go:94 - all appropriate as if bodies don't end with return)
     passing: true
+
+  - category: backend
+    description: Review Go short declaration redeclaration and reassignment (:=) patterns
+    items:
+      - Verify := redeclaration follows Go spec (same scope, assignable value, at least one new variable)
+      - "Reviewed files: core/auth/auth.go, core/config/config.go, core/k8s/k8s.go, core/nats/nats.go, core/message/message.go, core/channel/channel.go, rest/handler/*.go, socket/socket.go"
+      - "No issues found - code follows idiomatic Go patterns for error handling with proper scoping"
+    passing: true
