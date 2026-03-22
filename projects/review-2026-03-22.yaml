@@ -184,6 +184,16 @@ requirements:
     passing: true
 
   - category: backend
+    description: Review Go method receiver patterns (pointers vs. values)
+    items:
+      - Verify methods that modify receiver use pointer receivers (*T) not value receivers (T)
+      - "Reviewed files: all Go files with methods (core/pg/pg.go, core/config/configmap.go, core/auth/test_admin.go, wurbctl/context.go, core/nats/nats.go)"
+      - "All methods that modify receiver properly use pointer receivers: Secret.Patch modifies s.*, Context.DB caches c.db"
+      - "All io.Writer-style methods (Write) use pointer receivers as expected: *Secret, *ConfigMap, *TestAdmin"
+      - "No issues found - code correctly uses pointer receivers for modifiable receivers per Go conventions"
+    passing: true
+
+  - category: backend
     description: Use composite literals instead of zero-value initialization with field assignment
     items:
       - Convert Load() in core/config/config.go to use composite literal with labeled fields instead of &Config{} followed by field-by-field assignment
