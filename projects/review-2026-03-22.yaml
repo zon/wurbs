@@ -110,3 +110,10 @@ requirements:
       - "Reviewed files: core/**/*.go, rest/**/*.go, socket/**/*.go, wurbctl/**/*.go"
       - "No type switches found in codebase - no issues to review"
     passing: true
+
+  - category: backend
+    description: Fix Go multiple return values (error handling idiom)
+    items:
+      - Change parseID in rest/handler/common.go to return (uint, error) instead of (uint, bool)
+      - Change currentUser in rest/handler/common.go to return (*auth.User, error) instead of (*auth.User, bool)
+    passing: false
