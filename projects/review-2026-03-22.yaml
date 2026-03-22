@@ -224,3 +224,15 @@ requirements:
       - "fmt.Sprintf used for string construction with proper format verbs"
       - "No issues found - code follows Go printing best practices from review content"
     passing: true
+
+  - category: backend
+    description: Review Go variable declaration patterns (var with runtime expressions)
+    items:
+      - Verify variables use var declaration for runtime-computed values
+      - "Reviewed files: core/**/*.go, rest/**/*.go, socket/**/*.go, wurbctl/**/*.go"
+      - "Environment variable names properly use const: envConfigDir, envNatsTokenFile (these are string literals, not runtime values)"
+      - "Runtime environment lookups use os.Getenv inside functions, not at package level: dir.go:92, nats.go:73"
+      - "No os.Getenv used in const or var declarations at package level"
+      - "Package-level variables properly declared with var: oauth2Config, issuerURL in auth.go; testMode, cachedTree in dir.go"
+      - "No issues found - code follows Go variable declaration patterns from review content"
+    passing: true
