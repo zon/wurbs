@@ -58,8 +58,8 @@ func newConfigTree(parent string) *ConfigTree {
 }
 
 // findRepoRoot walks up from the working directory to find the git repo root.
-func findRepoRoot() (string, error) {
-	dir, err := os.Getwd()
+func findRepoRoot() (dir string, err error) {
+	dir, err = os.Getwd()
 	if err != nil {
 		return "", err
 	}
@@ -124,7 +124,7 @@ func Dir() (*ConfigTree, error) {
 }
 
 // findRepoConfigDir returns <git-repo-root>/config if it exists.
-func findRepoConfigDir() (string, error) {
+func findRepoConfigDir() (dir string, err error) {
 	root, err := findRepoRoot()
 	if err != nil {
 		return "", err

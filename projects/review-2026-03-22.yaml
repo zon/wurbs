@@ -61,7 +61,7 @@ requirements:
       - Add named result parameters to GetNodeIP in core/k8s/k8s.go (ip, err) to match existing pattern in codebase
       - Add named result parameters to GetClusterIP in core/k8s/k8s.go (host, err) to match existing pattern
       - Add named result parameters to GetSecret in core/k8s/k8s.go (data, err) to match existing pattern
-    passing: false
+    passing: true
 
   - category: backend
     description: Use composite literals instead of zero-value initialization with field assignment

@@ -184,15 +184,16 @@ func userSubject(id uint) string {
 	return fmt.Sprintf("wurbs.channel.%d.users", id)
 }
 
-func parseChannelID(path string) (uint, error) {
+func parseChannelID(path string) (id uint, err error) {
 	path = strings.TrimSuffix(path, "/")
 	parts := strings.Split(path, "/")
 	if len(parts) != 3 || parts[1] != "channels" {
 		return 0, fmt.Errorf("invalid channel path")
 	}
-	id, err := strconv.ParseUint(parts[2], 10, 64)
-	if err != nil || id == 0 {
+	parsedID, err := strconv.ParseUint(parts[2], 10, 64)
+	if err != nil || parsedID == 0 {
 		return 0, fmt.Errorf("invalid channel id")
 	}
-	return uint(id), nil
+	id = uint(parsedID)
+	return
 }

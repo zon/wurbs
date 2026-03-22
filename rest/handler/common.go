@@ -19,7 +19,7 @@ type handler struct {
 	deps Deps
 }
 
-func parseID(c *gin.Context, param string) (uint, error) {
+func parseID(c *gin.Context, param string) (value uint, ok error) {
 	raw := c.Param(param)
 	id, err := strconv.ParseUint(raw, 10, 64)
 	if err != nil || id == 0 {
@@ -28,7 +28,7 @@ func parseID(c *gin.Context, param string) (uint, error) {
 	return uint(id), nil
 }
 
-func currentUser(c *gin.Context) (*auth.User, error) {
+func currentUser(c *gin.Context) (user *auth.User, ok error) {
 	u, err := auth.UserFromContext(c.Request.Context())
 	if err != nil {
 		return nil, fmt.Errorf("common: unauthorized")
