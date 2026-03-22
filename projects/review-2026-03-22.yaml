@@ -154,6 +154,16 @@ requirements:
     passing: true
 
   - category: backend
+    description: Review Go array patterns (use slices instead fixed-size arrays)
+    items:
+      - Verify no fixed-size arrays ([N]int, [N]float64, etc.) exist in codebase
+      - Verify no pointer-to-array patterns (*[N]T) exist (not idiomatic Go)
+      - "Reviewed files: all Go files in the project"
+      - "No fixed-size arrays found - code properly uses slices (e.g., []Message, []Channel)"
+      - "No pointer-to-array patterns found - code follows idiomatic Go recommendation"
+    passing: true
+
+  - category: backend
     description: Use composite literals instead of zero-value initialization with field assignment
     items:
       - Convert Load() in core/config/config.go to use composite literal with labeled fields instead of &Config{} followed by field-by-field assignment
