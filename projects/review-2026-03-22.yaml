@@ -360,3 +360,14 @@ requirements:
       - "Consider implementing this pattern if RPC-style request/response with per-client reply channels is needed"
       - "Current NATS-based messaging uses different pattern (publish/subscribe without per-request reply channels)"
     passing: true
+
+  - category: backend
+    description: Review Go parallelization patterns (using multiple CPU cores)
+    items:
+      - "Verify no use of runtime.NumCPU() or runtime.GOMAXPROCS(0) for CPU-bound parallelization"
+      - "Verify no goroutine-based parallelization patterns (launching pieces across CPU cores)"
+      - "Verify no buffered channels used to signal completion of parallel tasks"
+      - "No parallelization code found in codebase - review not applicable"
+      - "The codebase does not implement parallelization (as distinct from concurrency) - no CPU-bound parallel calculations exist"
+      - "Go is a concurrent language, not parallel - codebase correctly uses goroutines for concurrency, not for parallel execution"
+    passing: true
