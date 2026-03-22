@@ -201,3 +201,18 @@ requirements:
       - "Reviewed files: all Go files in the project"
       - "No 2D slices ([][]T) or 2D arrays ([N][M]T) found in codebase - review not applicable"
     passing: true
+
+  - category: backend
+    description: Review Go formatted printing (fmt.Printf, fmt.Sprintf, fmt.Fprintf) patterns
+    items:
+      - "Reviewed files: all Go files in the project"
+      - "Integer formatting uses %d correctly: fmt.Sprintf(\"%d\", user.ID), fmt.Sprintf(\"%d\", channelID)"
+      - "String formatting uses %s correctly: fmt.Sprintf(\"%s\", name), fmt.Sprintf(\"%s\", email)"
+      - "Quoted string formatting uses %q: fmt.Sprintf(\"  %s: %q\\n\", k, v)"
+      - "Error formatting uses %v (acceptable for errors): fmt.Sprintf(\"failed to exchange code: %v\", err)"
+      - "No String() methods found - no risk of infinite recursion"
+      - "fmt.Printf used appropriately with format strings: fmt.Printf(\"wrote %s\\n\", tree.Config)"
+      - "fmt.Println used when no format verbs needed: fmt.Println(\"database migrations complete\")"
+      - "fmt.Sprintf used for string construction with proper format verbs"
+      - "No issues found - code follows Go printing best practices from review content"
+    passing: true
