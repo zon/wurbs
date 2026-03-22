@@ -1,0 +1,10 @@
+name: review-2026-03-22
+description: Fix Go formatting issues
+
+requirements:
+  - category: backend
+    description: Fix formatting issues identified by gofmt
+    items:
+      - Fix extra trailing newline in core/auth/test_admin.go
+      - Fix struct field alignment in core/config/config.go
+    passing: false
