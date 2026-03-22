@@ -15,3 +15,5 @@
 .config
 /config
 .pulumi
+rest.test
+socket.test
