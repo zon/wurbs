@@ -181,3 +181,11 @@ requirements:
     items:
       - Convert Load() in core/config/config.go to use composite literal with labeled fields instead of &Config{} followed by field-by-field assignment
     passing: false
+
+  - category: backend
+    description: Review two-dimensional slice patterns
+    items:
+      - Verify no incorrect 2D slice allocation patterns (all slices allocated independently or single allocation with proper slicing)
+      - "Reviewed files: all Go files in the project"
+      - "No 2D slices ([][]T) or 2D arrays ([N][M]T) found in codebase - review not applicable"
+    passing: true
