@@ -208,7 +208,10 @@ func Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rawIDToken, _ := newToken.Extra("id_token").(string)
+	rawIDToken, ok := newToken.Extra("id_token").(string)
+	if !ok {
+		rawIDToken = ""
+	}
 
 	tokenSet := TokenSet{
 		AccessToken:  newToken.AccessToken,

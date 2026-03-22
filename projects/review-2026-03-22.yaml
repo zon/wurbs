@@ -85,7 +85,7 @@ requirements:
       - "Fix unsafe type assertions in rest/e2e_test.go:236 - msg[\"id\"].(string) should use comma, ok"
       - "Fix unsafe type assertions in rest/e2e_test.go:391 - ch[\"id\"].(string) should use comma, ok"
       - "Fix ignoring ok value in core/auth/auth.go:187 - newToken.Extra(\"id_token\").(string) should handle missing id_token gracefully"
-    passing: false
+    passing: true
 
   - category: backend
     description: Fix inefficient string operations in String() methods
