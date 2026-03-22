@@ -318,3 +318,12 @@ requirements:
       - "Verify no var _ = fmt.Printf or var _ io.Reader patterns remain in production code (these should be removed when done debugging)"
       - "No issues found - code properly removes unused imports and variables per Go spec"
     passing: true
+
+  - category: backend
+    description: Review Go interface check patterns (compile-time vs runtime)
+    items:
+      - "Review: Runtime interface assertions like token.Extra('id_token').(string) in core/auth/auth.go:111 are appropriate (Extra returns interface{})"
+      - "Review: No types implement json.Marshaler or similar interfaces requiring compile-time verification"
+      - "Review: No need for blank identifier checks (var _ json.Marshaler = (*Type)(nil)) since no custom JSON marshaling is implemented"
+      - "No issues found - code follows Go interface check patterns from review content"
+    passing: true
