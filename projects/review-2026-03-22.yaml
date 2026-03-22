@@ -102,3 +102,11 @@ requirements:
       - "Reviewed files: core/**/*.go, rest/**/*.go, socket/**/*.go, wurbctl/**/*.go"
       - "No switch statements found in codebase - no issues to review"
     passing: true
+
+  - category: backend
+    description: Review Go type switch patterns
+    items:
+      - Verify type switches follow idiomatic Go (use type keyword in parentheses, declare variable with proper type in each case)
+      - "Reviewed files: core/**/*.go, rest/**/*.go, socket/**/*.go, wurbctl/**/*.go"
+      - "No type switches found in codebase - no issues to review"
+    passing: true
