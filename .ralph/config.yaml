@@ -1,4 +1,4 @@
-model: google/gemini-3-flash
+model: google/gemini-3.1-flash-lite-preview
 before:
   - name: build rest
     command: go
