@@ -72,3 +72,9 @@ requirements:
     items:
       - Ensure no if/for/switch/select statements have opening brace on new line (would cause unwanted semicolon insertion)
     passing: true
+
+  - category: backend
+    description: Verify Go if statement style (omit unnecessary else when if body ends with return/break/continue/goto)
+    items:
+      - Verify if statements follow style (all else statements reviewed - rest/handler/user.go:112, rest/handler/member.go:81, core/user/user.go:94 - all appropriate as if bodies don't end with return)
+    passing: true
