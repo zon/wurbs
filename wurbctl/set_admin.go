@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/zon/chat/core/auth"
+	"github.com/zon/chat/core/user"
 )
 
 // SetAdminCmd implements `wurbctl set admin`.
@@ -18,11 +18,11 @@ func (c *SetAdminCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	user, err := auth.EnsureAdminUser(db, c.Email)
+	u, err := user.EnsureAdminUser(db, c.Email)
 	if err != nil {
 		return fmt.Errorf("failed to promote user to admin: %w", err)
 	}
 
-	fmt.Printf("user %s promoted to admin\n", user.Email)
+	fmt.Printf("user %s promoted to admin\n", u.Email)
 	return nil
 }

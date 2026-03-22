@@ -8,13 +8,15 @@ import (
 )
 
 type Config struct {
-	RESTPort     int    `yaml:"rest_port"`
-	SocketPort   int    `yaml:"socket_port"`
-	OIDCIssuer   string `yaml:"oidc_issuer"`
-	NATSURL      string `yaml:"nats_url"`
-	NATSDevToken string `yaml:"nats_dev_token"`
-	TestAdmin    string `yaml:"test_admin"`
-	Postgres     string `yaml:"postgres"`
+	RESTPort        int    `yaml:"rest_port"`
+	SocketPort      int    `yaml:"socket_port"`
+	OIDCIssuer      string `yaml:"oidc_issuer"`
+	OIDCClientID    string `yaml:"oidc_client_id"`
+	OIDCClientSec   string `yaml:"oidc_client_secret"`
+	NATSURL         string `yaml:"nats_url"`
+	NATSDevToken    string `yaml:"nats_dev_token"`
+	TestAdmin       string `yaml:"test_admin"`
+	Postgres        string `yaml:"postgres"`
 }
 
 func Load() (*Config, error) {
@@ -32,6 +34,8 @@ func Load() (*Config, error) {
 	cfg.RESTPort = cm.RESTPort
 	cfg.SocketPort = cm.SocketPort
 	cfg.OIDCIssuer = cm.OIDCIssuer
+	cfg.OIDCClientID = cm.OIDCClientID
+	cfg.OIDCClientSec = cm.OIDCClientSecret
 	cfg.NATSURL = cm.NATSURL
 
 	if data, err := os.ReadFile(tree.NATSDevToken); err == nil {
@@ -67,10 +71,10 @@ func Write(cfg *Config) error {
 	return saveYAML(tree.Config, cfg)
 }
 
-func ReadAt(path string, cfg *Config) error {
-	return loadYAML(path, cfg)
+func ReadAt(path string, v any) error {
+	return loadYAML(path, v)
 }
 
-func WriteAt(path string, cfg *Config) error {
-	return saveYAML(path, cfg)
+func WriteAt(path string, v any) error {
+	return saveYAML(path, v)
 }

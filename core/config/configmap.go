@@ -15,10 +15,12 @@ const (
 )
 
 type ConfigMap struct {
-	RESTPort   int    `yaml:"restPort"`
-	SocketPort int    `yaml:"socketPort"`
-	OIDCIssuer string `yaml:"oidcIssuer"`
-	NATSURL    string `yaml:"natsURL"`
+	RESTPort         int    `yaml:"restPort"`
+	SocketPort       int    `yaml:"socketPort"`
+	OIDCIssuer       string `yaml:"oidcIssuer"`
+	OIDCClientID     string `yaml:"oidcClientID"`
+	OIDCClientSecret string `yaml:"oidcClientSecret"`
+	NATSURL          string `yaml:"natsURL"`
 }
 
 func (c *ConfigMap) Load() error {

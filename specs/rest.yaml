@@ -326,7 +326,7 @@ components:
 
     User:
       type: object
-      required: [id, email, admin, inactive, createdAt]
+      required: [id, admin, inactive, createdAt]
       properties:
         id:
           type: string
@@ -335,9 +335,6 @@ components:
           type: string
           description: Null until the user completes onboarding after first login
           nullable: true
-        email:
-          type: string
-          format: email
         admin:
           type: boolean
         inactive:
@@ -351,10 +348,6 @@ components:
       properties:
         username:
           type: string
-        email:
-          type: string
-          format: email
-          description: Admin only.
         admin:
           type: boolean
           description: Admin only.

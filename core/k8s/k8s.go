@@ -11,6 +11,27 @@ import (
 	"strings"
 )
 
+// GetNodeIP returns the InternalIP of the first ready worker node.
+func GetNodeIP(context string) (string, error) {
+	args := []string{"get", "nodes", "-o", "jsonpath={.items[0].status.addresses[?(@.type==\"InternalIP\")].address}"}
+	if context != "" {
+		args = append(args, "--context", context)
+	}
+
+	cmd := exec.Command("kubectl", args...)
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("kubectl get nodes failed: %w", err)
+	}
+
+	ip := strings.TrimSpace(string(output))
+	if ip == "" {
+		return "", fmt.Errorf("no InternalIP found on cluster nodes")
+	}
+
+	return ip, nil
+}
+
 func GetClusterIP(context string) (string, error) {
 	args := []string{"config", "view", "--minify", "-o", "jsonpath={.clusters[0].cluster.server}"}
 	if context != "" {

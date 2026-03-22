@@ -1,0 +1,5 @@
+[build]
+  cmd = "go build -o ./tmp/socket ./socket"
+  bin = "./tmp/socket"
+  include_dir = ["socket", "core"]
+  exclude_dir = ["tmp"]

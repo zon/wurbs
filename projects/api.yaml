@@ -59,7 +59,7 @@ requirements:
     items:
       - Tests use the test admin user credentials (mounted at /etc/wurbs by ralph workflows) to make REST API calls
       - Tests create and clean up test channels and users
-      - Tests avoid real channels, real users, and OIDC auth
+      - Tests avoid real channels, real users, and authentication endpoints (/auth/login, /auth/callback, /auth/logout, /auth/refresh)
     passing: false
 
   - category: containerfile
@@ -141,4 +141,3 @@ requirements:
       - Exposes helpers for publishing messages to NATS subjects
       - Handles NATS auth callout using k8s service tokens
     passing: true
-
