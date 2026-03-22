@@ -283,3 +283,10 @@ requirements:
       - "Review: Example Sequence.String() uses string concatenation in loop (str +=) - O(N²) complexity, should use strings.Builder"
       - "Fix: Replace string concatenation with strings.Builder or fmt.Fprintf with bytes.Buffer for O(n) performance"
     passing: false
+
+  - category: backend
+    description: Fix Generality issues - return interface types from constructors
+    items:
+      - Change Connect() in core/nats/nats.go to return NATSPublisher interface instead of *Conn concrete type (following crypto/cipher pattern like NewCTR returning Stream interface)
+      - Update callers of Connect() in rest/main.go and socket/main.go to use the interface type
+    passing: false
