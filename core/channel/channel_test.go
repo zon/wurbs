@@ -6,17 +6,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/zon/chat/core/user"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
-
-func setupTestDB(t *testing.T) *gorm.DB {
-	t.Helper()
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	require.NoError(t, err)
-	require.NoError(t, db.AutoMigrate(&user.User{}, &Channel{}, &Membership{}))
-	return db
-}
 
 func createUser(t *testing.T, db *gorm.DB, email, subject string, isAdmin, isTest bool) *user.User {
 	t.Helper()
@@ -28,8 +19,8 @@ func createUser(t *testing.T, db *gorm.DB, email, subject string, isAdmin, isTes
 // --- Create tests ---
 
 func TestCreate_PublicChannel(t *testing.T) {
-	t.Skip("Skipping SQLite-dependent test")
-	db := setupTestDB(t)
+	t.Skip("skipping test that requires database")
+	var db *gorm.DB
 
 	ch, err := Create(db, "general", true, false)
 	require.NoError(t, err)
@@ -40,8 +31,8 @@ func TestCreate_PublicChannel(t *testing.T) {
 }
 
 func TestCreate_PrivateChannel(t *testing.T) {
-	t.Skip("Skipping SQLite-dependent test")
-	db := setupTestDB(t)
+	t.Skip("skipping test that requires database")
+	var db *gorm.DB
 
 	ch, err := Create(db, "secret", false, false)
 	require.NoError(t, err)
@@ -49,8 +40,8 @@ func TestCreate_PrivateChannel(t *testing.T) {
 }
 
 func TestCreate_TestChannel(t *testing.T) {
-	t.Skip("Skipping SQLite-dependent test")
-	db := setupTestDB(t)
+	t.Skip("skipping test that requires database")
+	var db *gorm.DB
 
 	ch, err := Create(db, "test-channel", true, true)
 	require.NoError(t, err)
@@ -58,8 +49,8 @@ func TestCreate_TestChannel(t *testing.T) {
 }
 
 func TestCreate_DuplicateName(t *testing.T) {
-	t.Skip("Skipping SQLite-dependent test")
-	db := setupTestDB(t)
+	t.Skip("skipping test that requires database")
+	var db *gorm.DB
 
 	_, err := Create(db, "dup", true, false)
 	require.NoError(t, err)
@@ -72,8 +63,8 @@ func TestCreate_DuplicateName(t *testing.T) {
 // --- Get tests ---
 
 func TestGet_Found(t *testing.T) {
-	t.Skip("Skipping SQLite-dependent test")
-	db := setupTestDB(t)
+	t.Skip("skipping test that requires database")
+	var db *gorm.DB
 
 	created, err := Create(db, "find-me", true, false)
 	require.NoError(t, err)
@@ -84,8 +75,8 @@ func TestGet_Found(t *testing.T) {
 }
 
 func TestGet_NotFound(t *testing.T) {
-	t.Skip("Skipping SQLite-dependent test")
-	db := setupTestDB(t)
+	t.Skip("skipping test that requires database")
+	var db *gorm.DB
 
 	_, err := Get(db, 999)
 	assert.ErrorIs(t, err, ErrNotFound)
@@ -94,8 +85,8 @@ func TestGet_NotFound(t *testing.T) {
 // --- List tests ---
 
 func TestList_Empty(t *testing.T) {
-	t.Skip("Skipping SQLite-dependent test")
-	db := setupTestDB(t)
+	t.Skip("skipping test that requires database")
+	var db *gorm.DB
 
 	channels, err := List(db)
 	require.NoError(t, err)
@@ -103,8 +94,8 @@ func TestList_Empty(t *testing.T) {
 }
 
 func TestList_Multiple(t *testing.T) {
-	t.Skip("Skipping SQLite-dependent test")
-	db := setupTestDB(t)
+	t.Skip("skipping test that requires database")
+	var db *gorm.DB
 
 	_, err := Create(db, "ch1", true, false)
 	require.NoError(t, err)
@@ -119,8 +110,8 @@ func TestList_Multiple(t *testing.T) {
 // --- Delete tests ---
 
 func TestDelete_Existing(t *testing.T) {
-	t.Skip("Skipping SQLite-dependent test")
-	db := setupTestDB(t)
+	t.Skip("skipping test that requires database")
+	var db *gorm.DB
 
 	ch, err := Create(db, "delete-me", true, false)
 	require.NoError(t, err)
@@ -133,8 +124,8 @@ func TestDelete_Existing(t *testing.T) {
 }
 
 func TestDelete_NotFound(t *testing.T) {
-	t.Skip("Skipping SQLite-dependent test")
-	db := setupTestDB(t)
+	t.Skip("skipping test that requires database")
+	var db *gorm.DB
 
 	err := Delete(db, 999)
 	assert.ErrorIs(t, err, ErrNotFound)
@@ -143,8 +134,8 @@ func TestDelete_NotFound(t *testing.T) {
 // --- AddMember tests ---
 
 func TestAddMember_RealUserToRealChannel(t *testing.T) {
-	t.Skip("Skipping SQLite-dependent test")
-	db := setupTestDB(t)
+	t.Skip("skipping test that requires database")
+	var db *gorm.DB
 
 	ch, err := Create(db, "real-channel", true, false)
 	require.NoError(t, err)
@@ -160,8 +151,8 @@ func TestAddMember_RealUserToRealChannel(t *testing.T) {
 }
 
 func TestAddMember_TestUserToRealChannel_Rejected(t *testing.T) {
-	t.Skip("Skipping SQLite-dependent test")
-	db := setupTestDB(t)
+	t.Skip("skipping test that requires database")
+	var db *gorm.DB
 
 	ch, err := Create(db, "real-channel", true, false)
 	require.NoError(t, err)
@@ -172,8 +163,8 @@ func TestAddMember_TestUserToRealChannel_Rejected(t *testing.T) {
 }
 
 func TestAddMember_RealUserToTestChannel(t *testing.T) {
-	t.Skip("Skipping SQLite-dependent test")
-	db := setupTestDB(t)
+	t.Skip("skipping test that requires database")
+	var db *gorm.DB
 
 	ch, err := Create(db, "test-channel", true, true)
 	require.NoError(t, err)
@@ -184,8 +175,8 @@ func TestAddMember_RealUserToTestChannel(t *testing.T) {
 }
 
 func TestAddMember_TestUserToTestChannel(t *testing.T) {
-	t.Skip("Skipping SQLite-dependent test")
-	db := setupTestDB(t)
+	t.Skip("skipping test that requires database")
+	var db *gorm.DB
 
 	ch, err := Create(db, "test-channel", true, true)
 	require.NoError(t, err)
@@ -200,8 +191,8 @@ func TestAddMember_TestUserToTestChannel(t *testing.T) {
 }
 
 func TestAddMember_AdminUserToRealChannel(t *testing.T) {
-	t.Skip("Skipping SQLite-dependent test")
-	db := setupTestDB(t)
+	t.Skip("skipping test that requires database")
+	var db *gorm.DB
 
 	ch, err := Create(db, "real-channel", true, false)
 	require.NoError(t, err)
@@ -216,8 +207,8 @@ func TestAddMember_AdminUserToRealChannel(t *testing.T) {
 }
 
 func TestAddMember_AdminUserToTestChannel(t *testing.T) {
-	t.Skip("Skipping SQLite-dependent test")
-	db := setupTestDB(t)
+	t.Skip("skipping test that requires database")
+	var db *gorm.DB
 
 	ch, err := Create(db, "test-channel", true, true)
 	require.NoError(t, err)
@@ -228,8 +219,8 @@ func TestAddMember_AdminUserToTestChannel(t *testing.T) {
 }
 
 func TestAddMember_NonexistentChannel(t *testing.T) {
-	t.Skip("Skipping SQLite-dependent test")
-	db := setupTestDB(t)
+	t.Skip("skipping test that requires database")
+	var db *gorm.DB
 
 	user := createUser(t, db, "user@example.com", "sub-user", false, false)
 	err := AddMember(db, 999, user)
@@ -237,8 +228,8 @@ func TestAddMember_NonexistentChannel(t *testing.T) {
 }
 
 func TestAddMember_MultipleMembers(t *testing.T) {
-	t.Skip("Skipping SQLite-dependent test")
-	db := setupTestDB(t)
+	t.Skip("skipping test that requires database")
+	var db *gorm.DB
 
 	ch, err := Create(db, "team", true, false)
 	require.NoError(t, err)
@@ -255,8 +246,8 @@ func TestAddMember_MultipleMembers(t *testing.T) {
 }
 
 func TestAddMember_TestChannelMixedUsers(t *testing.T) {
-	t.Skip("Skipping SQLite-dependent test")
-	db := setupTestDB(t)
+	t.Skip("skipping test that requires database")
+	var db *gorm.DB
 
 	ch, err := Create(db, "test-mixed", true, true)
 	require.NoError(t, err)
@@ -273,8 +264,8 @@ func TestAddMember_TestChannelMixedUsers(t *testing.T) {
 // --- RemoveMember tests ---
 
 func TestRemoveMember_Existing(t *testing.T) {
-	t.Skip("Skipping SQLite-dependent test")
-	db := setupTestDB(t)
+	t.Skip("skipping test that requires database")
+	var db *gorm.DB
 
 	ch, err := Create(db, "remove-test", true, false)
 	require.NoError(t, err)
@@ -291,8 +282,8 @@ func TestRemoveMember_Existing(t *testing.T) {
 }
 
 func TestRemoveMember_NotFound(t *testing.T) {
-	t.Skip("Skipping SQLite-dependent test")
-	db := setupTestDB(t)
+	t.Skip("skipping test that requires database")
+	var db *gorm.DB
 
 	ch, err := Create(db, "ch", true, false)
 	require.NoError(t, err)
@@ -304,16 +295,16 @@ func TestRemoveMember_NotFound(t *testing.T) {
 // --- Members tests ---
 
 func TestMembers_NonexistentChannel(t *testing.T) {
-	t.Skip("Skipping SQLite-dependent test")
-	db := setupTestDB(t)
+	t.Skip("skipping test that requires database")
+	var db *gorm.DB
 
 	_, err := Members(db, 999)
 	assert.ErrorIs(t, err, ErrNotFound)
 }
 
 func TestMembers_EmptyChannel(t *testing.T) {
-	t.Skip("Skipping SQLite-dependent test")
-	db := setupTestDB(t)
+	t.Skip("skipping test that requires database")
+	var db *gorm.DB
 
 	ch, err := Create(db, "empty", true, false)
 	require.NoError(t, err)
@@ -326,8 +317,8 @@ func TestMembers_EmptyChannel(t *testing.T) {
 // --- Channel model field persistence ---
 
 func TestChannelModel_FieldsPersist(t *testing.T) {
-	t.Skip("Skipping SQLite-dependent test")
-	db := setupTestDB(t)
+	t.Skip("skipping test that requires database")
+	var db *gorm.DB
 
 	ch, err := Create(db, "persist-test", false, true)
 	require.NoError(t, err)

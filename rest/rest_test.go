@@ -13,9 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zon/chat/core/auth"
 	"github.com/zon/chat/core/channel"
-	"github.com/zon/chat/core/message"
 	corenats "github.com/zon/chat/core/nats"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -45,11 +43,8 @@ func init() {
 
 func setupTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
-	t.Skip("SQLite dependent")
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	require.NoError(t, err)
-	require.NoError(t, db.AutoMigrate(&auth.User{}, &channel.Channel{}, &channel.Membership{}, &message.Message{}))
-	return db
+	t.Skip("skipping test that requires database")
+	return nil
 }
 
 func createTestUser(t *testing.T, db *gorm.DB, email, subject string, isAdmin, isTest bool) *auth.User {

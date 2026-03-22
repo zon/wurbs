@@ -5,21 +5,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
-func setupTestDB(t *testing.T) *gorm.DB {
-	t.Helper()
-	t.Skip("Skipping SQLite dependent test")
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	require.NoError(t, err)
-	require.NoError(t, db.AutoMigrate(&User{}))
-	return db
-}
-
 func TestGetUserByID_Found(t *testing.T) {
-	db := setupTestDB(t)
+	t.Skip("skipping test that requires database")
+	var db *gorm.DB
 
 	_, err := EnsureAdminUser(db, "nonexistent@example.com")
 	require.Error(t, err)
