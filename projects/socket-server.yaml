@@ -13,7 +13,7 @@ requirements:
       - Clients receive MemberEvent JSON when a user joins or leaves the channel
       - Clients receive UserEvent JSON when a channel member updates their username
       - Clients can send an Unsubscribe message (empty JSON object) to close the connection
-    passing: false
+    passing: true
 
   - category: rest service NATS events
     description: REST service publishes correctly shaped event payloads to NATS so the socket service can relay them
@@ -21,7 +21,7 @@ requirements:
       - The REST service publishes a MessageEvent payload on message create, update, and delete
       - The REST service publishes a MemberEvent payload on member add and remove
       - The REST service publishes a UserEvent payload when a channel member updates their username
-    passing: false
+    passing: true
 
   - category: socket end to end tests
     description: E2E tests for the socket service per docs/testing.md
@@ -29,4 +29,4 @@ requirements:
       - Connecting to a channel event stream without authentication returns 401
       - Connecting to a channel event stream as a non-member returns 403
       - A channel member receives a MessageEvent over WebSocket when a message is posted to the channel via the REST API
-    passing: false
+    passing: true

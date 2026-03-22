@@ -156,7 +156,10 @@ func (h *MessageHandler) UpdateMessage(c *gin.Context) {
 		return
 	}
 
-	updated, err := message.Update(h.deps.DB, messageID, req.Content)
+	var nc interface {
+		Publish(subject string, data any) error
+	} = h.deps.NATS
+	updated, err := message.Update(h.deps.DB, nc, messageID, req.Content)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -191,7 +194,10 @@ func (h *MessageHandler) DeleteMessage(c *gin.Context) {
 		return
 	}
 
-	if err := message.Delete(h.deps.DB, messageID); err != nil {
+	var nc interface {
+		Publish(subject string, data any) error
+	} = h.deps.NATS
+	if err := message.Delete(h.deps.DB, nc, messageID); err != nil {
 		if errors.Is(err, message.ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "message not found"})
 			return

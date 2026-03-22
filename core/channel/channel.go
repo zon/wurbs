@@ -241,3 +241,13 @@ func Members(db *gorm.DB, channelID uint) ([]user.User, error) {
 	}
 	return users, nil
 }
+
+func ListForUser(db *gorm.DB, userID uint) ([]Channel, error) {
+	var channels []Channel
+	if err := db.Joins("JOIN memberships ON memberships.channel_id = channels.id").
+		Where("memberships.user_id = ?", userID).
+		Find(&channels).Error; err != nil {
+		return nil, fmt.Errorf("channel: failed to list channels for user: %w", err)
+	}
+	return channels, nil
+}

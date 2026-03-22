@@ -13,7 +13,7 @@ import (
 )
 
 var cli struct {
-	Port      string `help:"Port to listen on" default:"8080"`
+	Port      string `help:"Port to listen on" default:"8081"`
 	Test      bool   `help:"Enable test mode (test users and test channels)"`
 	NatsToken string `help:"Path to NATS auth token file" type:"path"`
 }
@@ -47,7 +47,7 @@ func Main() {
 		authMW = func(next http.Handler) http.Handler { return next }
 	}
 
-	handler := New(nc, authMW)
+	handler := New(nc, authMW, db)
 	if err := http.ListenAndServe(":"+cli.Port, handler); err != nil {
 		slog.Error("server failed", "error", err)
 		os.Exit(1)

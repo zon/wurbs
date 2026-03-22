@@ -4,12 +4,27 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/zon/chat/core/auth"
 	"github.com/zon/chat/core/channel"
 	"github.com/zon/chat/core/user"
 )
+
+type MemberEvent struct {
+	Type string     `json:"type"`
+	User MemberUser `json:"user"`
+}
+
+type MemberUser struct {
+	ID        uint      `json:"id"`
+	Username  *string   `json:"username"`
+	Email     string    `json:"email"`
+	Admin     bool      `json:"admin"`
+	Inactive  bool      `json:"inactive"`
+	CreatedAt time.Time `json:"createdAt"`
+}
 
 type MemberHandler struct {
 	deps Deps
@@ -98,10 +113,18 @@ func (h *MemberHandler) AddMember(c *gin.Context) {
 	}
 
 	if h.deps.NATS != nil {
-		_ = h.deps.NATS.Publish(fmt.Sprintf("wurbs.channel.%d.members.added", channelID), gin.H{
-			"channel_id": channelID,
-			"user_id":    target.ID,
-		})
+		event := MemberEvent{
+			Type: "joined",
+			User: MemberUser{
+				ID:        target.ID,
+				Username:  target.Username,
+				Email:     target.Email,
+				Admin:     target.IsAdmin,
+				Inactive:  !target.IsActive,
+				CreatedAt: target.CreatedAt,
+			},
+		}
+		_ = h.deps.NATS.Publish(fmt.Sprintf("wurbs.channel.%d.members", channelID), event)
 	}
 
 	c.JSON(http.StatusOK, gin.H{"added": true})
@@ -127,7 +150,17 @@ func (h *MemberHandler) RemoveMember(c *gin.Context) {
 		return
 	}
 
-	err := channel.RemoveMemberAsAdmin(h.deps.DB, channelID, userID, currentUser)
+	target, err := user.GetUserByID(h.deps.DB, fmt.Sprintf("%d", userID))
+	if err != nil {
+		if errors.Is(err, user.ErrUserNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	err = channel.RemoveMemberAsAdmin(h.deps.DB, channelID, userID, currentUser)
 	if err != nil {
 		if errors.Is(err, channel.ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "member not found"})
@@ -146,10 +179,18 @@ func (h *MemberHandler) RemoveMember(c *gin.Context) {
 	}
 
 	if h.deps.NATS != nil {
-		_ = h.deps.NATS.Publish(fmt.Sprintf("wurbs.channel.%d.members.removed", channelID), gin.H{
-			"channel_id": channelID,
-			"user_id":    userID,
-		})
+		event := MemberEvent{
+			Type: "left",
+			User: MemberUser{
+				ID:        target.ID,
+				Username:  target.Username,
+				Email:     target.Email,
+				Admin:     target.IsAdmin,
+				Inactive:  !target.IsActive,
+				CreatedAt: target.CreatedAt,
+			},
+		}
+		_ = h.deps.NATS.Publish(fmt.Sprintf("wurbs.channel.%d.members", channelID), event)
 	}
 
 	c.JSON(http.StatusOK, gin.H{"removed": true})

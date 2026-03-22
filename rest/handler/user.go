@@ -2,11 +2,18 @@ package handler
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/zon/chat/core/channel"
 	"github.com/zon/chat/core/user"
 )
+
+type UserEvent struct {
+	UserID   string  `json:"userId"`
+	Username *string `json:"username"`
+}
 
 type UserHandler struct {
 	deps Deps
@@ -116,5 +123,17 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	}
 
 	updatedUser, _ := user.GetUserByID(h.deps.DB, userID)
+
+	if req.Username != nil && h.deps.NATS != nil {
+		channels, _ := channel.ListForUser(h.deps.DB, targetUser.ID)
+		for _, ch := range channels {
+			event := UserEvent{
+				UserID:   fmt.Sprintf("%d", targetUser.ID),
+				Username: req.Username,
+			}
+			_ = h.deps.NATS.Publish(fmt.Sprintf("wurbs.channel.%d.users", ch.ID), event)
+		}
+	}
+
 	c.JSON(http.StatusOK, userToResponse(updatedUser))
 }
