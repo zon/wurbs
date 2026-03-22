@@ -309,3 +309,12 @@ requirements:
       - Change Connect() in core/nats/nats.go to return NATSPublisher interface instead of *Conn concrete type (following crypto/cipher pattern like NewCTR returning Stream interface)
       - Update callers of Connect() in rest/main.go and socket/main.go to use the interface type
     passing: false
+
+  - category: backend
+    description: Review unused imports and variables patterns
+    items:
+      - "Review: Ensure no unused imports exist in codebase (blank identifiers should only be temporary during development)"
+      - "Review: Ensure no unused variables exist in codebase (blank identifier _ can be used to explicitly discard values when truly needed)"
+      - "Verify no var _ = fmt.Printf or var _ io.Reader patterns remain in production code (these should be removed when done debugging)"
+      - "No issues found - code properly removes unused imports and variables per Go spec"
+    passing: true
