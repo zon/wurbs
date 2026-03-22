@@ -130,3 +130,13 @@ requirements:
       - Add named result parameters to GetClusterIP in core/k8s/k8s.go (host, err) to match existing pattern
       - Add named result parameters to GetSecret in core/k8s/k8s.go (data, err) to match existing pattern
     passing: false
+
+  - category: backend
+    description: Review Go defer statement usage patterns
+    items:
+      - "Reviewed files: core/**/*.go, rest/**/*.go, socket/**/*.go, wurbctl/**/*.go"
+      - "HTTP response bodies properly closed with defer in core/auth/oidc.go:101,123"
+      - "Mutex locks properly paired with defer unlock in socket/socket.go:84,97,111"
+      - "GORM database connections use connection pool - no explicit close needed"
+      - "No defer-related issues found - code follows idiomatic Go defer patterns"
+    passing: true
