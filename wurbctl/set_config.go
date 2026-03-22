@@ -152,6 +152,9 @@ func (c *SetConfigCmd) writePostgresSecret(tree *config.ConfigTree) error {
 		return fmt.Errorf("failed to load postgres secret: %w", err)
 	}
 
+	fullHost := secret.Host + "." + wurbsNamespace + ".svc.cluster.local"
+	secret.Patch(fullHost, secret.Port)
+
 	if err := secret.WriteK8s(postgresSecret, ralphWorkflowNamespace, c.Context); err != nil {
 		return fmt.Errorf("failed to apply postgres secret to %s: %w", ralphWorkflowNamespace, err)
 	}
