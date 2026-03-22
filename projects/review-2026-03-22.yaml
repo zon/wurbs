@@ -236,3 +236,13 @@ requirements:
       - "Package-level variables properly declared with var: oauth2Config, issuerURL in auth.go; testMode, cachedTree in dir.go"
       - "No issues found - code follows Go variable declaration patterns from review content"
     passing: true
+
+  - category: backend
+    description: Review Go init function patterns
+    items:
+      - Verify init functions are niladic (take no arguments)
+      - "Reviewed files: socket/e2e_test.go:140, rest/e2e_test.go:409"
+      - "Both init functions properly niladic: func init() { ... }"
+      - "Used for test state setup from environment variables (E2E_TEST_TOKEN)"
+      - "No issues found - code follows Go init function best practices from review content"
+    passing: true
