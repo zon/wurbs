@@ -63,6 +63,13 @@ requirements:
     passing: false
 
   - category: backend
+    description: Remove duplicate interface definitions (DRY principle)
+    items:
+      - Remove duplicate NATSPublisher interface from rest/rest.go (already defined in core/message/message.go)
+      - Update rest/rest.go to import Publisher interface from core/message package
+    passing: false
+
+  - category: backend
     description: Verify Go semicolon insertion rules are followed (opening brace must be on same line as control statement)
     items:
       - Ensure no if/for/switch/select statements have opening brace on new line (would cause unwanted semicolon insertion)
