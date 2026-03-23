@@ -12,8 +12,8 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/zon/chat/core/auth"
 	"github.com/zon/chat/core/channel"
-	"github.com/zon/chat/core/user"
 	corenats "github.com/zon/chat/core/nats"
+	"github.com/zon/chat/core/user"
 	"gorm.io/gorm"
 )
 
@@ -128,9 +128,11 @@ func serveChannel(sub subscriber, db *gorm.DB, w http.ResponseWriter, r *http.Re
 		usersUnsub()
 	}
 
+	done := make(chan struct{})
 	go func() {
 		defer unsubscribe()
 		defer conn.Close()
+		defer close(done)
 		for {
 			msgType, data, err := conn.ReadMessage()
 			if err != nil {
@@ -147,6 +149,7 @@ func serveChannel(sub subscriber, db *gorm.DB, w http.ResponseWriter, r *http.Re
 			}
 		}
 	}()
+	<-done
 }
 
 func isChannelMember(db *gorm.DB, channelID uint, user *user.User) bool {

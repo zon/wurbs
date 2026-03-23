@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"sync"
 )
 
 const (
@@ -10,13 +11,18 @@ const (
 	defaultConfigDir = "/etc/wurbs"
 )
 
-var testMode bool
-var cachedTree *ConfigTree
+var (
+	configMu   sync.RWMutex
+	testMode   bool
+	cachedTree *ConfigTree
+)
 
 // SetTestMode enables or disables test mode.
 // In test mode, if WURB_CONFIG is not set, the module walks up from the
 // working directory to find the git repo root and uses ./config there.
 func SetTestMode(enabled bool) {
+	configMu.Lock()
+	defer configMu.Unlock()
 	testMode = enabled
 }
 
@@ -24,9 +30,9 @@ func resetCache() {
 	cachedTree = nil
 }
 
-// ResetCache clears the cached configuration directory.
-// This is useful for testing when the config directory needs to be re-resolved.
 func ResetCache() {
+	configMu.Lock()
+	defer configMu.Unlock()
 	resetCache()
 }
 
@@ -85,6 +91,15 @@ func RepoDir() (*ConfigTree, error) {
 //
 // The result is cached after the first call.
 func Dir() (*ConfigTree, error) {
+	configMu.RLock()
+	tree := cachedTree
+	configMu.RUnlock()
+	if tree != nil {
+		return tree, nil
+	}
+
+	configMu.Lock()
+	defer configMu.Unlock()
 	if cachedTree != nil {
 		return cachedTree, nil
 	}
@@ -94,7 +109,10 @@ func Dir() (*ConfigTree, error) {
 		return cachedTree, nil
 	}
 
-	if testMode {
+	configMu.RLock()
+	tmode := testMode
+	configMu.RUnlock()
+	if tmode {
 		dir, err := findRepoConfigDir()
 		if err == nil {
 			cachedTree = newConfigTree(dir)
