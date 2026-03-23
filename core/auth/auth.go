@@ -4,9 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/go-jose/go-jose/v4"
@@ -37,7 +35,6 @@ var (
 	oauth2Config *oauth2.Config
 	issuerURL    string
 	oauth2JWKS   *jose.JSONWebKeySet
-	oidcMu       sync.RWMutex
 )
 
 type OIDCConfig struct {
@@ -52,8 +49,6 @@ func InitOIDC(cfg *OIDCConfig) error {
 	if cfg == nil {
 		return nil
 	}
-	oidcMu.Lock()
-	defer oidcMu.Unlock()
 	issuerURL = cfg.Issuer
 	oauth2Config = &oauth2.Config{
 		ClientID:     cfg.ClientID,
@@ -80,33 +75,23 @@ func InitOIDC(cfg *OIDCConfig) error {
 }
 
 func SetJWKS(jwks *jose.JSONWebKeySet) {
-	oidcMu.Lock()
-	defer oidcMu.Unlock()
 	oauth2JWKS = jwks
 }
 
 func Login(w http.ResponseWriter, r *http.Request) {
-	oidcMu.RLock()
-	cfg := oauth2Config
-	oidcMu.RUnlock()
-	if cfg == nil {
+	if oauth2Config == nil {
 		http.Error(w, "OIDC not configured", http.StatusInternalServerError)
 		return
 	}
 
 	state := r.URL.Query().Get("state")
-	url := cfg.AuthCodeURL(state, oauth2.AccessTypeOnline, oauth2.ApprovalForce)
+	url := oauth2Config.AuthCodeURL(state, oauth2.AccessTypeOnline, oauth2.ApprovalForce)
 	http.Redirect(w, r, url, http.StatusFound)
 }
 
 func Callback(db *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		oidcMu.RLock()
-		cfg := oauth2Config
-		jwks := oauth2JWKS
-		iss := issuerURL
-		oidcMu.RUnlock()
-		if cfg == nil {
+		if oauth2Config == nil {
 			http.Error(w, "OIDC not configured", http.StatusInternalServerError)
 			return
 		}
@@ -117,7 +102,7 @@ func Callback(db *gorm.DB) http.HandlerFunc {
 			return
 		}
 
-		token, err := cfg.Exchange(r.Context(), code)
+		token, err := oauth2Config.Exchange(r.Context(), code)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("failed to exchange code: %v", err), http.StatusInternalServerError)
 			return
@@ -129,7 +114,7 @@ func Callback(db *gorm.DB) http.HandlerFunc {
 			return
 		}
 
-		claims, err := validateOIDCToken(rawIDToken, jwks, iss)
+		claims, err := validateOIDCToken(rawIDToken, oauth2JWKS, issuerURL)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("failed to verify id_token: %v", err), http.StatusInternalServerError)
 			return
@@ -157,34 +142,25 @@ func Callback(db *gorm.DB) http.HandlerFunc {
 }
 
 func Logout(w http.ResponseWriter, r *http.Request) {
-	oidcMu.RLock()
-	cfg := oauth2Config
-	iss := issuerURL
-	oidcMu.RUnlock()
-	if cfg == nil {
+	if oauth2Config == nil {
 		http.Error(w, "OIDC not configured", http.StatusInternalServerError)
 		return
 	}
 
 	refreshToken := getRefreshTokenFromSession(r)
 	if refreshToken != "" {
-		tokenSource := cfg.TokenSource(r.Context(), &oauth2.Token{RefreshToken: refreshToken})
-		if _, err := tokenSource.Token(); err != nil {
-			log.Printf("failed to refresh token during logout: %v", err)
-		}
+		tokenSource := oauth2Config.TokenSource(r.Context(), &oauth2.Token{RefreshToken: refreshToken})
+		_, _ = tokenSource.Token()
 	}
 
 	clearSession(w)
 
-	endSessionURL := iss + "/v2/logout?post_logout_redirect_uri="
+	endSessionURL := issuerURL + "/v2/logout?post_logout_redirect_uri="
 	http.Redirect(w, r, endSessionURL, http.StatusFound)
 }
 
 func Refresh(w http.ResponseWriter, r *http.Request) {
-	oidcMu.RLock()
-	cfg := oauth2Config
-	oidcMu.RUnlock()
-	if cfg == nil {
+	if oauth2Config == nil {
 		http.Error(w, "OIDC not configured", http.StatusInternalServerError)
 		return
 	}
@@ -201,7 +177,7 @@ func Refresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	token := &oauth2.Token{RefreshToken: input.RefreshToken}
-	tokenSource := cfg.TokenSource(r.Context(), token)
+	tokenSource := oauth2Config.TokenSource(r.Context(), token)
 	newToken, err := tokenSource.Token()
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to refresh token: %v", err), http.StatusInternalServerError)
@@ -225,23 +201,15 @@ func Refresh(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(tokenSet)
 }
 
-var (
-	clientPublicKey []byte
-	clientKeyMu     sync.RWMutex
-)
+var clientPublicKey []byte
 
 func SetClientPublicKey(pem string) {
-	clientKeyMu.Lock()
-	defer clientKeyMu.Unlock()
 	clientPublicKey = []byte(pem)
 }
 
 func ClientToken(db *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		clientKeyMu.RLock()
-		key := clientPublicKey
-		clientKeyMu.RUnlock()
-		if len(key) == 0 {
+		if len(clientPublicKey) == 0 {
 			http.Error(w, "client credentials not configured", http.StatusInternalServerError)
 			return
 		}
@@ -267,7 +235,7 @@ func ClientToken(db *gorm.DB) http.HandlerFunc {
 			return
 		}
 
-		pubKey, err := parseRSAPublicKey(string(key))
+		pubKey, err := parseRSAPublicKey(string(clientPublicKey))
 		if err != nil {
 			http.Error(w, "failed to parse client public key", http.StatusInternalServerError)
 			return

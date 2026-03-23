@@ -127,9 +127,7 @@ func serveChannel(sub subscriber, db *gorm.DB, w http.ResponseWriter, r *http.Re
 		usersUnsub()
 	}
 
-	done := make(chan struct{})
 	go func() {
-		defer close(done)
 		defer unsubscribe()
 		defer conn.Close()
 		for {
@@ -148,8 +146,6 @@ func serveChannel(sub subscriber, db *gorm.DB, w http.ResponseWriter, r *http.Re
 			}
 		}
 	}()
-
-	<-done
 }
 
 func isChannelMember(db *gorm.DB, channelID uint, user *auth.User) bool {
