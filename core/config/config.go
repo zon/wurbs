@@ -25,18 +25,19 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
-	cfg := &Config{}
-
 	var cm ConfigMap
 	if err := loadYAML(tree.Config, &cm); err != nil {
 		return nil, err
 	}
-	cfg.RESTPort = cm.RESTPort
-	cfg.SocketPort = cm.SocketPort
-	cfg.OIDCIssuer = cm.OIDCIssuer
-	cfg.OIDCClientID = cm.OIDCClientID
-	cfg.OIDCClientSec = cm.OIDCClientSecret
-	cfg.NATSURL = cm.NATSURL
+
+	cfg := &Config{
+		RESTPort:      cm.RESTPort,
+		SocketPort:    cm.SocketPort,
+		OIDCIssuer:    cm.OIDCIssuer,
+		OIDCClientID:  cm.OIDCClientID,
+		OIDCClientSec: cm.OIDCClientSecret,
+		NATSURL:       cm.NATSURL,
+	}
 
 	if data, err := os.ReadFile(tree.NATSDevToken); err == nil {
 		cfg.NATSDevToken = strings.TrimSpace(string(data))

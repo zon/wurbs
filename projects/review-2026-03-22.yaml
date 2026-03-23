@@ -67,7 +67,7 @@ requirements:
     description: Use composite literals instead of zero-value initialization with field assignment
     items:
       - Convert Load() in core/config/config.go to use composite literal with labeled fields instead of &Config{} followed by field-by-field assignment
-    passing: false
+    passing: true
 
   - category: backend
     description: Review Go constants and iota enumerator patterns
