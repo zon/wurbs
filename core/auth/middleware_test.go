@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/zon/chat/core/config"
+	usermod "github.com/zon/chat/core/user"
 )
 
 // --- bearerToken tests ---
@@ -70,7 +71,7 @@ func TestClientMiddleware_AcceptsAdminUser(t *testing.T) {
 	key := generateTestKey(t)
 
 	// Create an admin user.
-	admin := &User{Email: "admin@example.com", Subject: "admin-sub", IsAdmin: true}
+	admin := &usermod.User{Email: "admin@example.com", Subject: "admin-sub", IsAdmin: true}
 	require.NoError(t, db.Create(admin).Error)
 
 	// Set up config with the public key.
@@ -107,7 +108,7 @@ func TestClientMiddleware_AcceptsTestUser(t *testing.T) {
 	db := setupTestDB(t)
 	key := generateTestKey(t)
 
-	testUser := &User{Email: "test@example.com", Subject: "test-sub", IsTest: true}
+	testUser := &usermod.User{Email: "test@example.com", Subject: "test-sub", IsTest: true}
 	require.NoError(t, db.Create(testUser).Error)
 
 	setupTestConfig(t, "", encodePEM(&key.PublicKey))
@@ -141,7 +142,7 @@ func TestClientMiddleware_RejectsRealUser(t *testing.T) {
 	key := generateTestKey(t)
 
 	// Real user (not admin, not test).
-	realUser := &User{Email: "real@example.com", Subject: "real-sub"}
+	realUser := &usermod.User{Email: "real@example.com", Subject: "real-sub"}
 	require.NoError(t, db.Create(realUser).Error)
 
 	setupTestConfig(t, "", encodePEM(&key.PublicKey))
@@ -219,7 +220,7 @@ func TestOIDCMiddleware_AcceptsRealUser(t *testing.T) {
 	issuer := "https://auth.example.com"
 
 	// Create a real user.
-	realUser := &User{Email: "real@example.com", Subject: "oidc-real-sub"}
+	realUser := &usermod.User{Email: "real@example.com", Subject: "oidc-real-sub"}
 	require.NoError(t, db.Create(realUser).Error)
 
 	setupTestConfig(t, issuer, "")
@@ -267,7 +268,7 @@ func TestOIDCMiddleware_AcceptsAdminUser(t *testing.T) {
 	key := generateTestKey(t)
 	issuer := "https://auth.example.com"
 
-	admin := &User{Email: "admin@example.com", Subject: "oidc-admin-sub", IsAdmin: true}
+	admin := &usermod.User{Email: "admin@example.com", Subject: "oidc-admin-sub", IsAdmin: true}
 	require.NoError(t, db.Create(admin).Error)
 
 	setupTestConfig(t, issuer, "")
@@ -312,7 +313,7 @@ func TestOIDCMiddleware_RejectsTestUser(t *testing.T) {
 	key := generateTestKey(t)
 	issuer := "https://auth.example.com"
 
-	testUser := &User{Email: "test@example.com", Subject: "oidc-test-sub", IsTest: true}
+	testUser := &usermod.User{Email: "test@example.com", Subject: "oidc-test-sub", IsTest: true}
 	require.NoError(t, db.Create(testUser).Error)
 
 	setupTestConfig(t, issuer, "")
@@ -394,7 +395,7 @@ func TestOIDCMiddleware_CreatesNewUser(t *testing.T) {
 
 	// Verify user was persisted.
 	var count int64
-	db.Model(&User{}).Where("subject = ?", "new-oidc-sub").Count(&count)
+	db.Model(&usermod.User{}).Where("subject = ?", "new-oidc-sub").Count(&count)
 	assert.Equal(t, int64(1), count)
 }
 

@@ -68,7 +68,7 @@ func (h *Member) AddMember(c *gin.Context) {
 		return
 	}
 
-	var target *auth.User
+	var target *user.User
 
 	if req.UserID != nil {
 		target, err = user.GetUserByID(h.deps.DB, fmt.Sprintf("%d", *req.UserID))

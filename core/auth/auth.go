@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-jose/go-jose/v4"
 	"golang.org/x/oauth2"
+	usermod "github.com/zon/chat/core/user"
 	"gorm.io/gorm"
 )
 
@@ -271,7 +272,7 @@ func ClientToken(db *gorm.DB) http.HandlerFunc {
 	}
 }
 
-func generateAccessToken(user *User) string {
+func generateAccessToken(user *usermod.User) string {
 	return fmt.Sprintf("client_%d_%s", user.ID, user.Email)
 }
 
@@ -336,7 +337,7 @@ func SessionAuthMiddleware(db *gorm.DB) func(http.Handler) http.Handler {
 				return
 			}
 
-			var user User
+			var user usermod.User
 			result := db.Where("subject = ?", cookie.Value).First(&user)
 			if result.Error != nil {
 				http.Error(w, "unauthorized", http.StatusUnauthorized)
@@ -354,8 +355,8 @@ func SessionAuthMiddleware(db *gorm.DB) func(http.Handler) http.Handler {
 	}
 }
 
-func FindUserBySubject(db *gorm.DB, subject string) (*User, error) {
-	var user User
+func FindUserBySubject(db *gorm.DB, subject string) (*usermod.User, error) {
+	var user usermod.User
 	result := db.Where("subject = ?", subject).First(&user)
 	if result.Error != nil {
 		return nil, result.Error
@@ -363,8 +364,8 @@ func FindUserBySubject(db *gorm.DB, subject string) (*User, error) {
 	return &user, nil
 }
 
-func FindOrCreateUserByEmail(db *gorm.DB, email, subject string) (*User, error) {
-	var user User
+func FindOrCreateUserByEmail(db *gorm.DB, email, subject string) (*usermod.User, error) {
+	var user usermod.User
 	result := db.Where("email = ?", email).First(&user)
 
 	if result.Error == nil {
@@ -379,7 +380,7 @@ func FindOrCreateUserByEmail(db *gorm.DB, email, subject string) (*User, error) 
 		return nil, result.Error
 	}
 
-	user = User{
+	user = usermod.User{
 		Email:    email,
 		Subject:  subject,
 		IsActive: true,
@@ -390,8 +391,8 @@ func FindOrCreateUserByEmail(db *gorm.DB, email, subject string) (*User, error) 
 	return &user, nil
 }
 
-func FindUserByEmail(db *gorm.DB, email string) (*User, error) {
-	var user User
+func FindUserByEmail(db *gorm.DB, email string) (*usermod.User, error) {
+	var user usermod.User
 	result := db.Where("email = ?", email).First(&user)
 	if result.Error != nil {
 		return nil, result.Error

@@ -6,13 +6,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/zon/chat/core/auth"
+	"github.com/zon/chat/core/user"
 	"gorm.io/gorm"
 )
 
-func createUser(t *testing.T, db *gorm.DB, email, subject string) *auth.User {
+func createUser(t *testing.T, db *gorm.DB, email, subject string) *user.User {
 	t.Helper()
-	u := &auth.User{Email: email, Subject: subject}
+	u := &user.User{Email: email, Subject: subject}
 	require.NoError(t, db.Create(u).Error)
 	return u
 }

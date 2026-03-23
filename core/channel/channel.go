@@ -18,7 +18,7 @@ type Channel struct {
 	IsPublic    bool
 	IsActive    bool `gorm:"default:true"`
 	IsTest      bool
-	Members     []user.UserModel `gorm:"many2many:memberships;"`
+	Members     []user.User `gorm:"many2many:memberships;"`
 }
 
 type Membership struct {
@@ -48,7 +48,7 @@ func Create(db *gorm.DB, name string, isPublic, isTest bool) (*Channel, error) {
 	return ch, nil
 }
 
-func CreateAsAdmin(db *gorm.DB, admin *user.UserModel, name string, isPublic, isTest bool) (*Channel, error) {
+func CreateAsAdmin(db *gorm.DB, admin *user.User, name string, isPublic, isTest bool) (*Channel, error) {
 	if admin.IsTest && !isTest {
 		return nil, ErrTestAdminInReal
 	}
@@ -96,7 +96,7 @@ func Update(db *gorm.DB, ch *Channel, input UpdateInput) error {
 	return nil
 }
 
-func UpdateAsAdmin(db *gorm.DB, ch *Channel, admin *user.UserModel, input UpdateInput) error {
+func UpdateAsAdmin(db *gorm.DB, ch *Channel, admin *user.User, input UpdateInput) error {
 	if admin.IsTest && !ch.IsTest {
 		return ErrTestAdminInReal
 	}
@@ -125,7 +125,7 @@ func Delete(db *gorm.DB, id uint) error {
 	return nil
 }
 
-func DeleteAsAdmin(db *gorm.DB, id uint, admin *user.UserModel) error {
+func DeleteAsAdmin(db *gorm.DB, id uint, admin *user.User) error {
 	ch, err := Get(db, id)
 	if err != nil {
 		return err
@@ -139,7 +139,7 @@ func DeleteAsAdmin(db *gorm.DB, id uint, admin *user.UserModel) error {
 	return Delete(db, id)
 }
 
-func AddMember(db *gorm.DB, channelID uint, user *user.UserModel) error {
+func AddMember(db *gorm.DB, channelID uint, user *user.User) error {
 	ch, err := Get(db, channelID)
 	if err != nil {
 		return err
@@ -159,7 +159,7 @@ func AddMember(db *gorm.DB, channelID uint, user *user.UserModel) error {
 	return nil
 }
 
-func AddMemberAsAdmin(db *gorm.DB, channelID uint, admin, user *user.UserModel) error {
+func AddMemberAsAdmin(db *gorm.DB, channelID uint, admin, user *user.User) error {
 	ch, err := Get(db, channelID)
 	if err != nil {
 		return err
@@ -198,7 +198,7 @@ func RemoveMember(db *gorm.DB, channelID, userID uint) error {
 	return nil
 }
 
-func RemoveMemberAsAdmin(db *gorm.DB, channelID, userID uint, admin *user.UserModel) error {
+func RemoveMemberAsAdmin(db *gorm.DB, channelID, userID uint, admin *user.User) error {
 	ch, err := Get(db, channelID)
 	if err != nil {
 		return err
@@ -229,13 +229,13 @@ func RemoveMemberAsAdmin(db *gorm.DB, channelID, userID uint, admin *user.UserMo
 	return RemoveMember(db, channelID, userID)
 }
 
-func Members(db *gorm.DB, channelID uint) ([]user.UserModel, error) {
+func Members(db *gorm.DB, channelID uint) ([]user.User, error) {
 	ch, err := Get(db, channelID)
 	if err != nil {
 		return nil, err
 	}
 
-	var users []user.UserModel
+	var users []user.User
 	if err := db.Model(ch).Association("Members").Find(&users); err != nil {
 		return nil, fmt.Errorf("channel: failed to list members: %w", err)
 	}

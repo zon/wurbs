@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
+	usermod "github.com/zon/chat/core/user"
 	"gorm.io/gorm"
 )
 
@@ -60,8 +61,8 @@ func validateOIDCToken(tokenStr string, jwks *jose.JSONWebKeySet, issuer string)
 }
 
 // resolveOIDCUser finds or creates a user by OIDC subject.
-func resolveOIDCUser(db *gorm.DB, claims *oidcClaims) (*User, error) {
-	var user User
+func resolveOIDCUser(db *gorm.DB, claims *oidcClaims) (*usermod.User, error) {
+	var user usermod.User
 	result := db.Where("subject = ?", claims.Subject).First(&user)
 	if result.Error == nil {
 		// Update email if changed.
@@ -75,7 +76,7 @@ func resolveOIDCUser(db *gorm.DB, claims *oidcClaims) (*User, error) {
 		return nil, result.Error
 	}
 	// Create new user.
-	user = User{
+	user = usermod.User{
 		Subject: claims.Subject,
 		Email:   claims.Email,
 	}

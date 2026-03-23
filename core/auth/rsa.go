@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
+	usermod "github.com/zon/chat/core/user"
 	"gorm.io/gorm"
 )
 
@@ -95,8 +96,8 @@ func validateClientToken(tokenStr string, pubKey *rsa.PublicKey) (*clientClaims,
 }
 
 // resolveClientUser finds a user by email from client credential claims.
-func resolveClientUser(db *gorm.DB, claims *clientClaims) (*User, error) {
-	var user User
+func resolveClientUser(db *gorm.DB, claims *clientClaims) (*usermod.User, error) {
+	var user usermod.User
 
 	if claims.Email != "" {
 		result := db.Where("email = ?", claims.Email).First(&user)

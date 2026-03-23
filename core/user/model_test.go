@@ -6,8 +6,8 @@ import (
 	"testing"
 )
 
-func TestUserModel(t *testing.T) {
-	u := UserModel{}
+func TestUser(t *testing.T) {
+	u := User{}
 	val := reflect.TypeOf(u)
 
 	// Check required fields

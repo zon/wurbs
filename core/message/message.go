@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/zon/chat/core/auth"
+	"github.com/zon/chat/core/user"
 	"gorm.io/gorm"
 )
 
@@ -21,7 +21,7 @@ type Message struct {
 	UpdatedAt time.Time
 	ChannelID uint
 	UserID    uint
-	User      auth.User `gorm:"foreignKey:UserID"`
+	User      user.User `gorm:"foreignKey:UserID"`
 	Content   string
 }
 

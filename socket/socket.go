@@ -12,6 +12,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/zon/chat/core/auth"
 	"github.com/zon/chat/core/channel"
+	"github.com/zon/chat/core/user"
 	corenats "github.com/zon/chat/core/nats"
 	"gorm.io/gorm"
 )
@@ -148,7 +149,7 @@ func serveChannel(sub subscriber, db *gorm.DB, w http.ResponseWriter, r *http.Re
 	}()
 }
 
-func isChannelMember(db *gorm.DB, channelID uint, user *auth.User) bool {
+func isChannelMember(db *gorm.DB, channelID uint, user *user.User) bool {
 	if user.IsAdmin {
 		return true
 	}

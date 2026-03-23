@@ -9,9 +9,9 @@ import (
 	"gorm.io/gorm"
 )
 
-func createUser(t *testing.T, db *gorm.DB, email, subject string, isAdmin, isTest bool) *user.UserModel {
+func createUser(t *testing.T, db *gorm.DB, email, subject string, isAdmin, isTest bool) *user.User {
 	t.Helper()
-	u := &user.UserModel{Email: email, Subject: subject, IsAdmin: isAdmin, IsTest: isTest}
+	u := &user.User{Email: email, Subject: subject, IsAdmin: isAdmin, IsTest: isTest}
 	require.NoError(t, db.Create(u).Error)
 	return u
 }

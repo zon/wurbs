@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/zon/chat/core/auth"
+	"github.com/zon/chat/core/user"
 	"github.com/zon/chat/core/message"
 	"gorm.io/gorm"
 )
@@ -28,7 +29,7 @@ func parseID(c *gin.Context, param string) (value uint, ok error) {
 	return uint(id), nil
 }
 
-func currentUser(c *gin.Context) (user *auth.User, ok error) {
+func currentUser(c *gin.Context) (user *user.User, ok error) {
 	u, err := auth.UserFromContext(c.Request.Context())
 	if err != nil {
 		return nil, fmt.Errorf("common: unauthorized")
@@ -44,7 +45,7 @@ type userResponse struct {
 	CreatedAt string  `json:"createdAt"`
 }
 
-func userToResponse(u *auth.User) userResponse {
+func userToResponse(u *user.User) userResponse {
 	return userResponse{
 		ID:        fmt.Sprintf("%d", u.ID),
 		Username:  u.Username,
