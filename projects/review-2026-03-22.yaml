@@ -116,6 +116,19 @@ requirements:
     passing: false
 
   - category: backend
+    description: Handler structs should directly contain their own dependencies instead of using a shared Deps struct
+    items:
+      - Remove the Deps struct and handler base struct from rest/handler/common.go
+      - Add DB field directly to Auth struct in rest/handler/auth.go (Auth only uses DB, not NATS)
+      - Add DB and NATS fields directly to User struct in rest/handler/user.go
+      - Add DB and NATS fields directly to Channel struct in rest/handler/channel.go
+      - Add DB and NATS fields directly to Member struct in rest/handler/member.go
+      - Add DB and NATS fields directly to Message struct in rest/handler/message.go
+      - Update constructors (NewAuth, NewUser, etc.) to accept DB and NATS directly instead of Deps
+      - Update rest/rest.go to pass DB and NATS directly when constructing handlers
+    passing: false
+
+  - category: backend
     description: Fix Go error handling - error strings must identify their origin
     items:
       - Add prefix "message:" to error strings in rest/handler/message.go (lines 68, 78, 88, 96, 122, 141, 149, 185, 193)
