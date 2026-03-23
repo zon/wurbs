@@ -126,7 +126,7 @@ requirements:
       - Add DB and NATS fields directly to Message struct in rest/handler/message.go
       - Update constructors (NewAuth, NewUser, etc.) to accept DB and NATS directly instead of Deps
       - Update rest/rest.go to pass DB and NATS directly when constructing handlers
-    passing: false
+    passing: true
 
   - category: backend
     description: Fix Go error handling - error strings must identify their origin

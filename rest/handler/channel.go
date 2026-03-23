@@ -8,14 +8,17 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/zon/chat/core/channel"
+	"github.com/zon/chat/core/message"
+	"gorm.io/gorm"
 )
 
 type Channel struct {
-	deps Deps
+	DB   *gorm.DB
+	NATS message.Publisher
 }
 
-func NewChannel(deps Deps) *Channel {
-	return &Channel{deps: deps}
+func NewChannel(db *gorm.DB, nats message.Publisher) *Channel {
+	return &Channel{DB: db, NATS: nats}
 }
 
 type createChannelRequest struct {
@@ -41,7 +44,7 @@ func (h *Channel) CreateChannel(c *gin.Context) {
 		return
 	}
 
-	ch, err := channel.CreateAsAdmin(h.deps.DB, user, req.Name, req.IsPublic, req.IsTest)
+	ch, err := channel.CreateAsAdmin(h.DB, user, req.Name, req.IsPublic, req.IsTest)
 	if err != nil {
 		if errors.Is(err, channel.ErrTestAdminInReal) || errors.Is(err, channel.ErrRealAdminInTest) {
 			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
@@ -51,8 +54,8 @@ func (h *Channel) CreateChannel(c *gin.Context) {
 		return
 	}
 
-	if h.deps.NATS != nil {
-		if err := h.deps.NATS.Publish(fmt.Sprintf("wurbs.channel.%d.created", ch.ID), ch); err != nil {
+	if h.NATS != nil {
+		if err := h.NATS.Publish(fmt.Sprintf("wurbs.channel.%d.created", ch.ID), ch); err != nil {
 			log.Printf("failed to publish channel created event: %v", err)
 		}
 	}
@@ -66,7 +69,7 @@ func (h *Channel) ListChannels(c *gin.Context) {
 		return
 	}
 
-	channels, err := channel.List(h.deps.DB)
+	channels, err := channel.List(h.DB)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -87,7 +90,7 @@ func (h *Channel) GetChannel(c *gin.Context) {
 		return
 	}
 
-	ch, err := channel.Get(h.deps.DB, id)
+	ch, err := channel.Get(h.DB, id)
 	if err != nil {
 		if errors.Is(err, channel.ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "channel: channel not found"})
@@ -124,7 +127,7 @@ func (h *Channel) UpdateChannel(c *gin.Context) {
 		return
 	}
 
-	ch, err := channel.Get(h.deps.DB, id)
+	ch, err := channel.Get(h.DB, id)
 	if err != nil {
 		if errors.Is(err, channel.ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "channel: channel not found"})
@@ -150,7 +153,7 @@ func (h *Channel) UpdateChannel(c *gin.Context) {
 		input.IsActive = &isActive
 	}
 
-	if err := channel.UpdateAsAdmin(h.deps.DB, ch, user, input); err != nil {
+	if err := channel.UpdateAsAdmin(h.DB, ch, user, input); err != nil {
 		if errors.Is(err, channel.ErrTestAdminInReal) || errors.Is(err, channel.ErrRealAdminInTest) {
 			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 			return
@@ -159,7 +162,7 @@ func (h *Channel) UpdateChannel(c *gin.Context) {
 		return
 	}
 
-	updated, _ := channel.Get(h.deps.DB, id)
+	updated, _ := channel.Get(h.DB, id)
 	c.JSON(http.StatusOK, updated)
 }
 
@@ -180,7 +183,7 @@ func (h *Channel) DeleteChannel(c *gin.Context) {
 		return
 	}
 
-	err = channel.DeleteAsAdmin(h.deps.DB, id, user)
+	err = channel.DeleteAsAdmin(h.DB, id, user)
 	if err != nil {
 		if errors.Is(err, channel.ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "channel: channel not found"})
@@ -194,8 +197,8 @@ func (h *Channel) DeleteChannel(c *gin.Context) {
 		return
 	}
 
-	if h.deps.NATS != nil {
-		if err := h.deps.NATS.Publish(fmt.Sprintf("wurbs.channel.%d.deleted", id), gin.H{"id": id}); err != nil {
+	if h.NATS != nil {
+		if err := h.NATS.Publish(fmt.Sprintf("wurbs.channel.%d.deleted", id), gin.H{"id": id}); err != nil {
 			log.Printf("failed to publish channel deleted event: %v", err)
 		}
 	}

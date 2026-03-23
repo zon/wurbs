@@ -10,7 +10,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/zon/chat/core/auth"
 	"github.com/zon/chat/core/channel"
+	"github.com/zon/chat/core/message"
 	"github.com/zon/chat/core/user"
+	"gorm.io/gorm"
 )
 
 type MemberEvent struct {
@@ -28,11 +30,12 @@ type MemberUser struct {
 }
 
 type Member struct {
-	deps Deps
+	DB   *gorm.DB
+	NATS message.Publisher
 }
 
-func NewMember(deps Deps) *Member {
-	return &Member{deps: deps}
+func NewMember(db *gorm.DB, nats message.Publisher) *Member {
+	return &Member{DB: db, NATS: nats}
 }
 
 type addMemberRequest struct {
@@ -71,7 +74,7 @@ func (h *Member) AddMember(c *gin.Context) {
 	var target *user.User
 
 	if req.UserID != nil {
-		target, err = user.GetUserByID(h.deps.DB, fmt.Sprintf("%d", *req.UserID))
+		target, err = user.GetUserByID(h.DB, fmt.Sprintf("%d", *req.UserID))
 		if err != nil {
 			if errors.Is(err, user.ErrUserNotFound) {
 				c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
@@ -81,14 +84,14 @@ func (h *Member) AddMember(c *gin.Context) {
 			return
 		}
 	} else {
-		target, err = auth.FindOrCreateUserByEmail(h.deps.DB, req.Email, "")
+		target, err = auth.FindOrCreateUserByEmail(h.DB, req.Email, "")
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 	}
 
-	err = channel.AddMemberAsAdmin(h.deps.DB, channelID, currentUser, target)
+	err = channel.AddMemberAsAdmin(h.DB, channelID, currentUser, target)
 	if err != nil {
 		if errors.Is(err, channel.ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "channel not found"})
@@ -114,7 +117,7 @@ func (h *Member) AddMember(c *gin.Context) {
 		return
 	}
 
-	if h.deps.NATS != nil {
+	if h.NATS != nil {
 		event := MemberEvent{
 			Type: "joined",
 			User: MemberUser{
@@ -126,7 +129,7 @@ func (h *Member) AddMember(c *gin.Context) {
 				CreatedAt: target.CreatedAt,
 			},
 		}
-		if err := h.deps.NATS.Publish(fmt.Sprintf("wurbs.channel.%d.members", channelID), event); err != nil {
+		if err := h.NATS.Publish(fmt.Sprintf("wurbs.channel.%d.members", channelID), event); err != nil {
 			log.Printf("failed to publish member event: %v", err)
 		}
 	}
@@ -157,7 +160,7 @@ func (h *Member) RemoveMember(c *gin.Context) {
 		return
 	}
 
-	target, err := user.GetUserByID(h.deps.DB, fmt.Sprintf("%d", userID))
+	target, err := user.GetUserByID(h.DB, fmt.Sprintf("%d", userID))
 	if err != nil {
 		if errors.Is(err, user.ErrUserNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
@@ -167,7 +170,7 @@ func (h *Member) RemoveMember(c *gin.Context) {
 		return
 	}
 
-	err = channel.RemoveMemberAsAdmin(h.deps.DB, channelID, userID, currentUser)
+	err = channel.RemoveMemberAsAdmin(h.DB, channelID, userID, currentUser)
 	if err != nil {
 		if errors.Is(err, channel.ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "member not found"})
@@ -185,7 +188,7 @@ func (h *Member) RemoveMember(c *gin.Context) {
 		return
 	}
 
-	if h.deps.NATS != nil {
+	if h.NATS != nil {
 		event := MemberEvent{
 			Type: "left",
 			User: MemberUser{
@@ -197,7 +200,7 @@ func (h *Member) RemoveMember(c *gin.Context) {
 				CreatedAt: target.CreatedAt,
 			},
 		}
-		if err := h.deps.NATS.Publish(fmt.Sprintf("wurbs.channel.%d.members", channelID), event); err != nil {
+		if err := h.NATS.Publish(fmt.Sprintf("wurbs.channel.%d.members", channelID), event); err != nil {
 			log.Printf("failed to publish member event: %v", err)
 		}
 	}
@@ -217,7 +220,7 @@ func (h *Member) ListMembers(c *gin.Context) {
 		return
 	}
 
-	members, err := channel.Members(h.deps.DB, channelID)
+	members, err := channel.Members(h.DB, channelID)
 	if err != nil {
 		if errors.Is(err, channel.ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "channel not found"})

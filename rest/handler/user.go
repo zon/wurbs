@@ -8,7 +8,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/zon/chat/core/channel"
+	"github.com/zon/chat/core/message"
 	"github.com/zon/chat/core/user"
+	"gorm.io/gorm"
 )
 
 type UserEvent struct {
@@ -17,11 +19,12 @@ type UserEvent struct {
 }
 
 type User struct {
-	deps Deps
+	DB   *gorm.DB
+	NATS message.Publisher
 }
 
-func NewUser(deps Deps) *User {
-	return &User{deps: deps}
+func NewUser(db *gorm.DB, nats message.Publisher) *User {
+	return &User{DB: db, NATS: nats}
 }
 
 func (h *User) GetUser(c *gin.Context) {
@@ -36,7 +39,7 @@ func (h *User) GetUser(c *gin.Context) {
 		return
 	}
 
-	u, err := user.GetUserByID(h.deps.DB, userID)
+	u, err := user.GetUserByID(h.DB, userID)
 	if err != nil {
 		if errors.Is(err, user.ErrUserNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "user: user not found"})
@@ -69,7 +72,7 @@ func (h *User) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	targetUser, err := user.GetUserByID(h.deps.DB, userID)
+	targetUser, err := user.GetUserByID(h.DB, userID)
 	if err != nil {
 		if errors.Is(err, user.ErrUserNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "user: user not found"})
@@ -111,9 +114,9 @@ func (h *User) UpdateUser(c *gin.Context) {
 
 	var updateErr error
 	if isSelf {
-		updateErr = user.UpdateUser(h.deps.DB, targetUser, input, currentUser.IsAdmin)
+		updateErr = user.UpdateUser(h.DB, targetUser, input, currentUser.IsAdmin)
 	} else {
-		updateErr = user.UpdateUserAsAdmin(h.deps.DB, currentUser, targetUser, input)
+		updateErr = user.UpdateUserAsAdmin(h.DB, currentUser, targetUser, input)
 	}
 
 	if updateErr != nil {
@@ -125,16 +128,16 @@ func (h *User) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	updatedUser, _ := user.GetUserByID(h.deps.DB, userID)
+	updatedUser, _ := user.GetUserByID(h.DB, userID)
 
-	if req.Username != nil && h.deps.NATS != nil {
-		channels, _ := channel.ListForUser(h.deps.DB, targetUser.ID)
+	if req.Username != nil && h.NATS != nil {
+		channels, _ := channel.ListForUser(h.DB, targetUser.ID)
 		for _, ch := range channels {
 			event := UserEvent{
 				UserID:   fmt.Sprintf("%d", targetUser.ID),
 				Username: req.Username,
 			}
-			if err := h.deps.NATS.Publish(fmt.Sprintf("wurbs.channel.%d.users", ch.ID), event); err != nil {
+			if err := h.NATS.Publish(fmt.Sprintf("wurbs.channel.%d.users", ch.ID), event); err != nil {
 				log.Printf("failed to publish user event: %v", err)
 			}
 		}

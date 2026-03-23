@@ -7,18 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/zon/chat/core/auth"
 	"github.com/zon/chat/core/user"
-	"github.com/zon/chat/core/message"
-	"gorm.io/gorm"
 )
-
-type Deps struct {
-	DB   *gorm.DB
-	NATS message.Publisher
-}
-
-type handler struct {
-	deps Deps
-}
 
 func parseID(c *gin.Context, param string) (value uint, ok error) {
 	raw := c.Param(param)

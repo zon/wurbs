@@ -8,14 +8,16 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/zon/chat/core/message"
+	"gorm.io/gorm"
 )
 
 type Message struct {
-	deps Deps
+	DB   *gorm.DB
+	NATS message.Publisher
 }
 
-func NewMessage(deps Deps) *Message {
-	return &Message{deps: deps}
+func NewMessage(db *gorm.DB, nats message.Publisher) *Message {
+	return &Message{DB: db, NATS: nats}
 }
 
 type createMessageRequest struct {
@@ -41,7 +43,7 @@ func (h *Message) CreateMessage(c *gin.Context) {
 		return
 	}
 
-	msg, err := message.Create(h.deps.DB, h.deps.NATS, channelID, user.ID, req.Content)
+	msg, err := message.Create(h.DB, h.NATS, channelID, user.ID, req.Content)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -100,7 +102,7 @@ func (h *Message) ListMessages(c *gin.Context) {
 		after = &t
 	}
 
-	page, err := message.List(h.deps.DB, channelID, cursor, limit, before, after)
+	page, err := message.List(h.DB, channelID, cursor, limit, before, after)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -138,7 +140,7 @@ func (h *Message) UpdateMessage(c *gin.Context) {
 		return
 	}
 
-	msg, err := message.Get(h.deps.DB, messageID)
+	msg, err := message.Get(h.DB, messageID)
 	if err != nil {
 		if errors.Is(err, message.ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "message: message not found"})
@@ -159,7 +161,7 @@ func (h *Message) UpdateMessage(c *gin.Context) {
 		return
 	}
 
-	updated, err := message.Update(h.deps.DB, h.deps.NATS, messageID, req.Content)
+	updated, err := message.Update(h.DB, h.NATS, messageID, req.Content)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -181,7 +183,7 @@ func (h *Message) DeleteMessage(c *gin.Context) {
 		return
 	}
 
-	msg, err := message.Get(h.deps.DB, messageID)
+	msg, err := message.Get(h.DB, messageID)
 	if err != nil {
 		if errors.Is(err, message.ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "message: message not found"})
@@ -196,7 +198,7 @@ func (h *Message) DeleteMessage(c *gin.Context) {
 		return
 	}
 
-	if err := message.Delete(h.deps.DB, h.deps.NATS, messageID); err != nil {
+	if err := message.Delete(h.DB, h.NATS, messageID); err != nil {
 		if errors.Is(err, message.ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "message: message not found"})
 			return
