@@ -102,20 +102,6 @@ requirements:
     passing: false
 
   - category: backend
-    description: Review Go concurrency patterns (goroutines, channels, mutexes, race conditions)
-    items:
-      - "Fix race condition in core/auth/auth.go:34-38 - oauth2Config, issuerURL, oauth2JWKS global variables accessed without synchronization"
-      - "Fix race condition in core/auth/auth.go:201 - clientPublicKey global variable accessed without synchronization"
-      - "Fix race condition in core/config/dir.go:13-14 - testMode and cachedTree global variables accessed without synchronization"
-      - "socket/socket.go:80 properly uses sync.Mutex to protect websocket WriteMessage calls - no issues"
-      - "core/pg/pg.go:144-145 properly configures database connection pool (MaxIdleConns, MaxOpenConns) - no issues"
-      - "core/nats/nats.go uses NATS server-side subscriptions (queue groups optional) - review not applicable"
-      - "No goroutine leaks found - all goroutines have proper exit conditions (socket handler goroutine at line 130 exits on conn.ReadMessage error)"
-      - "Fix goroutine signaling in socket/socket.go:130 - goroutine should use a channel to signal completion back to the caller (as recommended in review content: 'For that, we need channels')"
-      - "Review leaky buffer pattern: No leaky buffer / free list pattern found in codebase - code uses simple channel patterns without this buffer reuse optimization"
-    passing: false
-
-  - category: backend
     description: Handler structs should directly contain their own dependencies instead of using a shared Deps struct
     items:
       - Remove the Deps struct and handler base struct from rest/handler/common.go
