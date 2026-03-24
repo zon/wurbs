@@ -135,4 +135,4 @@ requirements:
       - Wrap errors in core/auth/auth.go FindOrCreateUserByEmail function (return err without context at lines 376, 385)
       - Wrap errors in core/pg/pg.go Secret.read method (return err without context at lines 124-126)
       - Wrap errors in core/pg/pg.go Secret.open method (return err without context at lines 136, 140)
-    passing: false
+    passing: true

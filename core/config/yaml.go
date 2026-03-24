@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -28,7 +29,7 @@ func LoadSecret(v any) error {
 func loadYAML(path string, v any) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to read %s: %w", path, err)
 	}
 	return yaml.Unmarshal(data, v)
 }
@@ -36,7 +37,7 @@ func loadYAML(path string, v any) error {
 func saveYAML(path string, v any) error {
 	data, err := yaml.Marshal(v)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal YAML: %w", err)
 	}
 	return os.WriteFile(path, data, 0644)
 }

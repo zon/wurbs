@@ -122,7 +122,7 @@ func (s *Secret) Write(path string) error {
 func (s *Secret) read(path string) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to read %s: %w", path, err)
 	}
 	return json.Unmarshal(data, s)
 }
@@ -133,12 +133,12 @@ func (s *Secret) open() (*gorm.DB, error) {
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
 	sqlDB, err := db.DB()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get underlying sql.DB: %w", err)
 	}
 
 	sqlDB.SetMaxIdleConns(10)

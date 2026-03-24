@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/go-jose/go-jose/v4"
-	"golang.org/x/oauth2"
 	usermod "github.com/zon/chat/core/user"
+	"golang.org/x/oauth2"
 	"gorm.io/gorm"
 )
 
@@ -359,7 +359,7 @@ func FindUserBySubject(db *gorm.DB, subject string) (*usermod.User, error) {
 	var user usermod.User
 	result := db.Where("subject = ?", subject).First(&user)
 	if result.Error != nil {
-		return nil, result.Error
+		return nil, fmt.Errorf("failed to find user by subject: %w", result.Error)
 	}
 	return &user, nil
 }
@@ -377,7 +377,7 @@ func FindOrCreateUserByEmail(db *gorm.DB, email, subject string) (*usermod.User,
 	}
 
 	if !errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, result.Error
+		return nil, fmt.Errorf("failed to find user by email: %w", result.Error)
 	}
 
 	user = usermod.User{
@@ -386,7 +386,7 @@ func FindOrCreateUserByEmail(db *gorm.DB, email, subject string) (*usermod.User,
 		IsActive: true,
 	}
 	if err := db.Create(&user).Error; err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
 	return &user, nil
 }
@@ -395,7 +395,7 @@ func FindUserByEmail(db *gorm.DB, email string) (*usermod.User, error) {
 	var user usermod.User
 	result := db.Where("email = ?", email).First(&user)
 	if result.Error != nil {
-		return nil, result.Error
+		return nil, fmt.Errorf("failed to find user by email: %w", result.Error)
 	}
 	return &user, nil
 }

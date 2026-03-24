@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -118,7 +119,7 @@ func TestLoad_ErrorWhenConfigYamlMissing(t *testing.T) {
 
 	_, err := Load()
 	assert.Error(t, err)
-	assert.True(t, os.IsNotExist(err))
+	assert.True(t, errors.Is(err, os.ErrNotExist))
 }
 
 func TestWrite_WritesConfigYAML(t *testing.T) {
