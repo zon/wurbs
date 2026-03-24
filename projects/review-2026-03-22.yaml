@@ -99,7 +99,7 @@ requirements:
     items:
       - Change Connect() in core/nats/nats.go to return NATSPublisher interface instead of *Conn concrete type (following crypto/cipher pattern like NewCTR returning Stream interface)
       - Update callers of Connect() in rest/main.go and socket/main.go to use the interface type
-    passing: false
+    passing: true
 
   - category: backend
     description: Handler structs should directly contain their own dependencies instead of using a shared Deps struct

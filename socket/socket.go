@@ -12,8 +12,8 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/zon/chat/core/auth"
 	"github.com/zon/chat/core/channel"
-	"github.com/zon/chat/core/user"
 	corenats "github.com/zon/chat/core/nats"
+	"github.com/zon/chat/core/user"
 	"gorm.io/gorm"
 )
 
@@ -25,7 +25,7 @@ type subscriber interface {
 	Subscribe(subject string, cb func([]byte)) (unsubscribe func(), err error)
 }
 
-type natsSubscriber struct{ conn *corenats.Conn }
+type natsSubscriber struct{ conn corenats.NATSPublisher }
 
 func (n *natsSubscriber) Subscribe(subject string, cb func([]byte)) (func(), error) {
 	sub, err := n.conn.Subscribe(subject, cb)
@@ -36,7 +36,7 @@ func (n *natsSubscriber) Subscribe(subject string, cb func([]byte)) (func(), err
 }
 
 // New returns an http.Handler for the socket service.
-func New(conn *corenats.Conn, authMW func(http.Handler) http.Handler, db *gorm.DB) http.Handler {
+func New(conn corenats.NATSPublisher, authMW func(http.Handler) http.Handler, db *gorm.DB) http.Handler {
 	return newHandler(&natsSubscriber{conn: conn}, authMW, db)
 }
 

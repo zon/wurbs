@@ -16,6 +16,12 @@ const (
 
 const envNatsTokenFile = "WURB_NATS_TOKEN_FILE"
 
+type NATSPublisher interface {
+	Publish(subject string, data any) error
+	Subscribe(subject string, cb func([]byte)) (*Subscription, error)
+	Close()
+}
+
 // Conn wraps a NATS connection.
 type Conn struct {
 	nc *nats.Conn
@@ -57,7 +63,7 @@ var dial = func(url string, opts ...nats.Option) (*nats.Conn, error) {
 // token for auth callout if available, and returns a connected Conn.
 // If WURB_NATS_TOKEN_FILE is set, the token from that file takes precedence
 // over the k8s service account token.
-func Connect() (*Conn, error) {
+func Connect() (NATSPublisher, error) {
 	cfg, err := config.Load()
 	if err != nil {
 		return nil, fmt.Errorf("nats: failed to load config: %w", err)
