@@ -75,7 +75,7 @@ requirements:
       - Fix iota usage in core/user/user.go - use blank identifier to skip iota=0 (use const block with _ = iota, userContextKey contextKey = iota)
       - Fix iota usage in core/auth/user.go - use blank identifier to skip iota=0 (use const block with _ = iota, userContextKey contextKey = iota)
       - "No ByteSize pattern found - review not applicable"
-    passing: false
+    passing: true
 
   - category: backend
     description: Review Go type assertion patterns
