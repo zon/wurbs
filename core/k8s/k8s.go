@@ -9,6 +9,8 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+
+	k8syaml "github.com/zon/chat/core/k8s/yaml"
 )
 
 // GetNodeIP returns the InternalIP of the first ready worker node.
@@ -146,35 +148,9 @@ func kubectlApply(yaml, namespace, context string) error {
 }
 
 func BuildConfigmapYAML(name, namespace string, data map[string]string) string {
-	var sb strings.Builder
-	sb.WriteString("apiVersion: v1\n")
-	sb.WriteString("kind: ConfigMap\n")
-	sb.WriteString("metadata:\n")
-	sb.WriteString(fmt.Sprintf("  name: %s\n", name))
-	if namespace != "" {
-		sb.WriteString(fmt.Sprintf("  namespace: %s\n", namespace))
-	}
-	sb.WriteString("data:\n")
-	for k, v := range data {
-		sb.WriteString(fmt.Sprintf("  %s: %q\n", k, v))
-	}
-	return sb.String()
+	return k8syaml.BuildConfigmapYAML(name, namespace, data)
 }
 
 func BuildSecretYAML(name, namespace string, data map[string]string) string {
-	var sb strings.Builder
-	sb.WriteString("apiVersion: v1\n")
-	sb.WriteString("kind: Secret\n")
-	sb.WriteString("metadata:\n")
-	sb.WriteString(fmt.Sprintf("  name: %s\n", name))
-	if namespace != "" {
-		sb.WriteString(fmt.Sprintf("  namespace: %s\n", namespace))
-	}
-	sb.WriteString("type: Opaque\n")
-	sb.WriteString("data:\n")
-	for k, v := range data {
-		encoded := base64.StdEncoding.EncodeToString([]byte(v))
-		sb.WriteString(fmt.Sprintf("  %s: %s\n", k, encoded))
-	}
-	return sb.String()
+	return k8syaml.BuildSecretYAML(name, namespace, data)
 }

@@ -14,4 +14,4 @@ requirements:
     items:
       - Review if any functions in k8s module belong to other domains (e.g., YAML building could be generic)
       - Consider extracting generic YAML building if needed elsewhere
-    passing: false
+    passing: true
