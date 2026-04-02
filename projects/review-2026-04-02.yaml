@@ -1,0 +1,12 @@
+name: review-2026-04-02
+description: Review of Specifications component for deep modules
+
+requirements:
+  - category: specifications
+    description: Specifications are the single source of truth for API contracts
+    items:
+      - The REST API implementation matches the OpenAPI specification (specs/rest.yaml)
+      - The WebSocket API implementation matches the AsyncAPI specification (specs/socket.yaml)
+      - API documentation is generated from the specifications
+      - Type definitions are generated from the specifications for client and server code
+    passing: false
