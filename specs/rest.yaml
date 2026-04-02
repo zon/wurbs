@@ -280,7 +280,6 @@ components:
       description: User identifier
       schema:
         type: string
-        format: uuid
     channelId:
       name: channelId
       in: path
@@ -288,7 +287,6 @@ components:
       description: Channel identifier
       schema:
         type: string
-        format: uuid
     messageId:
       name: messageId
       in: path
@@ -296,7 +294,6 @@ components:
       description: Message identifier
       schema:
         type: string
-        format: uuid
 
   schemas:
     RefreshInput:
@@ -330,7 +327,6 @@ components:
       properties:
         id:
           type: string
-          format: uuid
         username:
           type: string
           description: Null until the user completes onboarding after first login
@@ -361,7 +357,6 @@ components:
       properties:
         id:
           type: string
-          format: uuid
         name:
           type: string
         description:
@@ -403,10 +398,8 @@ components:
       properties:
         channelId:
           type: string
-          format: uuid
         userId:
           type: string
-          format: uuid
         joinedAt:
           type: string
           format: date-time
@@ -418,7 +411,6 @@ components:
           properties:
             userId:
               type: string
-              format: uuid
         - type: object
           required: [email]
           description: Creates a new user with this email if no account exists, then invites them.
@@ -433,13 +425,10 @@ components:
       properties:
         id:
           type: string
-          format: uuid
         channelId:
           type: string
-          format: uuid
         userId:
           type: string
-          format: uuid
         body:
           type: string
           description: Markdown body
