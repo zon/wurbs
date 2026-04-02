@@ -102,7 +102,6 @@ components:
       properties:
         id:
           type: string
-          format: uuid
         username:
           type: string
           description: Null until the user completes onboarding after first login
@@ -124,13 +123,10 @@ components:
       properties:
         id:
           type: string
-          format: uuid
         channelId:
           type: string
-          format: uuid
         userId:
           type: string
-          format: uuid
         body:
           type: string
           description: Markdown body
@@ -168,6 +164,5 @@ components:
       properties:
         userId:
           type: string
-          format: uuid
         username:
           type: string

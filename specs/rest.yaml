@@ -122,6 +122,19 @@ paths:
                 $ref: '#/components/schemas/User'
 
   /channels:
+    get:
+      operationId: listChannels
+      summary: List channels
+      tags: [Channels]
+      responses:
+        '200':
+          description: List of channels
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Channel'
     post:
       operationId: createChannel
       summary: Create a channel (admin only)
@@ -156,7 +169,7 @@ paths:
                 $ref: '#/components/schemas/Channel'
     patch:
       operationId: updateChannel
-      summary: Update a channel (admin only). Channels may be inactive but not deleted.
+      summary: Update a channel (admin only). Channels may be inactive or deleted.
       tags: [Channels]
       requestBody:
         required: true
@@ -171,7 +184,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Channel'
-
+    delete:
+      operationId: deleteChannel
+      summary: Delete a channel (admin only)
+      tags: [Channels]
+      responses:
+        '200':
+          description: Channel deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted:
+                    type: boolean
   /channels/{channelId}/members:
     parameters:
       - $ref: '#/components/parameters/channelId'

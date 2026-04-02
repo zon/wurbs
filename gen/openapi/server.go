@@ -25,13 +25,19 @@ type ServerInterface interface {
 	// Exchange a refresh token for a new access token.
 	// (POST /auth/refresh)
 	Refresh(c *gin.Context)
+	// List channels
+	// (GET /channels)
+	ListChannels(c *gin.Context)
 	// Create a channel (admin only)
 	// (POST /channels)
 	CreateChannel(c *gin.Context)
+	// Delete a channel (admin only)
+	// (DELETE /channels/{channelId})
+	DeleteChannel(c *gin.Context, channelId ChannelId)
 	// Get a channel by ID
 	// (GET /channels/{channelId})
 	GetChannel(c *gin.Context, channelId ChannelId)
-	// Update a channel (admin only). Channels may be inactive but not deleted.
+	// Update a channel (admin only). Channels may be inactive or deleted.
 	// (PATCH /channels/{channelId})
 	UpdateChannel(c *gin.Context, channelId ChannelId)
 	// Invite a user to a channel by email (admin only). Creates the user if no account with that email exists.
@@ -148,6 +154,21 @@ func (siw *ServerInterfaceWrapper) Refresh(c *gin.Context) {
 	siw.Handler.Refresh(c)
 }
 
+// ListChannels operation middleware
+func (siw *ServerInterfaceWrapper) ListChannels(c *gin.Context) {
+
+	c.Set(OidcScopes, []string{})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListChannels(c)
+}
+
 // CreateChannel operation middleware
 func (siw *ServerInterfaceWrapper) CreateChannel(c *gin.Context) {
 
@@ -161,6 +182,32 @@ func (siw *ServerInterfaceWrapper) CreateChannel(c *gin.Context) {
 	}
 
 	siw.Handler.CreateChannel(c)
+}
+
+// DeleteChannel operation middleware
+func (siw *ServerInterfaceWrapper) DeleteChannel(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "channelId" -------------
+	var channelId ChannelId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "channelId", c.Param("channelId"), &channelId, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter channelId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	c.Set(OidcScopes, []string{})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.DeleteChannel(c, channelId)
 }
 
 // GetChannel operation middleware
@@ -447,7 +494,9 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.GET(options.BaseURL+"/auth/login", wrapper.Login)
 	router.POST(options.BaseURL+"/auth/logout", wrapper.Logout)
 	router.POST(options.BaseURL+"/auth/refresh", wrapper.Refresh)
+	router.GET(options.BaseURL+"/channels", wrapper.ListChannels)
 	router.POST(options.BaseURL+"/channels", wrapper.CreateChannel)
+	router.DELETE(options.BaseURL+"/channels/:channelId", wrapper.DeleteChannel)
 	router.GET(options.BaseURL+"/channels/:channelId", wrapper.GetChannel)
 	router.PATCH(options.BaseURL+"/channels/:channelId", wrapper.UpdateChannel)
 	router.POST(options.BaseURL+"/channels/:channelId/members", wrapper.InviteMember)
