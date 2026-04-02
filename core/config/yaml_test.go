@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"os"
 	"testing"
 
@@ -16,7 +17,7 @@ func TestLoad_ErrorWhenFileMissing(t *testing.T) {
 	var cfg struct{}
 	err := LoadYAML(&cfg)
 	assert.Error(t, err)
-	assert.True(t, os.IsNotExist(err))
+	assert.True(t, errors.Is(err, os.ErrNotExist))
 }
 
 func TestLoadSecret_ErrorWhenFileMissing(t *testing.T) {
@@ -28,5 +29,5 @@ func TestLoadSecret_ErrorWhenFileMissing(t *testing.T) {
 	var secret struct{}
 	err := LoadSecret(&secret)
 	assert.Error(t, err)
-	assert.True(t, os.IsNotExist(err))
+	assert.True(t, errors.Is(err, os.ErrNotExist))
 }

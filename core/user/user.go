@@ -38,7 +38,10 @@ var (
 
 type contextKey int
 
-const userContextKey contextKey = iota
+const (
+	_                         = iota
+	userContextKey contextKey = iota
+)
 
 func UserFromContext(ctx context.Context) (*User, error) {
 	u, ok := ctx.Value(userContextKey).(*User)

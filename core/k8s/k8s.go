@@ -12,7 +12,7 @@ import (
 )
 
 // GetNodeIP returns the InternalIP of the first ready worker node.
-func GetNodeIP(context string) (string, error) {
+func GetNodeIP(context string) (ip string, err error) {
 	args := []string{"get", "nodes", "-o", "jsonpath={.items[0].status.addresses[?(@.type==\"InternalIP\")].address}"}
 	if context != "" {
 		args = append(args, "--context", context)
@@ -24,7 +24,7 @@ func GetNodeIP(context string) (string, error) {
 		return "", fmt.Errorf("kubectl get nodes failed: %w", err)
 	}
 
-	ip := strings.TrimSpace(string(output))
+	ip = strings.TrimSpace(string(output))
 	if ip == "" {
 		return "", fmt.Errorf("no InternalIP found on cluster nodes")
 	}
@@ -32,7 +32,7 @@ func GetNodeIP(context string) (string, error) {
 	return ip, nil
 }
 
-func GetClusterIP(context string) (string, error) {
+func GetClusterIP(context string) (host string, err error) {
 	args := []string{"config", "view", "--minify", "-o", "jsonpath={.clusters[0].cluster.server}"}
 	if context != "" {
 		args = append(args, "--context", context)
@@ -50,7 +50,7 @@ func GetClusterIP(context string) (string, error) {
 		return "", fmt.Errorf("failed to parse cluster server URL %q: %w", server, err)
 	}
 
-	host := u.Hostname()
+	host = u.Hostname()
 	if host == "" {
 		return "", fmt.Errorf("no host found in cluster server URL %q", server)
 	}
@@ -62,7 +62,7 @@ func GetClusterIP(context string) (string, error) {
 	return host, nil
 }
 
-func GetSecret(name, namespace, context string) (map[string]string, error) {
+func GetSecret(name, namespace, context string) (data map[string]string, err error) {
 	args := []string{"get", "secret", name, "-o", "json"}
 	if namespace != "" {
 		args = append(args, "--namespace", namespace)
@@ -77,7 +77,7 @@ func GetSecret(name, namespace, context string) (map[string]string, error) {
 		return nil, fmt.Errorf("kubectl get secret failed: %w", err)
 	}
 
-	data, err := parseK8sSecretJSON(output)
+	data, err = parseK8sSecretJSON(output)
 	if err != nil {
 		return nil, err
 	}

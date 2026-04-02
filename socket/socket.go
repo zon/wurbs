@@ -13,6 +13,7 @@ import (
 	"github.com/zon/chat/core/auth"
 	"github.com/zon/chat/core/channel"
 	corenats "github.com/zon/chat/core/nats"
+	"github.com/zon/chat/core/user"
 	"gorm.io/gorm"
 )
 
@@ -21,12 +22,12 @@ var upgrader = websocket.Upgrader{
 }
 
 type subscriber interface {
-	subscribe(subject string, cb func([]byte)) (unsubscribe func(), err error)
+	Subscribe(subject string, cb func([]byte)) (unsubscribe func(), err error)
 }
 
-type natsSubscriber struct{ conn *corenats.Conn }
+type natsSubscriber struct{ conn corenats.NATSPublisher }
 
-func (n *natsSubscriber) subscribe(subject string, cb func([]byte)) (func(), error) {
+func (n *natsSubscriber) Subscribe(subject string, cb func([]byte)) (func(), error) {
 	sub, err := n.conn.Subscribe(subject, cb)
 	if err != nil {
 		return nil, err
@@ -35,7 +36,7 @@ func (n *natsSubscriber) subscribe(subject string, cb func([]byte)) (func(), err
 }
 
 // New returns an http.Handler for the socket service.
-func New(conn *corenats.Conn, authMW func(http.Handler) http.Handler, db *gorm.DB) http.Handler {
+func New(conn corenats.NATSPublisher, authMW func(http.Handler) http.Handler, db *gorm.DB) http.Handler {
 	return newHandler(&natsSubscriber{conn: conn}, authMW, db)
 }
 
@@ -79,7 +80,7 @@ func serveChannel(sub subscriber, db *gorm.DB, w http.ResponseWriter, r *http.Re
 
 	var mu sync.Mutex
 
-	msgsUnsub, err := sub.subscribe(messageSubject(id), func(data []byte) {
+	msgsUnsub, err := sub.Subscribe(messageSubject(id), func(data []byte) {
 		mu.Lock()
 		defer mu.Unlock()
 		if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
@@ -92,7 +93,7 @@ func serveChannel(sub subscriber, db *gorm.DB, w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	membersUnsub, err := sub.subscribe(memberSubject(id), func(data []byte) {
+	membersUnsub, err := sub.Subscribe(memberSubject(id), func(data []byte) {
 		mu.Lock()
 		defer mu.Unlock()
 		if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
@@ -106,7 +107,7 @@ func serveChannel(sub subscriber, db *gorm.DB, w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	usersUnsub, err := sub.subscribe(userSubject(id), func(data []byte) {
+	usersUnsub, err := sub.Subscribe(userSubject(id), func(data []byte) {
 		mu.Lock()
 		defer mu.Unlock()
 		if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
@@ -148,7 +149,7 @@ func serveChannel(sub subscriber, db *gorm.DB, w http.ResponseWriter, r *http.Re
 	}()
 }
 
-func isChannelMember(db *gorm.DB, channelID uint, user *auth.User) bool {
+func isChannelMember(db *gorm.DB, channelID uint, user *user.User) bool {
 	if user.IsAdmin {
 		return true
 	}
@@ -180,15 +181,16 @@ func userSubject(id uint) string {
 	return fmt.Sprintf("wurbs.channel.%d.users", id)
 }
 
-func parseChannelID(path string) (uint, error) {
+func parseChannelID(path string) (id uint, err error) {
 	path = strings.TrimSuffix(path, "/")
 	parts := strings.Split(path, "/")
 	if len(parts) != 3 || parts[1] != "channels" {
 		return 0, fmt.Errorf("invalid channel path")
 	}
-	id, err := strconv.ParseUint(parts[2], 10, 64)
-	if err != nil || id == 0 {
+	parsedID, err := strconv.ParseUint(parts[2], 10, 64)
+	if err != nil || parsedID == 0 {
 		return 0, fmt.Errorf("invalid channel id")
 	}
-	return uint(id), nil
+	id = uint(parsedID)
+	return
 }

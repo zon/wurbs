@@ -8,6 +8,7 @@ import (
 	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	usermod "github.com/zon/chat/core/user"
 )
 
 // --- validateOIDCToken tests ---
@@ -117,7 +118,7 @@ func TestResolveOIDCUser_CreatesNewUser(t *testing.T) {
 func TestResolveOIDCUser_FindsExisting(t *testing.T) {
 	db := setupTestDB(t)
 
-	existing := &User{Subject: "sub-exist", Email: "exist@example.com"}
+	existing := &usermod.User{Subject: "sub-exist", Email: "exist@example.com"}
 	require.NoError(t, db.Create(existing).Error)
 
 	claims := &oidcClaims{Subject: "sub-exist", Email: "exist@example.com"}
@@ -130,7 +131,7 @@ func TestResolveOIDCUser_FindsExisting(t *testing.T) {
 func TestResolveOIDCUser_UpdatesEmail(t *testing.T) {
 	db := setupTestDB(t)
 
-	existing := &User{Subject: "sub-update", Email: "old@example.com"}
+	existing := &usermod.User{Subject: "sub-update", Email: "old@example.com"}
 	require.NoError(t, db.Create(existing).Error)
 
 	claims := &oidcClaims{Subject: "sub-update", Email: "new@example.com"}

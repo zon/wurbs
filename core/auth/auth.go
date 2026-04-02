@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/go-jose/go-jose/v4"
+	usermod "github.com/zon/chat/core/user"
 	"golang.org/x/oauth2"
 	"gorm.io/gorm"
 )
@@ -184,7 +185,10 @@ func Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rawIDToken, _ := newToken.Extra("id_token").(string)
+	rawIDToken, ok := newToken.Extra("id_token").(string)
+	if !ok {
+		rawIDToken = ""
+	}
 
 	tokenSet := TokenSet{
 		AccessToken:  newToken.AccessToken,
@@ -268,7 +272,7 @@ func ClientToken(db *gorm.DB) http.HandlerFunc {
 	}
 }
 
-func generateAccessToken(user *User) string {
+func generateAccessToken(user *usermod.User) string {
 	return fmt.Sprintf("client_%d_%s", user.ID, user.Email)
 }
 
@@ -333,7 +337,7 @@ func SessionAuthMiddleware(db *gorm.DB) func(http.Handler) http.Handler {
 				return
 			}
 
-			var user User
+			var user usermod.User
 			result := db.Where("subject = ?", cookie.Value).First(&user)
 			if result.Error != nil {
 				http.Error(w, "unauthorized", http.StatusUnauthorized)
@@ -351,17 +355,17 @@ func SessionAuthMiddleware(db *gorm.DB) func(http.Handler) http.Handler {
 	}
 }
 
-func FindUserBySubject(db *gorm.DB, subject string) (*User, error) {
-	var user User
+func FindUserBySubject(db *gorm.DB, subject string) (*usermod.User, error) {
+	var user usermod.User
 	result := db.Where("subject = ?", subject).First(&user)
 	if result.Error != nil {
-		return nil, result.Error
+		return nil, fmt.Errorf("failed to find user by subject: %w", result.Error)
 	}
 	return &user, nil
 }
 
-func FindOrCreateUserByEmail(db *gorm.DB, email, subject string) (*User, error) {
-	var user User
+func FindOrCreateUserByEmail(db *gorm.DB, email, subject string) (*usermod.User, error) {
+	var user usermod.User
 	result := db.Where("email = ?", email).First(&user)
 
 	if result.Error == nil {
@@ -373,25 +377,25 @@ func FindOrCreateUserByEmail(db *gorm.DB, email, subject string) (*User, error) 
 	}
 
 	if !errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, result.Error
+		return nil, fmt.Errorf("failed to find user by email: %w", result.Error)
 	}
 
-	user = User{
+	user = usermod.User{
 		Email:    email,
 		Subject:  subject,
 		IsActive: true,
 	}
 	if err := db.Create(&user).Error; err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
 	return &user, nil
 }
 
-func FindUserByEmail(db *gorm.DB, email string) (*User, error) {
-	var user User
+func FindUserByEmail(db *gorm.DB, email string) (*usermod.User, error) {
+	var user usermod.User
 	result := db.Where("email = ?", email).First(&user)
 	if result.Error != nil {
-		return nil, result.Error
+		return nil, fmt.Errorf("failed to find user by email: %w", result.Error)
 	}
 	return &user, nil
 }

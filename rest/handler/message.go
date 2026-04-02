@@ -8,28 +8,32 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/zon/chat/core/message"
+	"gorm.io/gorm"
 )
 
-type MessageHandler struct {
-	deps Deps
+type Message struct {
+	DB   *gorm.DB
+	NATS message.Publisher
 }
 
-func NewMessageHandler(deps Deps) *MessageHandler {
-	return &MessageHandler{deps: deps}
+func NewMessage(db *gorm.DB, nats message.Publisher) *Message {
+	return &Message{DB: db, NATS: nats}
 }
 
 type createMessageRequest struct {
 	Content string `json:"content" binding:"required"`
 }
 
-func (h *MessageHandler) CreateMessage(c *gin.Context) {
-	user, ok := currentUser(c)
-	if !ok {
+func (h *Message) CreateMessage(c *gin.Context) {
+	user, err := currentUser(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
-	channelID, ok := parseID(c, "id")
-	if !ok {
+	channelID, err := parseID(c, "id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -39,10 +43,7 @@ func (h *MessageHandler) CreateMessage(c *gin.Context) {
 		return
 	}
 
-	var nc interface {
-		Publish(subject string, data any) error
-	} = h.deps.NATS
-	msg, err := message.Create(h.deps.DB, nc, channelID, user.ID, req.Content)
+	msg, err := message.Create(h.DB, h.NATS, channelID, user.ID, req.Content)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -51,13 +52,15 @@ func (h *MessageHandler) CreateMessage(c *gin.Context) {
 	c.JSON(http.StatusCreated, msg)
 }
 
-func (h *MessageHandler) ListMessages(c *gin.Context) {
-	if _, ok := currentUser(c); !ok {
+func (h *Message) ListMessages(c *gin.Context) {
+	if _, err := currentUser(c); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
-	channelID, ok := parseID(c, "id")
-	if !ok {
+	channelID, err := parseID(c, "id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -65,7 +68,7 @@ func (h *MessageHandler) ListMessages(c *gin.Context) {
 	if raw := c.Query("cursor"); raw != "" {
 		v, err := parseCursor(raw)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid cursor"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "message: invalid cursor"})
 			return
 		}
 		cursor = v
@@ -75,7 +78,7 @@ func (h *MessageHandler) ListMessages(c *gin.Context) {
 	if raw := c.Query("limit"); raw != "" {
 		v, err := parseLimit(raw)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid limit"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "message: invalid limit"})
 			return
 		}
 		limit = v
@@ -85,7 +88,7 @@ func (h *MessageHandler) ListMessages(c *gin.Context) {
 	if raw := c.Query("before"); raw != "" {
 		t, err := time.Parse(time.RFC3339, raw)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid before timestamp"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "message: invalid before timestamp"})
 			return
 		}
 		before = &t
@@ -93,13 +96,13 @@ func (h *MessageHandler) ListMessages(c *gin.Context) {
 	if raw := c.Query("after"); raw != "" {
 		t, err := time.Parse(time.RFC3339, raw)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid after timestamp"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "message: invalid after timestamp"})
 			return
 		}
 		after = &t
 	}
 
-	page, err := message.List(h.deps.DB, channelID, cursor, limit, before, after)
+	page, err := message.List(h.DB, channelID, cursor, limit, before, after)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -119,26 +122,28 @@ func parseCursor(raw string) (uint, error) {
 func parseLimit(raw string) (int, error) {
 	v, err := strconv.Atoi(raw)
 	if err != nil || v <= 0 {
-		return 0, errors.New("invalid limit")
+		return 0, errors.New("message: invalid limit")
 	}
 	return v, nil
 }
 
-func (h *MessageHandler) UpdateMessage(c *gin.Context) {
-	user, ok := currentUser(c)
-	if !ok {
+func (h *Message) UpdateMessage(c *gin.Context) {
+	user, err := currentUser(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
-	messageID, ok := parseID(c, "id")
-	if !ok {
+	messageID, err := parseID(c, "id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	msg, err := message.Get(h.deps.DB, messageID)
+	msg, err := message.Get(h.DB, messageID)
 	if err != nil {
 		if errors.Is(err, message.ErrNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "message not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "message: message not found"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -156,10 +161,7 @@ func (h *MessageHandler) UpdateMessage(c *gin.Context) {
 		return
 	}
 
-	var nc interface {
-		Publish(subject string, data any) error
-	} = h.deps.NATS
-	updated, err := message.Update(h.deps.DB, nc, messageID, req.Content)
+	updated, err := message.Update(h.DB, h.NATS, messageID, req.Content)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -168,21 +170,23 @@ func (h *MessageHandler) UpdateMessage(c *gin.Context) {
 	c.JSON(http.StatusOK, updated)
 }
 
-func (h *MessageHandler) DeleteMessage(c *gin.Context) {
-	user, ok := currentUser(c)
-	if !ok {
+func (h *Message) DeleteMessage(c *gin.Context) {
+	user, err := currentUser(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
-	messageID, ok := parseID(c, "id")
-	if !ok {
+	messageID, err := parseID(c, "id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	msg, err := message.Get(h.deps.DB, messageID)
+	msg, err := message.Get(h.DB, messageID)
 	if err != nil {
 		if errors.Is(err, message.ErrNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "message not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "message: message not found"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -194,12 +198,9 @@ func (h *MessageHandler) DeleteMessage(c *gin.Context) {
 		return
 	}
 
-	var nc interface {
-		Publish(subject string, data any) error
-	} = h.deps.NATS
-	if err := message.Delete(h.deps.DB, nc, messageID); err != nil {
+	if err := message.Delete(h.DB, h.NATS, messageID); err != nil {
 		if errors.Is(err, message.ErrNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "message not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "message: message not found"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

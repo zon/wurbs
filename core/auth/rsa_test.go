@@ -8,6 +8,7 @@ import (
 	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	usermod "github.com/zon/chat/core/user"
 )
 
 // --- parseRSAPublicKey tests ---
@@ -109,7 +110,7 @@ func TestValidateClientToken_InvalidTokenString(t *testing.T) {
 func TestResolveClientUser_FindsByEmail(t *testing.T) {
 	db := setupTestDB(t)
 
-	existing := &User{Email: "admin@example.com", Subject: "sub-admin", IsAdmin: true}
+	existing := &usermod.User{Email: "admin@example.com", Subject: "sub-admin", IsAdmin: true}
 	require.NoError(t, db.Create(existing).Error)
 
 	claims := &clientClaims{Email: "admin@example.com"}
@@ -123,7 +124,7 @@ func TestResolveClientUser_FindsByEmail(t *testing.T) {
 func TestResolveClientUser_FindsBySubject(t *testing.T) {
 	db := setupTestDB(t)
 
-	existing := &User{Subject: "sub-test", Email: "test@example.com", IsTest: true}
+	existing := &usermod.User{Subject: "sub-test", Email: "test@example.com", IsTest: true}
 	require.NoError(t, db.Create(existing).Error)
 
 	claims := &clientClaims{Subject: "sub-test"}

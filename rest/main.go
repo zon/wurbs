@@ -36,7 +36,7 @@ func Main() {
 		os.Exit(1)
 	}
 
-	var nc *corenats.Conn
+	var nc corenats.NATSPublisher
 	nc, err = corenats.Connect()
 	if err != nil {
 		slog.Warn("NATS connection failed, running without NATS", "error", err)

@@ -4,17 +4,16 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/zon/chat/core/message"
 	"github.com/zon/chat/rest/handler"
 	"gorm.io/gorm"
 )
 
-type NATSPublisher interface {
-	Publish(subject string, data any) error
-}
+type Publisher = message.Publisher
 
 type Deps struct {
 	DB   *gorm.DB
-	NATS NATSPublisher
+	NATS Publisher
 }
 
 func New(deps Deps, authMiddleware func(http.Handler) http.Handler) *gin.Engine {
@@ -23,7 +22,7 @@ func New(deps Deps, authMiddleware func(http.Handler) http.Handler) *gin.Engine 
 
 	r.GET("/health", health)
 
-	authHandler := handler.NewAuthHandler(handler.Deps{DB: deps.DB, NATS: deps.NATS})
+	authHandler := handler.NewAuth(deps.DB)
 	r.GET("/auth/login", authHandler.Login)
 	r.GET("/auth/callback", authHandler.Callback)
 	r.POST("/auth/logout", authHandler.Logout)
@@ -33,26 +32,26 @@ func New(deps Deps, authMiddleware func(http.Handler) http.Handler) *gin.Engine 
 	api := r.Group("")
 	api.Use(wrapMiddleware(authMiddleware))
 
-	channelHandler := handler.NewChannelHandler(handler.Deps{DB: deps.DB, NATS: deps.NATS})
+	channelHandler := handler.NewChannel(deps.DB, deps.NATS)
 	api.POST("/channels", channelHandler.CreateChannel)
 	api.GET("/channels", channelHandler.ListChannels)
 	api.GET("/channels/:id", channelHandler.GetChannel)
 	api.PATCH("/channels/:id", channelHandler.UpdateChannel)
 	api.DELETE("/channels/:id", channelHandler.DeleteChannel)
 
-	memberHandler := handler.NewMemberHandler(handler.Deps{DB: deps.DB, NATS: deps.NATS})
+	memberHandler := handler.NewMember(deps.DB, deps.NATS)
 	api.POST("/channels/:id/members", memberHandler.AddMember)
 	api.DELETE("/channels/:id/members/:user_id", memberHandler.RemoveMember)
 	api.GET("/channels/:id/members", memberHandler.ListMembers)
 
-	messageHandler := handler.NewMessageHandler(handler.Deps{DB: deps.DB, NATS: deps.NATS})
+	messageHandler := handler.NewMessage(deps.DB, deps.NATS)
 	api.POST("/channels/:id/messages", messageHandler.CreateMessage)
 	api.GET("/channels/:id/messages", messageHandler.ListMessages)
 
 	api.PATCH("/messages/:id", messageHandler.UpdateMessage)
 	api.DELETE("/messages/:id", messageHandler.DeleteMessage)
 
-	userHandler := handler.NewUserHandler(handler.Deps{DB: deps.DB, NATS: deps.NATS})
+	userHandler := handler.NewUser(deps.DB, deps.NATS)
 	api.GET("/users/:id", userHandler.GetUser)
 	api.PATCH("/users/:id", userHandler.UpdateUser)
 

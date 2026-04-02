@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestUserModel(t *testing.T) {
+func TestUser(t *testing.T) {
 	u := User{}
 	val := reflect.TypeOf(u)
 

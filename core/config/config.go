@@ -8,15 +8,15 @@ import (
 )
 
 type Config struct {
-	RESTPort        int    `yaml:"rest_port"`
-	SocketPort      int    `yaml:"socket_port"`
-	OIDCIssuer      string `yaml:"oidc_issuer"`
-	OIDCClientID    string `yaml:"oidc_client_id"`
-	OIDCClientSec   string `yaml:"oidc_client_secret"`
-	NATSURL         string `yaml:"nats_url"`
-	NATSDevToken    string `yaml:"nats_dev_token"`
-	TestAdmin       string `yaml:"test_admin"`
-	Postgres        string `yaml:"postgres"`
+	RESTPort      int    `yaml:"rest_port"`
+	SocketPort    int    `yaml:"socket_port"`
+	OIDCIssuer    string `yaml:"oidc_issuer"`
+	OIDCClientID  string `yaml:"oidc_client_id"`
+	OIDCClientSec string `yaml:"oidc_client_secret"`
+	NATSURL       string `yaml:"nats_url"`
+	NATSDevToken  string `yaml:"nats_dev_token"`
+	TestAdmin     string `yaml:"test_admin"`
+	Postgres      string `yaml:"postgres"`
 }
 
 func Load() (*Config, error) {
@@ -25,18 +25,19 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
-	cfg := &Config{}
-
 	var cm ConfigMap
 	if err := loadYAML(tree.Config, &cm); err != nil {
 		return nil, err
 	}
-	cfg.RESTPort = cm.RESTPort
-	cfg.SocketPort = cm.SocketPort
-	cfg.OIDCIssuer = cm.OIDCIssuer
-	cfg.OIDCClientID = cm.OIDCClientID
-	cfg.OIDCClientSec = cm.OIDCClientSecret
-	cfg.NATSURL = cm.NATSURL
+
+	cfg := &Config{
+		RESTPort:      cm.RESTPort,
+		SocketPort:    cm.SocketPort,
+		OIDCIssuer:    cm.OIDCIssuer,
+		OIDCClientID:  cm.OIDCClientID,
+		OIDCClientSec: cm.OIDCClientSecret,
+		NATSURL:       cm.NATSURL,
+	}
 
 	if data, err := os.ReadFile(tree.NATSDevToken); err == nil {
 		cfg.NATSDevToken = strings.TrimSpace(string(data))

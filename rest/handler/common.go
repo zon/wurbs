@@ -2,42 +2,28 @@ package handler
 
 import (
 	"fmt"
-	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/zon/chat/core/auth"
-	"gorm.io/gorm"
+	"github.com/zon/chat/core/user"
 )
 
-type Deps struct {
-	DB   *gorm.DB
-	NATS interface {
-		Publish(subject string, data any) error
-	}
-}
-
-type handler struct {
-	deps Deps
-}
-
-func parseID(c *gin.Context, param string) (uint, bool) {
+func parseID(c *gin.Context, param string) (value uint, ok error) {
 	raw := c.Param(param)
 	id, err := strconv.ParseUint(raw, 10, 64)
 	if err != nil || id == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid " + param})
-		return 0, false
+		return 0, fmt.Errorf("common: invalid %s", param)
 	}
-	return uint(id), true
+	return uint(id), nil
 }
 
-func currentUser(c *gin.Context) (*auth.User, bool) {
+func currentUser(c *gin.Context) (user *user.User, ok error) {
 	u, err := auth.UserFromContext(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-		return nil, false
+		return nil, fmt.Errorf("common: unauthorized")
 	}
-	return u, true
+	return u, nil
 }
 
 type userResponse struct {
@@ -48,7 +34,7 @@ type userResponse struct {
 	CreatedAt string  `json:"createdAt"`
 }
 
-func userToResponse(u *auth.User) userResponse {
+func userToResponse(u *user.User) userResponse {
 	return userResponse{
 		ID:        fmt.Sprintf("%d", u.ID),
 		Username:  u.Username,

@@ -3,13 +3,16 @@ package handler
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/zon/chat/core/auth"
 	"github.com/zon/chat/core/channel"
+	"github.com/zon/chat/core/message"
 	"github.com/zon/chat/core/user"
+	"gorm.io/gorm"
 )
 
 type MemberEvent struct {
@@ -26,12 +29,13 @@ type MemberUser struct {
 	CreatedAt time.Time `json:"createdAt"`
 }
 
-type MemberHandler struct {
-	deps Deps
+type Member struct {
+	DB   *gorm.DB
+	NATS message.Publisher
 }
 
-func NewMemberHandler(deps Deps) *MemberHandler {
-	return &MemberHandler{deps: deps}
+func NewMember(db *gorm.DB, nats message.Publisher) *Member {
+	return &Member{DB: db, NATS: nats}
 }
 
 type addMemberRequest struct {
@@ -39,9 +43,10 @@ type addMemberRequest struct {
 	Email  string `json:"email"`
 }
 
-func (h *MemberHandler) AddMember(c *gin.Context) {
-	currentUser, ok := currentUser(c)
-	if !ok {
+func (h *Member) AddMember(c *gin.Context) {
+	currentUser, err := currentUser(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 	if !currentUser.IsAdmin {
@@ -49,8 +54,9 @@ func (h *MemberHandler) AddMember(c *gin.Context) {
 		return
 	}
 
-	channelID, ok := parseID(c, "id")
-	if !ok {
+	channelID, err := parseID(c, "id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -65,11 +71,10 @@ func (h *MemberHandler) AddMember(c *gin.Context) {
 		return
 	}
 
-	var target *auth.User
-	var err error
+	var target *user.User
 
 	if req.UserID != nil {
-		target, err = user.GetUserByID(h.deps.DB, fmt.Sprintf("%d", *req.UserID))
+		target, err = user.GetUserByID(h.DB, fmt.Sprintf("%d", *req.UserID))
 		if err != nil {
 			if errors.Is(err, user.ErrUserNotFound) {
 				c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
@@ -79,14 +84,14 @@ func (h *MemberHandler) AddMember(c *gin.Context) {
 			return
 		}
 	} else {
-		target, err = auth.FindOrCreateUserByEmail(h.deps.DB, req.Email, "")
+		target, err = auth.FindOrCreateUserByEmail(h.DB, req.Email, "")
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 	}
 
-	err = channel.AddMemberAsAdmin(h.deps.DB, channelID, currentUser, target)
+	err = channel.AddMemberAsAdmin(h.DB, channelID, currentUser, target)
 	if err != nil {
 		if errors.Is(err, channel.ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "channel not found"})
@@ -112,7 +117,7 @@ func (h *MemberHandler) AddMember(c *gin.Context) {
 		return
 	}
 
-	if h.deps.NATS != nil {
+	if h.NATS != nil {
 		event := MemberEvent{
 			Type: "joined",
 			User: MemberUser{
@@ -124,15 +129,18 @@ func (h *MemberHandler) AddMember(c *gin.Context) {
 				CreatedAt: target.CreatedAt,
 			},
 		}
-		_ = h.deps.NATS.Publish(fmt.Sprintf("wurbs.channel.%d.members", channelID), event)
+		if err := h.NATS.Publish(fmt.Sprintf("wurbs.channel.%d.members", channelID), event); err != nil {
+			log.Printf("failed to publish member event: %v", err)
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"added": true})
 }
 
-func (h *MemberHandler) RemoveMember(c *gin.Context) {
-	currentUser, ok := currentUser(c)
-	if !ok {
+func (h *Member) RemoveMember(c *gin.Context) {
+	currentUser, err := currentUser(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 	if !currentUser.IsAdmin {
@@ -140,17 +148,19 @@ func (h *MemberHandler) RemoveMember(c *gin.Context) {
 		return
 	}
 
-	channelID, ok := parseID(c, "id")
-	if !ok {
+	channelID, err := parseID(c, "id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	userID, ok := parseID(c, "user_id")
-	if !ok {
+	userID, err := parseID(c, "user_id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	target, err := user.GetUserByID(h.deps.DB, fmt.Sprintf("%d", userID))
+	target, err := user.GetUserByID(h.DB, fmt.Sprintf("%d", userID))
 	if err != nil {
 		if errors.Is(err, user.ErrUserNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
@@ -160,7 +170,7 @@ func (h *MemberHandler) RemoveMember(c *gin.Context) {
 		return
 	}
 
-	err = channel.RemoveMemberAsAdmin(h.deps.DB, channelID, userID, currentUser)
+	err = channel.RemoveMemberAsAdmin(h.DB, channelID, userID, currentUser)
 	if err != nil {
 		if errors.Is(err, channel.ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "member not found"})
@@ -178,7 +188,7 @@ func (h *MemberHandler) RemoveMember(c *gin.Context) {
 		return
 	}
 
-	if h.deps.NATS != nil {
+	if h.NATS != nil {
 		event := MemberEvent{
 			Type: "left",
 			User: MemberUser{
@@ -190,23 +200,27 @@ func (h *MemberHandler) RemoveMember(c *gin.Context) {
 				CreatedAt: target.CreatedAt,
 			},
 		}
-		_ = h.deps.NATS.Publish(fmt.Sprintf("wurbs.channel.%d.members", channelID), event)
+		if err := h.NATS.Publish(fmt.Sprintf("wurbs.channel.%d.members", channelID), event); err != nil {
+			log.Printf("failed to publish member event: %v", err)
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"removed": true})
 }
 
-func (h *MemberHandler) ListMembers(c *gin.Context) {
-	if _, ok := currentUser(c); !ok {
+func (h *Member) ListMembers(c *gin.Context) {
+	if _, err := currentUser(c); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
-	channelID, ok := parseID(c, "id")
-	if !ok {
+	channelID, err := parseID(c, "id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	members, err := channel.Members(h.deps.DB, channelID)
+	members, err := channel.Members(h.DB, channelID)
 	if err != nil {
 		if errors.Is(err, channel.ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "channel not found"})

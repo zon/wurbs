@@ -80,7 +80,9 @@ func TestHealth(t *testing.T) {
 
 func TestCreateChannel(t *testing.T) {
 	ch := createChannel(t, "test-channel-e2e", true, true)
-	testChannelID = ch["id"].(string)
+	id, ok := ch["id"].(string)
+	require.True(t, ok, "expected channel id to be a string")
+	testChannelID = id
 	assert.NotEmpty(t, testChannelID)
 }
 
@@ -233,7 +235,9 @@ func TestCreateMessage(t *testing.T) {
 
 	var msg map[string]interface{}
 	json.NewDecoder(resp.Body).Decode(&msg)
-	testMessageID = msg["id"].(string)
+	id, ok := msg["id"].(string)
+	require.True(t, ok, "expected message id to be a string")
+	testMessageID = id
 	assert.NotEmpty(t, testMessageID)
 }
 
@@ -388,7 +392,9 @@ func TestRemoveMember(t *testing.T) {
 
 func TestDeleteChannel(t *testing.T) {
 	ch := createChannel(t, "channel-to-delete", true, true)
-	deleteChannelID := ch["id"].(string)
+	id, ok := ch["id"].(string)
+	require.True(t, ok, "expected channel id to be a string")
+	deleteChannelID := id
 
 	headers := getAuthHeaders(t)
 	require.NotNil(t, headers)

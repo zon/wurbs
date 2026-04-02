@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 )
@@ -50,10 +51,10 @@ func newConfigTree(parent string) *ConfigTree {
 }
 
 // findRepoRoot walks up from the working directory to find the git repo root.
-func findRepoRoot() (string, error) {
-	dir, err := os.Getwd()
+func findRepoRoot() (dir string, err error) {
+	dir, err = os.Getwd()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to get current working directory: %w", err)
 	}
 	for {
 		if isDir(filepath.Join(dir, ".git")) {
@@ -107,10 +108,10 @@ func Dir() (*ConfigTree, error) {
 }
 
 // findRepoConfigDir returns <git-repo-root>/config if it exists.
-func findRepoConfigDir() (string, error) {
+func findRepoConfigDir() (dir string, err error) {
 	root, err := findRepoRoot()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to find repo config dir: %w", err)
 	}
 	configDir := filepath.Join(root, "config")
 	if !isDir(configDir) {
