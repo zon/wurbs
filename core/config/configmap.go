@@ -1,13 +1,11 @@
 package config
 
 import (
-	"fmt"
-	"os"
-	"os/exec"
-	"strings"
-
+	"github.com/zon/chat/core/k8s"
 	"gopkg.in/yaml.v3"
 )
+
+var applyConfigmapFunc = k8s.ApplyConfigmap
 
 const (
 	configMapName          = "wurbs"
@@ -40,7 +38,7 @@ func (c *ConfigMap) WriteToK8s(context string) error {
 	if err != nil {
 		return err
 	}
-	return k8sApplyConfigmap(configMapName, ralphWorkflowNamespace, context, data)
+	return applyConfigmapFunc(configMapName, ralphWorkflowNamespace, context, data)
 }
 
 func (c *ConfigMap) MarshalConfigMap() (map[string]string, error) {
@@ -51,45 +49,4 @@ func (c *ConfigMap) MarshalConfigMap() (map[string]string, error) {
 	return map[string]string{
 		"config.yaml": string(data),
 	}, nil
-}
-
-func k8sApplyConfigmap(name, namespace, context string, data map[string]string) error {
-	yaml := BuildConfigmapYAML(name, namespace, data)
-	return kubectlApply(yaml, namespace, context)
-}
-
-func kubectlApply(yaml, namespace, context string) error {
-	args := []string{"apply", "-f", "-"}
-	if namespace != "" {
-		args = append(args, "--namespace", namespace)
-	}
-	if context != "" {
-		args = append(args, "--context", context)
-	}
-
-	cmd := exec.Command("kubectl", args...)
-	cmd.Stdin = strings.NewReader(yaml)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("kubectl apply failed: %w", err)
-	}
-	return nil
-}
-
-func BuildConfigmapYAML(name, namespace string, data map[string]string) string {
-	var sb strings.Builder
-	sb.WriteString("apiVersion: v1\n")
-	sb.WriteString("kind: ConfigMap\n")
-	sb.WriteString("metadata:\n")
-	sb.WriteString(fmt.Sprintf("  name: %s\n", name))
-	if namespace != "" {
-		sb.WriteString(fmt.Sprintf("  namespace: %s\n", namespace))
-	}
-	sb.WriteString("data:\n")
-	for k, v := range data {
-		sb.WriteString(fmt.Sprintf("  %s: %q\n", k, v))
-	}
-	return sb.String()
 }

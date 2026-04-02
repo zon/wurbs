@@ -7,7 +7,7 @@ requirements:
     items:
       - Replace kubectlApply and BuildConfigmapYAML in core/config/configmap.go with calls to k8s.ApplyConfigmap and k8s.BuildConfigmapYAML
       - Remove duplicate kubectlApply implementation from config package
-    passing: false
+    passing: true
 
   - category: backend
     description: Ensure k8s module has a well-defined single area of responsibility
