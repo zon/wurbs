@@ -89,6 +89,26 @@ paths:
               schema:
                 $ref: '#/components/schemas/TokenSet'
 
+  /auth/token:
+    post:
+      operationId: token
+      summary: Exchange a client assertion for an access token.
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientTokenInput'
+      responses:
+        '200':
+          description: Token response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenSet'
+
   /users/{userId}:
     parameters:
       - $ref: '#/components/parameters/userId'
@@ -122,6 +142,19 @@ paths:
                 $ref: '#/components/schemas/User'
 
   /channels:
+    get:
+      operationId: listChannels
+      summary: List channels
+      tags: [Channels]
+      responses:
+        '200':
+          description: List of channels
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Channel'
     post:
       operationId: createChannel
       summary: Create a channel (admin only)
@@ -156,7 +189,7 @@ paths:
                 $ref: '#/components/schemas/Channel'
     patch:
       operationId: updateChannel
-      summary: Update a channel (admin only). Channels may be inactive but not deleted.
+      summary: Update a channel (admin only). Channels may be inactive or deleted.
       tags: [Channels]
       requestBody:
         required: true
@@ -171,10 +204,36 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Channel'
-
+    delete:
+      operationId: deleteChannel
+      summary: Delete a channel (admin only)
+      tags: [Channels]
+      responses:
+        '200':
+          description: Channel deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted:
+                    type: boolean
   /channels/{channelId}/members:
     parameters:
       - $ref: '#/components/parameters/channelId'
+    get:
+      operationId: listMembers
+      summary: List members of a channel
+      tags: [Channels]
+      responses:
+        '200':
+          description: List of channel members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
     post:
       operationId: inviteMember
       summary: Invite a user to a channel by email (admin only). Creates the user if no account with that email exists.
@@ -192,6 +251,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Member'
+
+  /channels/{channelId}/members/{userId}:
+    parameters:
+      - $ref: '#/components/parameters/channelId'
+      - $ref: '#/components/parameters/userId'
+    delete:
+      operationId: deleteMember
+      summary: Remove a member from a channel (admin only)
+      tags: [Channels]
+      responses:
+        '200':
+          description: Member removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted:
+                    type: boolean
 
   /channels/{channelId}/messages:
     parameters:
@@ -280,7 +358,6 @@ components:
       description: User identifier
       schema:
         type: string
-        format: uuid
     channelId:
       name: channelId
       in: path
@@ -288,7 +365,6 @@ components:
       description: Channel identifier
       schema:
         type: string
-        format: uuid
     messageId:
       name: messageId
       in: path
@@ -296,7 +372,6 @@ components:
       description: Message identifier
       schema:
         type: string
-        format: uuid
 
   schemas:
     RefreshInput:
@@ -305,6 +380,21 @@ components:
       properties:
         refreshToken:
           type: string
+
+    ClientTokenInput:
+      type: object
+      required: [grantType, clientId, clientAssertion, clientAssertionType]
+      properties:
+        grantType:
+          type: string
+          enum: [client_credentials]
+        clientId:
+          type: string
+        clientAssertion:
+          type: string
+        clientAssertionType:
+          type: string
+          enum: [urn:ietf:params:oauth:client-assertion-type:jwt-bearer]
 
     TokenSet:
       type: object
@@ -330,7 +420,6 @@ components:
       properties:
         id:
           type: string
-          format: uuid
         username:
           type: string
           description: Null until the user completes onboarding after first login
@@ -361,7 +450,6 @@ components:
       properties:
         id:
           type: string
-          format: uuid
         name:
           type: string
         description:
@@ -399,17 +487,16 @@ components:
 
     Member:
       type: object
-      required: [channelId, userId, joinedAt]
+      required: [channelId, userId]
       properties:
         channelId:
           type: string
-          format: uuid
         userId:
           type: string
-          format: uuid
         joinedAt:
           type: string
           format: date-time
+          description: When the user joined the channel (optional)
 
     InviteMemberInput:
       oneOf:
@@ -418,7 +505,6 @@ components:
           properties:
             userId:
               type: string
-              format: uuid
         - type: object
           required: [email]
           description: Creates a new user with this email if no account exists, then invites them.
@@ -433,13 +519,10 @@ components:
       properties:
         id:
           type: string
-          format: uuid
         channelId:
           type: string
-          format: uuid
         userId:
           type: string
-          format: uuid
         body:
           type: string
           description: Markdown body

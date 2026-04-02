@@ -9,4 +9,4 @@ requirements:
       - The WebSocket API implementation matches the AsyncAPI specification (specs/socket.yaml)
       - API documentation is generated from the specifications
       - Type definitions are generated from the specifications for client and server code
-    passing: false
+    passing: true

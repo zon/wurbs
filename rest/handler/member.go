@@ -21,7 +21,7 @@ type MemberEvent struct {
 }
 
 type MemberUser struct {
-	ID        uint      `json:"id"`
+	ID        string    `json:"id"`
 	Username  *string   `json:"username"`
 	Email     string    `json:"email"`
 	Admin     bool      `json:"admin"`
@@ -38,9 +38,15 @@ func NewMember(db *gorm.DB, nats message.Publisher) *Member {
 	return &Member{DB: db, NATS: nats}
 }
 
-type addMemberRequest struct {
-	UserID *uint  `json:"user_id"`
-	Email  string `json:"email"`
+type inviteMemberRequest struct {
+	UserID *string `json:"userId"`
+	Email  string  `json:"email"`
+}
+
+type memberResponse struct {
+	ChannelID string    `json:"channelId"`
+	UserID    string    `json:"userId"`
+	JoinedAt  time.Time `json:"joinedAt,omitempty"`
 }
 
 func (h *Member) AddMember(c *gin.Context) {
@@ -60,21 +66,21 @@ func (h *Member) AddMember(c *gin.Context) {
 		return
 	}
 
-	var req addMemberRequest
+	var req inviteMemberRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if req.UserID == nil && req.Email == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "user_id or email required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "userId or email required"})
 		return
 	}
 
 	var target *user.User
 
 	if req.UserID != nil {
-		target, err = user.GetUserByID(h.DB, fmt.Sprintf("%d", *req.UserID))
+		target, err = user.GetUserByID(h.DB, *req.UserID)
 		if err != nil {
 			if errors.Is(err, user.ErrUserNotFound) {
 				c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
@@ -121,7 +127,7 @@ func (h *Member) AddMember(c *gin.Context) {
 		event := MemberEvent{
 			Type: "joined",
 			User: MemberUser{
-				ID:        target.ID,
+				ID:        fmt.Sprintf("%d", target.ID),
 				Username:  target.Username,
 				Email:     target.Email,
 				Admin:     target.IsAdmin,
@@ -134,7 +140,11 @@ func (h *Member) AddMember(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusOK, gin.H{"added": true})
+	c.JSON(http.StatusCreated, memberResponse{
+		ChannelID: fmt.Sprintf("%d", channelID),
+		UserID:    fmt.Sprintf("%d", target.ID),
+		JoinedAt:  time.Now(),
+	})
 }
 
 func (h *Member) RemoveMember(c *gin.Context) {
@@ -192,7 +202,7 @@ func (h *Member) RemoveMember(c *gin.Context) {
 		event := MemberEvent{
 			Type: "left",
 			User: MemberUser{
-				ID:        target.ID,
+				ID:        fmt.Sprintf("%d", target.ID),
 				Username:  target.Username,
 				Email:     target.Email,
 				Admin:     target.IsAdmin,
@@ -205,7 +215,7 @@ func (h *Member) RemoveMember(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusOK, gin.H{"removed": true})
+	c.JSON(http.StatusOK, gin.H{"deleted": true})
 }
 
 func (h *Member) ListMembers(c *gin.Context) {
@@ -230,5 +240,9 @@ func (h *Member) ListMembers(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, members)
+	responses := make([]userResponse, len(members))
+	for i, m := range members {
+		responses[i] = userToResponse(&m)
+	}
+	c.JSON(http.StatusOK, responses)
 }
