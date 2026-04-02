@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/zon/chat/core/config"
-	"github.com/zon/chat/core/k8s"
+	k8syaml "github.com/zon/chat/core/k8s/yaml"
 )
 
 func TestSetConfigCmd_ConfigmapWithOIDCIssuer(t *testing.T) {
@@ -19,7 +19,7 @@ func TestSetConfigCmd_ConfigmapWithOIDCIssuer(t *testing.T) {
 		"oidc-issuer": cmd.OIDCIssuer,
 	}
 
-	yaml := k8s.BuildConfigmapYAML("wurbs-config", ralphWorkflowNamespace, data)
+	yaml := k8syaml.BuildConfigmapYAML("wurbs-config", ralphWorkflowNamespace, data)
 
 	assert.Contains(t, yaml, "apiVersion: v1")
 	assert.Contains(t, yaml, "kind: ConfigMap")
@@ -41,7 +41,7 @@ func TestSetConfigCmd_ConfigmapWithOIDCClientCredentials(t *testing.T) {
 		"oidc-client-secret": cmd.OIDCClientSecret,
 	}
 
-	yaml := k8s.BuildConfigmapYAML("wurbs-config", ralphWorkflowNamespace, data)
+	yaml := k8syaml.BuildConfigmapYAML("wurbs-config", ralphWorkflowNamespace, data)
 
 	assert.Contains(t, yaml, "oidc-client-id: \"my-client-id\"")
 	assert.Contains(t, yaml, "oidc-client-secret: \"my-client-secret\"")
@@ -76,7 +76,7 @@ func TestSetConfigCmd_ConfigTreePaths(t *testing.T) {
 
 func TestSetConfigCmd_NATSSecretYAML(t *testing.T) {
 	token := "my-dev-token"
-	yaml := k8s.BuildSecretYAML(natsWriteSecret, ralphWorkflowNamespace, map[string]string{natsReadTokenKey: token})
+	yaml := k8syaml.BuildSecretYAML(natsWriteSecret, ralphWorkflowNamespace, map[string]string{natsReadTokenKey: token})
 
 	assert.Contains(t, yaml, "kind: Secret")
 	assert.Contains(t, yaml, "name: "+natsWriteSecret)
@@ -86,7 +86,7 @@ func TestSetConfigCmd_NATSSecretYAML(t *testing.T) {
 }
 
 func TestSetConfigCmd_TestAdminSecretYAML(t *testing.T) {
-	yaml := k8s.BuildSecretYAML(testAdminSecretName, ralphWorkflowNamespace, map[string]string{
+	yaml := k8syaml.BuildSecretYAML(testAdminSecretName, ralphWorkflowNamespace, map[string]string{
 		"email":      "test-admin@example.com",
 		"privateKey": "private-key-data",
 		"publicKey":  "public-key-data",
