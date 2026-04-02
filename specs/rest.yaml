@@ -89,6 +89,26 @@ paths:
               schema:
                 $ref: '#/components/schemas/TokenSet'
 
+  /auth/token:
+    post:
+      operationId: token
+      summary: Exchange a client assertion for an access token.
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientTokenInput'
+      responses:
+        '200':
+          description: Token response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenSet'
+
   /users/{userId}:
     parameters:
       - $ref: '#/components/parameters/userId'
@@ -201,6 +221,19 @@ paths:
   /channels/{channelId}/members:
     parameters:
       - $ref: '#/components/parameters/channelId'
+    get:
+      operationId: listMembers
+      summary: List members of a channel
+      tags: [Channels]
+      responses:
+        '200':
+          description: List of channel members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
     post:
       operationId: inviteMember
       summary: Invite a user to a channel by email (admin only). Creates the user if no account with that email exists.
@@ -218,6 +251,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Member'
+
+  /channels/{channelId}/members/{userId}:
+    parameters:
+      - $ref: '#/components/parameters/channelId'
+      - $ref: '#/components/parameters/userId'
+    delete:
+      operationId: deleteMember
+      summary: Remove a member from a channel (admin only)
+      tags: [Channels]
+      responses:
+        '200':
+          description: Member removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted:
+                    type: boolean
 
   /channels/{channelId}/messages:
     parameters:
@@ -329,6 +381,21 @@ components:
         refreshToken:
           type: string
 
+    ClientTokenInput:
+      type: object
+      required: [grantType, clientId, clientAssertion, clientAssertionType]
+      properties:
+        grantType:
+          type: string
+          enum: [client_credentials]
+        clientId:
+          type: string
+        clientAssertion:
+          type: string
+        clientAssertionType:
+          type: string
+          enum: [urn:ietf:params:oauth:client-assertion-type:jwt-bearer]
+
     TokenSet:
       type: object
       required: [accessToken, tokenType, expiresIn]
@@ -420,7 +487,7 @@ components:
 
     Member:
       type: object
-      required: [channelId, userId, joinedAt]
+      required: [channelId, userId]
       properties:
         channelId:
           type: string
@@ -429,6 +496,7 @@ components:
         joinedAt:
           type: string
           format: date-time
+          description: When the user joined the channel (optional)
 
     InviteMemberInput:
       oneOf:

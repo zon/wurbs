@@ -15,6 +15,36 @@ const (
 	OidcScopes = "oidc.Scopes"
 )
 
+// Defines values for ClientTokenInputClientAssertionType.
+const (
+	UrnIetfParamsOauthClientAssertionTypeJwtBearer ClientTokenInputClientAssertionType = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
+)
+
+// Valid indicates whether the value is a known member of the ClientTokenInputClientAssertionType enum.
+func (e ClientTokenInputClientAssertionType) Valid() bool {
+	switch e {
+	case UrnIetfParamsOauthClientAssertionTypeJwtBearer:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ClientTokenInputGrantType.
+const (
+	ClientCredentials ClientTokenInputGrantType = "client_credentials"
+)
+
+// Valid indicates whether the value is a known member of the ClientTokenInputGrantType enum.
+func (e ClientTokenInputGrantType) Valid() bool {
+	switch e {
+	case ClientCredentials:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for TokenSetTokenType.
 const (
 	Bearer TokenSetTokenType = "Bearer"
@@ -40,6 +70,20 @@ type Channel struct {
 	Public      bool      `json:"public"`
 }
 
+// ClientTokenInput defines model for ClientTokenInput.
+type ClientTokenInput struct {
+	ClientAssertion     string                              `json:"clientAssertion"`
+	ClientAssertionType ClientTokenInputClientAssertionType `json:"clientAssertionType"`
+	ClientId            string                              `json:"clientId"`
+	GrantType           ClientTokenInputGrantType           `json:"grantType"`
+}
+
+// ClientTokenInputClientAssertionType defines model for ClientTokenInput.ClientAssertionType.
+type ClientTokenInputClientAssertionType string
+
+// ClientTokenInputGrantType defines model for ClientTokenInput.GrantType.
+type ClientTokenInputGrantType string
+
 // CreateChannelInput defines model for CreateChannelInput.
 type CreateChannelInput struct {
 	Description *string `json:"description,omitempty"`
@@ -64,9 +108,11 @@ type InviteMemberInput1 struct {
 
 // Member defines model for Member.
 type Member struct {
-	ChannelId string    `json:"channelId"`
-	JoinedAt  time.Time `json:"joinedAt"`
-	UserId    string    `json:"userId"`
+	ChannelId string `json:"channelId"`
+
+	// JoinedAt When the user joined the channel (optional)
+	JoinedAt *time.Time `json:"joinedAt,omitempty"`
+	UserId   string     `json:"userId"`
 }
 
 // Message defines model for Message.
@@ -174,6 +220,9 @@ type ListMessagesParams struct {
 
 // RefreshJSONRequestBody defines body for Refresh for application/json ContentType.
 type RefreshJSONRequestBody = RefreshInput
+
+// TokenJSONRequestBody defines body for Token for application/json ContentType.
+type TokenJSONRequestBody = ClientTokenInput
 
 // CreateChannelJSONRequestBody defines body for CreateChannel for application/json ContentType.
 type CreateChannelJSONRequestBody = CreateChannelInput

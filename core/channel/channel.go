@@ -1,6 +1,7 @@
 package channel
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -10,20 +11,31 @@ import (
 )
 
 type Channel struct {
-	ID          uint `gorm:"primarykey"`
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	Name        string `gorm:"uniqueIndex"`
-	Description string
-	IsPublic    bool
-	IsActive    bool `gorm:"default:true"`
-	IsTest      bool
-	Members     []user.User `gorm:"many2many:memberships;"`
+	ID          uint        `gorm:"primarykey" json:"id,string"`
+	CreatedAt   time.Time   `json:"createdAt"`
+	UpdatedAt   time.Time   `json:"-"`
+	Name        string      `gorm:"uniqueIndex" json:"name"`
+	Description string      `json:"description,omitempty"`
+	IsPublic    bool        `json:"public"`
+	IsActive    bool        `gorm:"default:true" json:"-"`
+	IsTest      bool        `json:"-"`
+	Members     []user.User `gorm:"many2many:memberships;" json:"-"`
 }
 
 type Membership struct {
 	ChannelID uint `gorm:"primaryKey"`
 	UserID    uint `gorm:"primaryKey"`
+}
+
+func (c Channel) MarshalJSON() ([]byte, error) {
+	type Alias Channel
+	return json.Marshal(&struct {
+		Alias
+		Inactive bool `json:"inactive"`
+	}{
+		Alias:    (Alias)(c),
+		Inactive: !c.IsActive,
+	})
 }
 
 var (

@@ -64,17 +64,14 @@
                 "properties": {
                   "id": {
                     "type": "string",
-                    "format": "uuid",
                     "x-parser-schema-id": "<anonymous-schema-3>"
                   },
                   "channelId": {
                     "type": "string",
-                    "format": "uuid",
                     "x-parser-schema-id": "<anonymous-schema-4>"
                   },
                   "userId": {
                     "type": "string",
-                    "format": "uuid",
                     "x-parser-schema-id": "<anonymous-schema-5>"
                   },
                   "body": {
@@ -132,7 +129,6 @@
                 "properties": {
                   "id": {
                     "type": "string",
-                    "format": "uuid",
                     "x-parser-schema-id": "<anonymous-schema-10>"
                   },
                   "username": {
@@ -180,7 +176,6 @@
             "properties": {
               "userId": {
                 "type": "string",
-                "format": "uuid",
                 "x-parser-schema-id": "<anonymous-schema-16>"
               },
               "username": {

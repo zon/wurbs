@@ -30,7 +30,8 @@ generate-openapi:
 
 generate-asyncapi:
 	mkdir -p ./gen/asyncapi
-	@echo "TODO: generate asyncapi types"
+	asyncapi validate specs/socket.yaml
+	@echo "AsyncAPI types are manually maintained in gen/asyncapi/types.go"
 
 infra:
 	cd infra && pulumi up --stack dev --yes

@@ -25,6 +25,9 @@ type ServerInterface interface {
 	// Exchange a refresh token for a new access token.
 	// (POST /auth/refresh)
 	Refresh(c *gin.Context)
+	// Exchange a client assertion for an access token.
+	// (POST /auth/token)
+	Token(c *gin.Context)
 	// List channels
 	// (GET /channels)
 	ListChannels(c *gin.Context)
@@ -40,9 +43,15 @@ type ServerInterface interface {
 	// Update a channel (admin only). Channels may be inactive or deleted.
 	// (PATCH /channels/{channelId})
 	UpdateChannel(c *gin.Context, channelId ChannelId)
+	// List members of a channel
+	// (GET /channels/{channelId}/members)
+	ListMembers(c *gin.Context, channelId ChannelId)
 	// Invite a user to a channel by email (admin only). Creates the user if no account with that email exists.
 	// (POST /channels/{channelId}/members)
 	InviteMember(c *gin.Context, channelId ChannelId)
+	// Remove a member from a channel (admin only)
+	// (DELETE /channels/{channelId}/members/{userId})
+	DeleteMember(c *gin.Context, channelId ChannelId, userId UserId)
 	// List messages in a channel, paged by time
 	// (GET /channels/{channelId}/messages)
 	ListMessages(c *gin.Context, channelId ChannelId, params ListMessagesParams)
@@ -154,6 +163,19 @@ func (siw *ServerInterfaceWrapper) Refresh(c *gin.Context) {
 	siw.Handler.Refresh(c)
 }
 
+// Token operation middleware
+func (siw *ServerInterfaceWrapper) Token(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.Token(c)
+}
+
 // ListChannels operation middleware
 func (siw *ServerInterfaceWrapper) ListChannels(c *gin.Context) {
 
@@ -262,6 +284,32 @@ func (siw *ServerInterfaceWrapper) UpdateChannel(c *gin.Context) {
 	siw.Handler.UpdateChannel(c, channelId)
 }
 
+// ListMembers operation middleware
+func (siw *ServerInterfaceWrapper) ListMembers(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "channelId" -------------
+	var channelId ChannelId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "channelId", c.Param("channelId"), &channelId, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter channelId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	c.Set(OidcScopes, []string{})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListMembers(c, channelId)
+}
+
 // InviteMember operation middleware
 func (siw *ServerInterfaceWrapper) InviteMember(c *gin.Context) {
 
@@ -286,6 +334,41 @@ func (siw *ServerInterfaceWrapper) InviteMember(c *gin.Context) {
 	}
 
 	siw.Handler.InviteMember(c, channelId)
+}
+
+// DeleteMember operation middleware
+func (siw *ServerInterfaceWrapper) DeleteMember(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "channelId" -------------
+	var channelId ChannelId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "channelId", c.Param("channelId"), &channelId, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter channelId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Path parameter "userId" -------------
+	var userId UserId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "userId", c.Param("userId"), &userId, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter userId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	c.Set(OidcScopes, []string{})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.DeleteMember(c, channelId, userId)
 }
 
 // ListMessages operation middleware
@@ -494,12 +577,15 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.GET(options.BaseURL+"/auth/login", wrapper.Login)
 	router.POST(options.BaseURL+"/auth/logout", wrapper.Logout)
 	router.POST(options.BaseURL+"/auth/refresh", wrapper.Refresh)
+	router.POST(options.BaseURL+"/auth/token", wrapper.Token)
 	router.GET(options.BaseURL+"/channels", wrapper.ListChannels)
 	router.POST(options.BaseURL+"/channels", wrapper.CreateChannel)
 	router.DELETE(options.BaseURL+"/channels/:channelId", wrapper.DeleteChannel)
 	router.GET(options.BaseURL+"/channels/:channelId", wrapper.GetChannel)
 	router.PATCH(options.BaseURL+"/channels/:channelId", wrapper.UpdateChannel)
+	router.GET(options.BaseURL+"/channels/:channelId/members", wrapper.ListMembers)
 	router.POST(options.BaseURL+"/channels/:channelId/members", wrapper.InviteMember)
+	router.DELETE(options.BaseURL+"/channels/:channelId/members/:userId", wrapper.DeleteMember)
 	router.GET(options.BaseURL+"/channels/:channelId/messages", wrapper.ListMessages)
 	router.POST(options.BaseURL+"/channels/:channelId/messages", wrapper.CreateMessage)
 	router.DELETE(options.BaseURL+"/messages/:messageId", wrapper.DeleteMessage)

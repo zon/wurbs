@@ -16,13 +16,13 @@ type Publisher interface {
 
 // Message is the chat message model. The message module owns this type.
 type Message struct {
-	ID        uint `gorm:"primarykey"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	ChannelID uint
-	UserID    uint
-	User      user.User `gorm:"foreignKey:UserID"`
-	Content   string
+	ID        uint      `gorm:"primarykey" json:"id,string"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"editedAt,omitempty"`
+	ChannelID uint      `json:"channelId,string"`
+	UserID    uint      `json:"userId,string"`
+	User      user.User `gorm:"foreignKey:UserID" json:"-"`
+	Content   string    `json:"body"`
 }
 
 type MessageEvent struct {
