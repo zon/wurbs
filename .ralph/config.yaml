@@ -1,4 +1,4 @@
-model: minimax/MiniMax-M2.5
+model: deepseek/deepseek-reasoner
 before:
   - name: build rest
     command: go
@@ -29,60 +29,5 @@ workflow:
     WURB_CONFIG: /etc/wurbs
 review:
   items:
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/formatting.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/commentary.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/names.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/names_package_names.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/names_getters.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/names_interface_names.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/names_mixedcaps.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/semicolons.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/control_structures.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/control_structures_if.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/control_structures_redeclaration_and_reassignment.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/control_structures_for.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/control_structures_switch.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/control_structures_type_switch.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/functions.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/functions_multiple_return_values.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/functions_named_result_parameters.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/functions_defer.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/data.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/data_allocation_with_new.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/data_constructors_and_composite_literals.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/data_allocation_with_make.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/data_arrays.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/data_slices.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/data_two_dimensional_slices.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/data_maps.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/data_printing.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/data_append.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/initialization.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/initialization_constants.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/initialization_variables.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/initialization_the_init_function.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/methods.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/methods_pointers_vs_values.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/interfaces_and_other_types.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/interfaces_and_other_types_interfaces.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/interfaces_and_other_types_conversions.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/interfaces_and_other_types_interface_conversions_and_type_assertions.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/interfaces_and_other_types_generality.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/interfaces_and_other_types_interfaces_and_methods.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/the_blank_identifier.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/the_blank_identifier_the_blank_identifier_in_multiple_assignment.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/the_blank_identifier_unused_imports_and_variables.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/the_blank_identifier_import_for_side_effect.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/the_blank_identifier_interface_checks.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/embedding.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/concurrency.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/concurrency_share_by_communicating.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/concurrency_goroutines.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/concurrency_channels.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/concurrency_channels_of_channels.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/concurrency_parallelization.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/concurrency_a_leaky_buffer.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/errors.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/errors_panic.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/errors_recover.md
-    - url: https://raw.githubusercontent.com/zon/code/main/review/go/a_web_server.md
+    - url: https://raw.githubusercontent.com/zon/code/main/review/architecture/deep-modules.md
+    - url: https://raw.githubusercontent.com/zon/code/main/review/architecture/domain-logic.md
